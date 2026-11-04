@@ -11,7 +11,7 @@ Last checked 2026-11-04 by the final verification pass (build, all tests, simula
 2. **Fill in the team bio.** `submission/01-team-bio/SafetySense-TeamBio.html`: George's year and major, and Mary's year, major and email (yellow `[FILL IN]`). Check both "why we care" lines and Mary's role. Re-render with `submission/_assets/render.sh` (needs network for Google Fonts) and open the PDF.
 3. **Finish the email draft.** `submission/EMAIL_DRAFT.md`: Mary's email, and the extra-credit line (keep it only if one of you went to the Sep 17 kickoff or an Oct 8/20 mentoring session; delete it otherwise).
 4. **Send the email** from gteifel@unm.edu with the 5 PDFs attached. Subject: `App Contest Technical Submission – SafetySense`. Record the time and message id in `docs/SUBMISSION_CHECKLIST.md`. No agent sends email.
-5. **Commit the work.** Nothing from 2026-11-04 is committed (fake call, account deletion, privacy migration, doc and PDF updates). Review `git status` and commit when you're happy. The repo `george11642/safetysense` is **public**: `docs/CONTEST_BRIEF.md` and `docs/OPEN_QUESTIONS.md` contain your personal Gmail address, and `presentation/IPHONE_DEMO_SCRIPT.md` contains the Twilio trial number (a caller ID, not a secret). Remove them first if you'd rather not publish them. No tokens, keys or George/Mary phone numbers are in the tree or the history (scanned 2026-11-04).
+5. ~~Commit the work.~~ Done: everything is committed and pushed to the public repo https://github.com/george11642/safetysense. Your personal Gmail address has been removed from the docs. The secret and phone-number scan passed (2026-11-04).
 
 **Before Nov 20 (finalists):**
 
