@@ -1,10 +1,11 @@
 # Open questions (for George)
 
-1. **Mary:** Is she at UNM or CNM, with at least 3 credit hours this fall? What are her year, major, and email? Is she already on the registration, or do we email itevents@unm.edu to add her before Nov 6?
+1. **Mary:** She's at **CNM** (confirmed 2026-11-04). Is she taking at least 3 credit hours this fall? What are her year, major, and email? Is she already on the registration, or do we email itevents@unm.edu to add her before Nov 6?
 2. **Extra credit:** Did George (or Mary) attend the Sep 17 kickoff or a mentoring session (Oct 8 / Oct 20)? Each is worth up to 5 points, max 10. If yes, mention it in the submission email.
 3. **App design:** What should it do? George will describe it. Also pick an app name and team name for the subject line.
 4. **Apple Developer team for TestFlight:** George's own paid team, or none (simulator-only demo)? The only distribution cert on this Mac belongs to Josh Jarrett's team (K89F44WFKH).
-5. **Slides tool:** Decide after finalist notification (Nov 9). Default is PPTX/Google Slides with embedded video.
+5. **Figma seat:** Figma MCP is connected (Claude + Codex) as george.teifel@gmail.com, but both teams show a **View** seat (Starter + Student). Figma limits Starter/View seats to about 6 MCP tool calls per month. To build the prototype through the MCP, get a Full seat (the Figma Education plan is free for verified students).
+6. **Slides tool:** Decide after finalist notification (Nov 9). Default is PPTX/Google Slides with embedded video.
 
 ## Domain notes for a sexual-assault prevention/safety app (verify before citing)
 - **Existing apps to differentiate from** (the rules require a "novel idea"): Noonlight, bSafe, Circle of 6, Life360 SOS, Apple's built-in Emergency SOS / Check In, and UNM's own campus safety app (LoboGuardian / Rave Guardian, *to verify*). Judges will ask "why not just use X?"

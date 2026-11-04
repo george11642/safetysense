@@ -5,7 +5,7 @@ Email **to:** itevents@unm.edu · **from:** George (UNM address recommended: gte
 
 Every item except #6 is a **PDF or Word file attached** to the email, never a link.
 
-- [ ] Mary's eligibility confirmed (UNM/CNM, at least 3 credit hours this fall, or a CNM Deep Dive cohort). If she isn't on the registration yet, add her to the team by emailing itevents@unm.edu before Nov 6.
+- [ ] Mary's eligibility confirmed (she's at CNM; confirm at least 3 credit hours this fall, or a CNM Deep Dive cohort). If she isn't on the registration yet, add her to the team by emailing itevents@unm.edu before Nov 6.
 - [ ] 1. Team bio: `submission/01-team-bio/` → `TeamBio.pdf` (name, institution, year, major, role, one line on why we care)
 - [ ] 2. Three screenshots: `submission/02-screenshots/` → one `Screenshots.pdf` with 3 labeled screens
 - [ ] 3. Purpose / Audience / Functions / Pathway to Satisfaction: `submission/03-purpose-audience-functions/` → PDF
