@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ward Safety App</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single reading column. Phone mockups are the visual anchors; sections step through the product from the hero down to scope. */
+:root{
+  --bg:#f3f4f8; --surface:#ffffff; --ink:#1b1a2b; --muted:#5b5d72; --line:#dcdfea;
+  --accent:#c4446a; --accent-soft:#f8e3ea;
+  --calm:#1f7d6c; --warn:#b5700c; --danger:#bb3328;
+  --app-bg:#14131f; --app-card:#211f31; --app-ink:#f1eff8; --app-muted:#a19fb6; --app-accent:#ef7b9b; --app-calm:#5cc7b2; --app-warn:#f0b55a; --app-danger:#ef6a5c;
+  --display:"Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11111c; --surface:#1a1a29; --ink:#ecebf5; --muted:#a3a4ba; --line:#2d2d44;
+    --accent:#ea7194; --accent-soft:#3a2131; --calm:#55bfa9; --warn:#e3a94c; --danger:#e66a5d; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11111c; --surface:#1a1a29; --ink:#ecebf5; --muted:#a3a4ba; --line:#2d2d44;
+  --accent:#ea7194; --accent-soft:#3a2131; --calm:#55bfa9; --warn:#e3a94c; --danger:#e66a5d; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(56px,10vw,104px);line-height:.95;font-weight:700}
+h2{font-size:clamp(28px,4vw,38px);line-height:1.1;font-weight:600}
+h3{font-size:19px;font-weight:600}
+p{margin:0}
+.eyebrow{font:600 12px/1.3 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:21px;line-height:1.45;max-width:34ch}
+.muted{color:var(--muted)}
+.sec{display:flex;flex-direction:column;gap:24px}
+.sec-head{display:flex;flex-direction:column;gap:8px;max-width:65ch}
+section:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:40px;align-items:center}
+.hero-copy{display:flex;flex-direction:column;gap:20px;min-width:0}
+.hero h1 span{color:var(--accent)}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font:600 13px/1 var(--mono);padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--surface)}
+.note{font-size:14px;color:var(--muted);border-left:3px solid var(--accent);padding-left:12px;max-width:52ch}
+
+/* phone */
+.phone{width:264px;max-width:100%;aspect-ratio:9/19.2;border-radius:42px;background:var(--app-bg);color:var(--app-ink);
+  border:9px solid #0b0a12;box-shadow:0 30px 60px -30px rgba(20,16,40,.55);position:relative;overflow:hidden;flex:none;
+  display:flex;flex-direction:column;font-size:13px;line-height:1.35}
+.phone::before{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);width:84px;height:24px;border-radius:14px;background:#000;z-index:2}
+.scr{flex:1;display:flex;flex-direction:column;gap:10px;padding:46px 16px 18px}
+.status{display:flex;justify-content:space-between;font:600 11px var(--mono);color:var(--app-muted);position:absolute;top:13px;left:22px;right:22px}
+.app-h{font:700 22px/1.1 var(--display)}
+.app-sub{color:var(--app-muted);font-size:12px}
+.card{background:var(--app-card);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--app-calm);flex:none}
+.chip{font:600 10.5px var(--mono);padding:4px 8px;border-radius:999px;background:#2c2a40;color:var(--app-muted)}
+.chip.on{background:#123a35;color:var(--app-calm)}
+.btn{border:0;border-radius:14px;padding:12px;font:600 14px var(--body);text-align:center;color:#14131f;background:var(--app-calm)}
+.btn.ghost{background:#2c2a40;color:var(--app-ink)}
+.btn.danger{background:var(--app-danger);color:#fff}
+.big-ring{width:150px;height:150px;border-radius:50%;margin:8px auto;display:grid;place-items:center;text-align:center;
+  background:radial-gradient(circle at 50% 50%, #1d3b37 0 55%, transparent 56%), conic-gradient(var(--app-calm) 0 72%, #2c2a40 72% 100%)}
+.big-ring b{font:700 30px/1 var(--display);display:block}
+.ring-warn{background:radial-gradient(circle at 50% 50%, #3d2e17 0 55%, transparent 56%), conic-gradient(var(--app-warn) 0 62%, #2c2a40 62% 100%)}
+.ring-danger{background:radial-gradient(circle at 50% 50%, #40201d 0 55%, transparent 56%), conic-gradient(var(--app-danger) 0 40%, #2c2a40 40% 100%)}
+.pin{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pin span{background:#2c2a40;border-radius:12px;padding:8px 0;text-align:center;font:600 15px var(--display)}
+.map{height:120px;border-radius:14px;position:relative;overflow:hidden;
+  background:linear-gradient(115deg,transparent 46%,#3a3852 46% 49%,transparent 49%),linear-gradient(25deg,transparent 60%,#3a3852 60% 63%,transparent 63%),#252338}
+.map i{position:absolute;left:58%;top:44%;width:14px;height:14px;border-radius:50%;background:var(--app-accent);box-shadow:0 0 0 8px rgba(239,123,155,.25)}
+.web .scr{background:#f4f3f8;color:#1b1a2b}
+.web .card{background:#fff;border:1px solid #e1e0ea}
+.web .app-sub{color:#5b5d72}
+
+/* problem */
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fact b{font:600 18px/1.2 var(--display)}
+.fact p{font-size:15px;color:var(--muted)}
+
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;counter-reset:s}
+.step{padding:18px 18px 18px 0;border-top:3px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
+.step:nth-child(1){border-color:var(--calm)}.step:nth-child(2){border-color:var(--calm)}.step:nth-child(3){border-color:var(--warn)}.step:nth-child(4){border-color:var(--danger)}
+.step .n{font:600 12px var(--mono);color:var(--muted)}
+.step p{font-size:15px;color:var(--muted)}
+
+/* engine diagram */
+.engine{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,.9fr) auto minmax(0,1fr);gap:14px;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.sig{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;display:flex;flex-direction:column}
+.sig small{font:400 12px var(--mono);color:var(--muted)}
+.arrow{font:600 22px var(--display);color:var(--muted)}
+.core{background:var(--ink);color:var(--bg);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.core h3{color:var(--bg)}
+.core p{font-size:14px;opacity:.85}
+.core .tag{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;opacity:.7}
+.out{border-radius:10px;padding:9px 12px;font-size:14px;border:1px solid var(--line);background:var(--surface);border-left-width:5px}
+.out.l1{border-left-color:var(--calm)}.out.l2{border-left-color:var(--warn)}.out.l3{border-left-color:var(--danger)}
+
+/* ladder + sim */
+.ladder-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:40px;align-items:start}
+.ladder{display:flex;flex-direction:column;gap:10px}
+.lvl{display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;transition:border-color .25s, box-shadow .25s}
+.lvl .badge{font:700 30px/1 var(--display);display:flex;flex-direction:column;gap:6px}
+.lvl .badge small{font:600 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lvl[data-l="0"] .badge{color:var(--calm)}.lvl[data-l="1"] .badge{color:var(--calm)}.lvl[data-l="2"] .badge{color:var(--warn)}.lvl[data-l="3"] .badge{color:var(--danger)}
+.lvl p{font-size:15px;color:var(--muted)}
+.lvl .stop{font:400 12.5px var(--mono);color:var(--muted)}
+.lvl.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.sim{display:flex;flex-direction:column;gap:14px;align-items:center;width:264px;max-width:100%}
+.sim-log{font:400 13px/1.45 var(--mono);color:var(--muted);min-height:4.4em;text-align:left;width:100%}
+.sim-log b{color:var(--ink);font-weight:600}
+.sim-ctrl{display:flex;gap:8px;width:100%}
+.sim-ctrl button{flex:1;font:600 14px var(--body);padding:11px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.sim-ctrl button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.duress{font-size:15px;background:var(--accent-soft);border-radius:12px;padding:14px 16px}
+
+/* screens strip */
+.strip{display:flex;gap:22px;overflow-x:auto;padding:6px 2px 18px;scroll-snap-type:x mandatory}
+.shot{display:flex;flex-direction:column;gap:10px;scroll-snap-align:start}
+.shot figcaption{font:600 12px var(--mono);color:var(--muted);letter-spacing:.04em}
+figure{margin:0}
+
+/* modes, triggers, privacy */
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.box p,.box li{font-size:15px;color:var(--muted)}
+.box ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.box .k{font:600 11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.change{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:0;border-top:1px solid var(--line)}
+.change > div{padding:14px 16px 14px 0;border-bottom:1px solid var(--line);min-width:0}
+.change .was{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--accent);text-decoration-thickness:1.5px}
+.change .now b{font-weight:600}
+
+/* table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+td.y{color:var(--calm);font-weight:600}
+td.n{color:var(--muted)}
+tr.diff td{background:var(--accent-soft)}
+th:last-child,td:last-child{font-weight:600}
+
+/* scope */
+.scope{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.scope .box:first-child{border-color:var(--calm)}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
+
+@media (max-width:900px){
+  .hero,.ladder-wrap{grid-template-columns:1fr}
+  .hero .phone,.sim{margin:0 auto}
+  .facts,.flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .engine{grid-template-columns:1fr}
+  .arrow{transform:rotate(90deg);justify-self:center}
+  .grid3,.scope{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .facts,.flow,.grid2,.change{grid-template-columns:1fr}
+  .change > div.was{border-bottom:0;padding-bottom:2px}
+  body{font-size:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<header class="hero">
+  <div class="hero-copy">
+    <span class="eyebrow">UNM / CNM App Contest 2026 · George &amp; Mary Teifel · spec v0.1</span>
+    <h1>Ward<span>.</span></h1>
+    <p class="lede">Help that comes to you when you can't reach your phone.</p>
+    <p class="muted" style="max-width:56ch">During a Guard session, Ward listens and watches on your phone only. If you go quiet, can't answer, or lose your phone, it brings in your people and then professional dispatch, with no tap from you.</p>
+    <div class="pills"><span class="pill">iOS 26 · SwiftUI</span><span class="pill">On-device AI</span><span class="pill">Nothing saved unless it's an emergency</span></div>
+    <p class="note">Ward supplements 911 and doesn't replace it. Working name, still open to change.</p>
+  </div>
+  <div class="phone" aria-label="Guard active screen">
+    <div class="status"><span>11:38</span><span>● 62%</span></div>
+    <div class="scr">
+      <span class="app-sub">Night Out · Guarding</span>
+      <div class="big-ring"><div><b>1:42</b><span class="app-sub">elapsed</span></div></div>
+      <div class="card"><div class="row"><span>Next check-in</span><b>12:10 am</b></div></div>
+      <div class="row" style="flex-wrap:wrap;justify-content:flex-start;gap:6px"><span class="chip on">Mic · on-device</span><span class="chip on">Location</span><span class="chip on">Motion</span></div>
+      <div class="card"><div class="row"><span>Maya, Mom</span><span class="app-sub">will be alerted</span></div></div>
+      <div style="flex:1"></div>
+      <div class="btn ghost">End session · Face ID</div>
+    </div>
+  </div>
+</header>
+
+<section class="sec" aria-labelledby="why">
+  <div class="sec-head"><span class="eyebrow">The problem</span><h2 id="why">Every safety app assumes you can press a button.</h2></div>
+  <div class="facts">
+    <div class="fact"><b>People freeze</b><p>Being unable to move or speak (tonic immobility) is a common response during an assault. A panic button doesn't help someone who has frozen.</p></div>
+    <div class="fact"><b>Drugs remove the choice</b><p>Someone who's been drugged may not recognize danger or be able to unlock a phone.</p></div>
+    <div class="fact"><b>Phones get taken</b><p>Other apps read a phone going silent as "all clear." Ward reads it as a warning sign.</p></div>
+    <div class="fact"><b>NM has no text-to-911</b><p>If you can't speak out loud, there's no silent way to reach 911 here. Ward's data-only path to dispatch fills that gap.</p></div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="how">
+  <div class="sec-head"><span class="eyebrow">How it works</span><h2 id="how">Turn it on. It watches. It decides. Help comes.</h2></div>
+  <div class="flow">
+    <div class="step"><span class="n">1 · ARM</span><h3>Start a Guard session</h3><p>Tap, use the Action Button, or accept Ward's suggestion when you arrive at a bar on a Friday night.</p></div>
+    <div class="step"><span class="n">2 · WATCH</span><h3>On-device sensing</h3><p>Ward checks sound, words, motion, and location. Audio stays in a 30-second memory buffer that's never written to storage.</p></div>
+    <div class="step"><span class="n">3 · DECIDE</span><h3>Risk engine</h3><p>Rules you can explain make the decision, and the on-device AI gives a second opinion. Ward checks in with you before raising the alert.</p></div>
+    <div class="step"><span class="n">4 · RESPOND</span><h3>People, then dispatch</h3><p>Your contacts get a live-location link. If nobody can confirm you're safe, professional monitoring sends police.</p></div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="engine">
+  <div class="sec-head"><span class="eyebrow">Detection</span><h2 id="engine">Many weak signals add up to one clear decision.</h2><p class="muted">Every signal is processed on the phone. Only the server's heartbeat check runs off the phone, because it has to keep working after the phone is gone.</p></div>
+  <div class="engine">
+    <div class="col">
+      <div class="sig">Sound events<small>screaming · shout · crying_sobbing · slap_smack · glass_breaking</small></div>
+      <div class="sig">Words<small>safe word · "stop" · "get off me" · "help"</small></div>
+      <div class="sig">Motion<small>impact then stillness · phone dropped</small></div>
+      <div class="sig">Location<small>off-plan · unknown place late · off-route ride</small></div>
+      <div class="sig">Responsiveness<small>missed check-in · ignored "You okay?"</small></div>
+      <div class="sig">Heartbeat (server)<small>phone went dark mid-session</small></div>
+    </div>
+    <span class="arrow" aria-hidden="true">→</span>
+    <div class="core">
+      <span class="tag">Risk engine</span>
+      <h3>Weighted rules that fade over time</h3>
+      <p>Weights depend on mode and time of day. Settings are Relaxed, Balanced, or Vigilant.</p>
+      <p><b>On-device LLM second opinion</b> on iPhone 15 Pro and later. It can nudge the score, but it can never trigger an alert alone or block an SOS.</p>
+    </div>
+    <span class="arrow" aria-hidden="true">→</span>
+    <div class="col">
+      <div class="out l1"><b>Check in</b> · quiet haptic, "You okay?"</div>
+      <div class="out l2"><b>Alert</b> · contacts get a live link, evidence starts recording</div>
+      <div class="out l3"><b>Dispatch</b> · professional monitoring sends police</div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="ladder">
+  <div class="sec-head"><span class="eyebrow">Escalation ladder</span><h2 id="ladder">Ward checks in with you before it brings in anyone else.</h2><p class="muted">Step through a sample Night Out to see what Ward does at each level.</p></div>
+  <div class="ladder-wrap">
+    <div class="ladder" id="ladderList">
+      <div class="lvl active" data-l="0"><div class="badge">0<small>Guarding</small></div><div><h3>Listening, nothing saved</h3><p>A 30-second rolling buffer in memory. The Live Activity shows the session is running.</p><span class="stop">stop: end session (Face ID)</span></div></div>
+      <div class="lvl" data-l="1"><div class="badge">1<small>Check-in</small></div><div><h3>"You okay?"</h3><p>A quiet haptic and a 45-second ring. Triggered by the risk score or a scheduled check-in.</p><span class="stop">stop: tap "I'm okay"</span></div></div>
+      <div class="lvl" data-l="2"><div class="badge">2<small>Alert</small></div><div><h3>Your people are notified</h3><p>A text and automated call with a live map. Evidence is encrypted and uploaded while it records. Also triggered by the safe word, the Action Button, or a lost heartbeat.</p><span class="stop">stop: safety PIN</span></div></div>
+      <div class="lvl" data-l="3"><div class="badge">3<small>Dispatch</small></div><div><h3>Professional help is sent</h3><p>After 90 seconds with no valid cancel, or when a contact taps "Send help." The monitoring center calls you, then sends police to your live location.</p><span class="stop">stop: PIN plus the dispatcher's call</span></div></div>
+      <p class="duress"><b>Duress PIN.</b> If someone forces you to cancel, enter your duress PIN. Ward shows "Cancelled" on screen and goes straight to Dispatch.</p>
+    </div>
+    <div class="sim">
+      <div class="phone" id="simPhone" aria-live="polite"></div>
+      <p class="sim-log" id="simLog"></p>
+      <div class="sim-ctrl"><button type="button" id="simReset">Reset</button><button type="button" class="primary" id="simNext">Next</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="screens">
+  <div class="sec-head"><span class="eyebrow">Key screens</span><h2 id="screens">Calm by default, impossible to miss in an emergency.</h2></div>
+  <div class="strip">
+    <figure class="shot"><div class="phone"><div class="status"><span>9:41</span><span>●</span></div><div class="scr">
+      <span class="app-sub">Welcome · 2 of 9</span><span class="app-h">Three promises</span>
+      <div class="card"><b>Ward only listens when you turn it on.</b><span class="app-sub">You start a Guard session. You'll always see when it's on.</span></div>
+      <div class="card"><b>Nothing is saved unless something's wrong.</b><span class="app-sub">Audio stays in a 30-second memory buffer on your phone.</span></div>
+      <div class="card"><b>Help comes even if you can't tap.</b><span class="app-sub">Missed check-ins and a phone going dark still alert your people.</span></div>
+      <div style="flex:1"></div><div class="btn">Continue</div></div></div><figcaption>ONBOARDING · PROMISES</figcaption></figure>
+
+    <figure class="shot"><div class="phone"><div class="status"><span>9:12</span><span>●</span></div><div class="scr">
+      <span class="app-sub">Good evening, Mary</span><span class="app-h">Where are you headed?</span>
+      <div class="row" style="flex-wrap:wrap;justify-content:flex-start;gap:6px"><span class="chip on">Night Out</span><span class="chip">Walk Home</span><span class="chip">Date</span><span class="chip">Ride</span></div>
+      <div class="big-ring" style="background:radial-gradient(circle,#2a1c27 0 55%,transparent 56%),conic-gradient(var(--app-accent) 0 100%)"><div><b style="font-size:22px">Start<br>Guard</b></div></div>
+      <div class="card"><div class="row"><span>Trusted contacts</span><b>2 ready</b></div><div class="row"><span>Action Button</span><span class="chip on">set</span></div></div>
+      <div class="card"><div class="row"><span>UNM Police</span><span class="app-sub">505-277-2241</span></div></div></div></div><figcaption>HOME</figcaption></figure>
+
+    <figure class="shot"><div class="phone"><div class="status"><span>11:51</span><span>●</span></div><div class="scr">
+      <span class="app-sub">Ward heard shouting nearby</span><span class="app-h">You okay?</span>
+      <div class="big-ring ring-warn"><div><b>0:31</b><span class="app-sub">to respond</span></div></div>
+      <div class="btn">I'm okay</div><div class="btn danger">I need help</div>
+      <span class="app-sub" style="text-align:center">If you don't answer, Maya and Mom will be alerted.</span></div></div><figcaption>CHECK-IN · LEVEL 1</figcaption></figure>
+
+    <figure class="shot"><div class="phone"><div class="status"><span>11:52</span><span>●</span></div><div class="scr">
+      <span class="app-sub" style="color:var(--app-warn)">Alert sent · 11:52 pm</span><span class="app-h">Help is being called</span>
+      <div class="big-ring ring-danger" style="width:120px;height:120px"><div><b style="font-size:24px">1:04</b><span class="app-sub">to dispatch</span></div></div>
+      <span class="app-sub" style="text-align:center">Enter your PIN to cancel</span>
+      <div class="pin"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div></div></div><figcaption>ALERT · LEVEL 2</figcaption></figure>
+
+    <figure class="shot"><div class="phone"><div class="status"><span>11:54</span><span>●</span></div><div class="scr">
+      <span class="app-sub" style="color:var(--app-danger)">Dispatch active</span><span class="app-h">Help is on the way</span>
+      <div class="map"><i></i></div>
+      <div class="card"><div class="row"><span><span class="dot" style="display:inline-block;margin-right:6px"></span>Maya</span><b>On her way · 6 min</b></div><div class="row"><span>Mom</span><span class="app-sub">Called you</span></div><div class="row"><span>Monitoring center</span><span class="app-sub">Police notified</span></div></div>
+      <div class="row" style="justify-content:flex-start;gap:6px"><span class="chip on">Evidence encrypted · 2:41</span></div>
+      <div style="flex:1"></div><div class="btn ghost">I'm safe now</div></div></div><figcaption>ALERT ACTIVE · LEVEL 3</figcaption></figure>
+
+    <figure class="shot"><div class="phone web"><div class="status"><span style="color:#5b5d72">ward.link/a/8f2…</span><span></span></div><div class="scr">
+      <span class="app-sub">Shared by Ward · expires in 24 hours</span><span class="app-h">Mary needs help</span>
+      <div class="map" style="background:linear-gradient(115deg,transparent 46%,#d6d4e2 46% 49%,transparent 49%),#ebeaf2"><i></i></div>
+      <div class="card"><div class="row"><span>Last update</span><b>8 sec ago</b></div><div class="row"><span>Battery</span><b>58%</b></div><div class="row"><span>Near</span><b>Central &amp; Cornell</b></div></div>
+      <div class="btn" style="background:#1f7d6c;color:#fff">I'm on my way</div><div class="btn danger">Send help now</div></div></div><figcaption>CONTACT'S LIVE LINK · NO APP NEEDED</figcaption></figure>
+
+    <figure class="shot"><div class="phone"><div class="status"><span>10:02</span><span>●</span></div><div class="scr">
+      <span class="app-sub">You're safe here. Take your time.</span><span class="app-h">Support</span>
+      <div class="card"><b>Talk to someone now</b><span class="app-sub">LoboRESPECT Advocacy · 24/7<br>Rape Crisis Center of Central NM · 24/7</span></div>
+      <div class="card"><b>Medical care</b><span class="app-sub">Albuquerque SANE Collaborative · confidential exam, no police report required</span></div>
+      <div class="card"><b>Reporting options</b><span class="app-sub">UNMPD · APD · Title IX / CNM. Only if and when you choose.</span></div>
+      <div class="card"><b>Keep it private</b><span class="app-sub">Evidence stays encrypted in your Vault.</span></div></div></div><figcaption>SUPPORT · AFTERWARDS</figcaption></figure>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="modes">
+  <div class="sec-head"><span class="eyebrow">Modes</span><h2 id="modes">Each situation gets its own level of protection.</h2></div>
+  <div class="grid3">
+    <div class="box"><span class="k">Everyday</span><h3>Always on, no mic</h3><p>SOS triggers, trusted contacts, medical info, and campus resources.</p></div>
+    <div class="box"><span class="k">Walk Home</span><h3>Live escort</h3><p>One contact follows you live. Ward alerts them if you leave your route, stop too long, or don't arrive.</p></div>
+    <div class="box"><span class="k">Night Out</span><h3>Full Guard</h3><p>On-device audio AI, motion, check-ins every 30–90 minutes, and drink-check prompts.</p></div>
+    <div class="box"><span class="k">Date</span><h3>Sealed details</h3><p>Their name, photo, and the venue are encrypted. Your friend sees them only if an alert fires.</p></div>
+    <div class="box"><span class="k">Ride</span><h3>Trip watch</h3><p>Log the plate and driver. Ward alerts you if the route changes or the car makes an unplanned stop.</p></div>
+    <div class="box"><span class="k">Triggers</span><h3>Without opening the app</h3><ul><li>Action Button (hold)</li><li>Lock Screen control</li><li>Spoken safe word, recognized offline</li><li>"Hey Siri, Ward alert"</li><li>Fake call to get away</li></ul></div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="changes">
+  <div class="sec-head"><span class="eyebrow">What changed from the first idea</span><h2 id="changes">Same goal, adjusted to what iOS allows and what users will trust.</h2></div>
+  <div class="change">
+    <div class="was">AI listens all the time</div><div class="now"><b>Guard sessions you start yourself.</b> Ward suggests a session when the context fits. iOS can't start the mic from the background, the battery cost is real, and App Review rejects always-on recording.</div>
+    <div class="was">Press the side button</div><div class="now"><b>Action Button, Lock Screen control, Siri, safe word.</b> Apple doesn't let apps use the side button. These are the official ways to trigger an app.</div>
+    <div class="was">AI calls the police</div><div class="now"><b>The AI raises the alert level; it doesn't dial 911 alone.</b> iOS can't place calls without a tap, so dispatch goes through professional monitoring, which verifies before sending police.</div>
+    <div class="was">Detect being drugged</div><div class="now"><b>Detect being unable to respond.</b> Ward watches for missed check-ins, unsteady movement, and falls. No phone can detect a drug, so Ward doesn't promise it.</div>
+    <div class="was">Copy every feature of Lobo Guardian</div><div class="now"><b>Cover the basics well and put the effort into proactive protection.</b> Lobo Guardian is being replaced by UNM Safe, and Ward links to it.</div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="privacy">
+  <div class="sec-head"><span class="eyebrow">Privacy &amp; security</span><h2 id="privacy">Private by design.</h2></div>
+  <div class="grid2">
+    <div class="box"><h3>On the phone</h3><ul><li>Audio, transcripts, and AI reasoning never leave the device while guarding</li><li>The 30-second buffer stays in memory and is overwritten continuously</li><li>Face ID locks the Vault. Optional discreet app icon</li><li>Duress PIN</li></ul></div>
+    <div class="box"><h3>On the server</h3><ul><li>Evidence is encrypted (AES-GCM) before upload, so the server stores only data it can't read</li><li>Each clip has a SHA-256 hash and timestamp to show it hasn't been altered</li><li>Location is kept only during sessions and alerts, and auto-deleted after 30 days</li><li>No ad or analytics SDKs. App Attest on dispatch</li></ul></div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="compare">
+  <div class="sec-head"><span class="eyebrow">Landscape</span><h2 id="compare">What Ward does that others don't.</h2></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>UNM Safe</th><th>Noonlight</th><th>bSafe</th><th>Apple built-in</th><th>Ward</th></tr></thead>
+    <tbody>
+      <tr><td>Manual SOS</td><td class="y">✓</td><td class="y">✓ hold</td><td class="y">✓</td><td class="y">✓ side button</td><td class="y">✓ Action Button, Lock Screen, Siri</td></tr>
+      <tr><td>Live location to a friend</td><td class="y">✓ Friend Walk</td><td class="n">–</td><td class="y">✓</td><td class="y">✓ Check In</td><td class="y">✓</td></tr>
+      <tr><td>Professional dispatch</td><td class="n">campus call</td><td class="y">✓</td><td class="n">–</td><td class="n">911 call</td><td class="y">✓ Noonlight API</td></tr>
+      <tr><td>Voice trigger</td><td class="n">–</td><td class="n">Alexa</td><td class="y">✓</td><td class="n">Siri</td><td class="y">✓ offline safe word</td></tr>
+      <tr class="diff"><td>Detects distress automatically</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">crash and fall only</td><td class="y">✓ on-device</td></tr>
+      <tr class="diff"><td>Alerts when the phone goes dark</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="y">✓ heartbeat</td></tr>
+      <tr class="diff"><td>Duress PIN</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="y">✓</td></tr>
+      <tr class="diff"><td>Date details revealed only in an alert</td><td class="n">–</td><td class="n">notes</td><td class="n">–</td><td class="n">–</td><td class="y">✓</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec" aria-labelledby="scope">
+  <div class="sec-head"><span class="eyebrow">Build scope</span><h2 id="scope">Due Nov 6: a working core, shown through a Figma prototype.</h2></div>
+  <div class="scope">
+    <div class="box"><span class="k" style="color:var(--calm)">Must ship · Nov 4–6</span><ul><li>Onboarding, Home, Guard, Check-in, Alert, Support</li><li>Real SoundAnalysis detection of screams and shouts, plus the safe word</li><li>Escalation with PIN and duress PIN</li><li>Contact text with a live link</li><li>Dispatch through the Noonlight sandbox, never live 911</li></ul></div>
+    <div class="box"><span class="k">Stretch</span><ul><li>Live Activity and Dynamic Island</li><li>Foundation Models second opinion</li><li>Date-mode sealed details</li><li>Server heartbeat monitor</li><li>Action Button App Intent</li></ul></div>
+    <div class="box"><span class="k">After the contest</span><ul><li>Apple Watch app</li><li>Critical Alerts entitlement</li><li>Partnership with UNMPD and LoboRESPECT</li><li>Student field testing</li><li>Android</li></ul></div>
+  </div>
+</section>
+
+<footer>Draft spec v0.1, Nov 4 2026. Full details are in <code>docs/SPEC.md</code>. Check local phone numbers, the text-to-911 status, and recording-consent law before they appear in the app or on slides.</footer>
+</main>
+
+<script>
+(function(){
+  var steps=[
+    {l:0,t:"11:38 pm",log:"<b>11:38 pm</b> Night Out started at a house party. Mic, motion, and location are on. Nothing is being saved.",
+     html:'<span class="app-sub">Night Out · Guarding</span><div class="big-ring"><div><b>0:00</b><span class="app-sub">elapsed</span></div></div><div class="row" style="flex-wrap:wrap;justify-content:flex-start;gap:6px"><span class="chip on">Mic</span><span class="chip on">Location</span><span class="chip on">Motion</span></div><div class="card"><div class="row"><span>Next check-in</span><b>12:10 am</b></div></div>'},
+    {l:0,t:"11:49 pm",log:"<b>11:49 pm</b> Loud music and laughing. The classifier hears \"shout\" a few times, but the risk score stays low. Party noise is expected.",
+     html:'<span class="app-sub">Night Out · Guarding</span><div class="big-ring"><div><b>0:11</b><span class="app-sub">elapsed</span></div></div><div class="card"><div class="row"><span>Risk</span><b style="color:var(--app-calm)">Low</b></div><span class="app-sub">shout ×3 · laughter · music</span></div>'},
+    {l:1,t:"11:51 pm",log:"<b>11:51 pm</b> A sound of impact, \"get off me,\" then the phone goes still. The score crosses the first threshold, so Ward sends a quiet check-in.",
+     html:'<span class="app-sub">Ward heard something</span><span class="app-h">You okay?</span><div class="big-ring ring-warn"><div><b>0:45</b><span class="app-sub">to respond</span></div></div><div class="btn">I\'m okay</div><div class="btn danger">I need help</div>'},
+    {l:2,t:"11:52 pm",log:"<b>11:52 pm</b> No answer. Maya and Mom get a text and an automated call with a live map. Encrypted audio and location start uploading.",
+     html:'<span class="app-sub" style="color:var(--app-warn)">Alert sent</span><span class="app-h">Help is being called</span><div class="big-ring ring-danger" style="width:120px;height:120px"><div><b style="font-size:24px">1:30</b><span class="app-sub">to dispatch</span></div></div><div class="card"><div class="row"><span>Maya</span><span class="app-sub">notified</span></div><div class="row"><span>Mom</span><span class="app-sub">notified</span></div></div>'},
+    {l:3,t:"11:54 pm",log:"<b>11:54 pm</b> No valid PIN after 90 seconds. The monitoring center calls, gets no answer, and sends police to the live location. Maya taps \"I'm on my way.\"",
+     html:'<span class="app-sub" style="color:var(--app-danger)">Dispatch active</span><span class="app-h">Help is on the way</span><div class="map"><i></i></div><div class="card"><div class="row"><span>Maya</span><b>6 min away</b></div><div class="row"><span>Police</span><span class="app-sub">dispatched</span></div></div>'}
+  ];
+  var i=0, phone=document.getElementById('simPhone'), log=document.getElementById('simLog'),
+      lv=document.querySelectorAll('#ladderList .lvl'), next=document.getElementById('simNext');
+  function render(){
+    var s=steps[i];
+    phone.innerHTML='<div class="status"><span>'+s.t.replace(' pm','')+'</span><span>● 61%</span></div><div class="scr">'+s.html+'</div>';
+    log.innerHTML=s.log;
+    lv.forEach(function(el){el.classList.toggle('active',+el.dataset.l===s.l)});
+    next.textContent=i===steps.length-1?'Start over':'Next';
+  }
+  next.addEventListener('click',function(){i=(i+1)%steps.length;render()});
+  document.getElementById('simReset').addEventListener('click',function(){i=0;render()});
+  render();
+})();
+</script>
+</body>
+</html>
