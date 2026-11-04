@@ -6,3 +6,11 @@ build/
 *.ipa
 *.dSYM.zip
 .env*
+node_modules/
+video/raw/
+video/out/
+*.sb-*
+presentation/build/
+.vercel/
+# Private correspondence stays local (contest site mirror is public and kept)
+reference/email/

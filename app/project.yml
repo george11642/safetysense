@@ -1,0 +1,133 @@
+name: SafetySense
+options:
+  bundleIdPrefix: com.georgeteifel
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    # George sets his team for device builds (iPhone 16e). Simulator builds sign ad hoc.
+    DEVELOPMENT_TEAM: ""
+    "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  SafetySense:
+    type: application
+    platform: iOS
+    sources:
+      - path: SafetySense
+      - path: Shared
+    info:
+      path: SafetySense/Info.plist
+      properties:
+        CFBundleDisplayName: SafetySense
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIUserInterfaceStyle: Dark
+        ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveActivities: true
+        NSSupportsLiveActivitiesFrequentUpdates: true
+        NSMicrophoneUsageDescription: "SafetySense listens only during a Guard session you start, so it can notice a scream or your safe word. Audio stays in a 30-second memory buffer and is never saved unless an alert starts."
+        NSSpeechRecognitionUsageDescription: "SafetySense recognizes your safe word and words like \"help\" or \"stop\" on your iPhone during a Guard session. Nothing you say is sent anywhere."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "If something goes wrong, your location lets your trusted contacts and responders find you, even if your phone is locked. SafetySense shares it only during a session or an alert."
+        NSLocationWhenInUseUsageDescription: "Your location lets your trusted contacts and responders find you if you need help."
+        NSMotionUsageDescription: "SafetySense notices a hard fall or a sudden impact during a Guard session so it can check on you."
+        NSContactsUsageDescription: "Pick the people you trust from your contacts. SafetySense only reads the ones you choose."
+        NSFaceIDUsageDescription: "Face ID keeps your evidence vault and session controls private to you."
+        UIBackgroundModes: [audio, location, fetch, processing]
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.georgeteifel.SafetySense.refresh
+          - com.georgeteifel.SafetySense.evidence-upload
+        SSBackendBaseURL: "https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api"
+        # Publishable (anon) key is not a secret; the System Integration module fills it in.
+        SSBackendPublishableKey: ""
+        SSShareBaseURL: ""
+    entitlements:
+      path: SafetySense/SafetySense.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.georgeteifel.SafetySense
+        com.apple.developer.usernotifications.time-sensitive: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.georgeteifel.SafetySense
+        PRODUCT_NAME: SafetySense
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIconDiscreet
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: YES
+    dependencies:
+      - target: SafetySenseWidgets
+        embed: true
+
+  SafetySenseWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: SafetySenseWidgets
+      - path: Shared
+    info:
+      path: SafetySenseWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: SafetySense
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: SafetySenseWidgets/SafetySenseWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.georgeteifel.SafetySense
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.georgeteifel.SafetySense.Widgets
+        PRODUCT_NAME: SafetySenseWidgets
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+
+  SafetySenseTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: SafetySenseTests
+    dependencies:
+      - target: SafetySense
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.georgeteifel.SafetySenseTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  SafetySense:
+    build:
+      targets:
+        SafetySense: all
+        SafetySenseWidgets: all
+    run:
+      config: Debug
+      commandLineArguments:
+        "-ssDemo 1": false
+        "-ssSkipOnboarding 1": false
+        "-ssScreen home": false
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - SafetySenseTests

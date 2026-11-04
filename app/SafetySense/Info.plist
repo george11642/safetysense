@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.georgeteifel.SafetySense.refresh</string>
+		<string>com.georgeteifel.SafetySense.evidence-upload</string>
+	</array>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>SafetySense</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSContactsUsageDescription</key>
+	<string>Pick the people you trust from your contacts. SafetySense only reads the ones you choose.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID keeps your evidence vault and session controls private to you.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>If something goes wrong, your location lets your trusted contacts and responders find you, even if your phone is locked. SafetySense shares it only during a session or an alert.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location lets your trusted contacts and responders find you if you need help.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SafetySense listens only during a Guard session you start, so it can notice a scream or your safe word. Audio stays in a 30-second memory buffer and is never saved unless an alert starts.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>SafetySense notices a hard fall or a sudden impact during a Guard session so it can check on you.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SafetySense recognizes your safe word and words like "help" or "stop" on your iPhone during a Guard session. Nothing you say is sent anywhere.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
+	<key>SSBackendBaseURL</key>
+	<string>https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api</string>
+	<key>SSBackendPublishableKey</key>
+	<string></string>
+	<key>SSShareBaseURL</key>
+	<string></string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>location</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
+</dict>
+</plist>

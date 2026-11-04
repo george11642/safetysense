@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>SafetySense Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#f4f3f8; --surface:#fff; --ink:#1b1a2b; --muted:#5b5d72; --line:#e0dfea;
+  --accent:#c4446a; --accent-soft:#f8e3ea; --calm:#1f7d6c; --calm-soft:#dff1ec;
+  --warn:#9a5d06; --warn-soft:#fbefd8; --danger:#bb3328; --danger-soft:#fbe3e0;
+  --display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --body:"Source Sans 3",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14131f; --surface:#211f31; --ink:#f1eff8; --muted:#a19fb6; --line:#2f2c44;
+    --accent:#ef7b9b; --accent-soft:#3a2131; --calm:#5cc7b2; --calm-soft:#163a34;
+    --warn:#f0b55a; --warn-soft:#3d2e17; --danger:#ef6a5c; --danger-soft:#40201d; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14131f; --surface:#211f31; --ink:#f1eff8; --muted:#a19fb6; --line:#2f2c44;
+  --accent:#ef7b9b; --accent-soft:#3a2131; --calm:#5cc7b2; --calm-soft:#163a34;
+  --warn:#f0b55a; --warn-soft:#3d2e17; --danger:#ef6a5c; --danger-soft:#40201d; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.5 var(--body);
+  padding:env(safe-area-inset-top,0) max(16px,env(safe-area-inset-right,0)) env(safe-area-inset-bottom,0) max(16px,env(safe-area-inset-left,0))}
+.wrap{max-width:560px;margin:0 auto;padding:16px 0 48px;display:flex;flex-direction:column;gap:14px}
+h1,h2{font-family:var(--display);margin:0;letter-spacing:-.01em}
+h1{font-size:30px;line-height:1.1}
+h2{font-size:17px}
+.brand{display:flex;align-items:center;justify-content:space-between;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.brand b{color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.pill{align-self:flex-start;font:600 12px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:7px 10px;border-radius:999px}
+.pill.active{background:var(--warn-soft);color:var(--warn)}
+.pill.dispatched{background:var(--danger-soft);color:var(--danger)}
+.pill.safe{background:var(--calm-soft);color:var(--calm)}
+.pill.test{background:var(--accent-soft);color:var(--accent)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+#map{height:280px;border-radius:14px;border:1px solid var(--line);z-index:0}
+.nomap{height:120px;border-radius:14px;border:1px dashed var(--line);display:grid;place-items:center;text-align:center;padding:12px;color:var(--muted);font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:var(--bg);border-radius:12px;padding:10px}
+.stat .k{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stat .v{font:700 18px var(--display);margin-top:2px;overflow-wrap:anywhere}
+.actions{display:flex;flex-direction:column;gap:10px}
+button,.btn{appearance:none;border:0;border-radius:14px;padding:15px 16px;font:600 17px var(--body);cursor:pointer;text-align:center;text-decoration:none;display:block;width:100%}
+.b-calm{background:var(--calm);color:#fff}
+.b-ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.b-danger{background:var(--danger);color:#fff}
+.b-911{background:var(--ink);color:var(--bg)}
+button:disabled{opacity:.55;cursor:default}
+button:focus-visible,.btn:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+label{font-weight:600;font-size:15px}
+input{width:100%;font:400 17px var(--body);padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.note{font-size:15px;border-left:3px solid var(--accent);padding-left:12px}
+.timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.timeline li{display:grid;grid-template-columns:62px 1fr;gap:10px;font-size:15px}
+.timeline time{font:500 12px var(--mono);color:var(--muted);padding-top:2px}
+.sealed{white-space:pre-wrap;background:var(--accent-soft);border-radius:12px;padding:12px;font-size:15px}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:12px;font-size:15px;max-width:calc(100% - 32px);display:none}
+.hidden{display:none !important}
+.leaflet-container{font:inherit}
+</style>
+</head>
+<body>
+<main class="wrap" aria-live="polite">
+  <div class="brand"><span><b>Safety</b>Sense · live link</span><span id="refresh">connecting…</span></div>
+
+  <section id="loading" class="card"><h1>Loading…</h1><p class="muted">Getting the latest location and status.</p></section>
+
+  <section id="error" class="card hidden">
+    <h1 id="err-title">This link isn't available</h1>
+    <p id="err-body" class="muted">It may have expired. If you think someone is in danger, call 911.</p>
+    <a class="btn b-911" href="tel:911">Call 911</a>
+  </section>
+
+  <div id="content" class="hidden" style="display:flex;flex-direction:column;gap:14px">
+    <section class="card">
+      <div class="pills"><span id="pill" class="pill active">Alert active</span><span id="test-pill" class="pill test hidden">Test alert</span></div>
+      <h1 id="headline">Someone may need help</h1>
+      <p id="reason" class="muted"></p>
+      <p id="dispatch" class="small hidden"></p>
+    </section>
+
+    <section class="card" id="map-card">
+      <div id="map" role="img" aria-label="Map of their last known location"></div>
+      <div id="nomap" class="nomap hidden">No location has been shared yet. This page refreshes every 5 seconds.</div>
+      <div class="stats">
+        <div class="stat"><div class="k">Updated</div><div class="v" id="age">–</div></div>
+        <div class="stat"><div class="k">Battery</div><div class="v" id="battery">–</div></div>
+        <div class="stat"><div class="k">Accuracy</div><div class="v" id="acc">–</div></div>
+      </div>
+      <a id="directions" class="btn b-ghost hidden" target="_blank" rel="noopener">Open in Maps for directions</a>
+    </section>
+
+    <section class="card" id="act-card">
+      <h2>What you can do</h2>
+      <div id="name-row">
+        <label for="rname">Your name (so they know who's coming)</label>
+        <input id="rname" autocomplete="given-name" maxlength="40" placeholder="e.g. Maya">
+      </div>
+      <div class="actions">
+        <button class="b-calm" data-action="on_my_way">I'm on my way</button>
+        <button class="b-ghost" data-action="called_911">I called 911</button>
+        <button class="b-danger" data-action="send_help">Send help now</button>
+      </div>
+      <p class="note">If you believe they're in immediate danger, <a href="tel:911">call 911</a> first. SafetySense helps people reach help faster; it doesn't replace 911. "Send help now" asks SafetySense's dispatch service to respond to their location.</p>
+    </section>
+
+    <section class="card hidden" id="sealed-card">
+      <h2>Details they asked us to share if an alert fired</h2>
+      <div id="sealed" class="sealed"></div>
+    </section>
+
+    <section class="card">
+      <h2>What's happened</h2>
+      <ol class="timeline" id="timeline"></ol>
+    </section>
+
+    <p class="small muted" style="text-align:center">You're seeing this because they added you as a trusted contact in SafetySense. This link stops working after the alert ends.</p>
+  </div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(() => {
+  const API = "https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api/";
+  const KEY = "sb_publishable__JyRQ8x_BXI2FWlRsgUULA__5tdSYuh";
+  const token = (location.pathname.match(/\/a\/([A-Za-z0-9_-]{24,64})/) || [])[1]
+             || new URLSearchParams(location.search).get("t");
+  const $ = (id) => document.getElementById(id);
+  let map = null, marker = null, circle = null, last = null, firstName = "they";
+
+  function call(route, body) {
+    return fetch(API + route, {
+      method: "POST",
+      headers: { "content-type": "application/json", apikey: KEY },
+      body: JSON.stringify(body),
+    }).then(async (r) => {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { const e = new Error(j.error || "Request failed"); e.status = r.status; throw e; }
+      return j;
+    });
+  }
+
+  function ago(iso) {
+    const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+    if (s < 60) return s + "s ago";
+    if (s < 3600) return Math.round(s / 60) + " min ago";
+    return Math.round(s / 3600) + " h ago";
+  }
+  function clock(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.style.display = "block";
+    clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.display = "none"), 3500);
+  }
+  function showError(title, body) {
+    $("loading").classList.add("hidden"); $("content").classList.add("hidden");
+    $("err-title").textContent = title; $("err-body").textContent = body;
+    $("error").classList.remove("hidden");
+  }
+
+  const LABELS = {
+    alert_started: "Alert started", text_sent: "Text sent", call_placed: "Call placed", call_status: "Call update",
+    on_my_way: "On the way", called_911: "Called 911", send_help: "Asked for help", dispatch_requested: "Dispatch requested",
+    marked_safe: "Marked safe", no_contacts: "No contacts",
+  };
+
+  function render(d) {
+    last = d; firstName = d.first_name || "they";
+    $("loading").classList.add("hidden"); $("error").classList.add("hidden");
+    $("content").classList.remove("hidden");
+    document.title = `${d.first_name} · SafetySense Live`;
+
+    const ended = d.status === "cancelled" || d.status === "resolved";
+    const pill = $("pill");
+    if (ended) { pill.className = "pill safe"; pill.textContent = "Marked safe"; }
+    else if (d.status === "dispatched") { pill.className = "pill dispatched"; pill.textContent = "Help requested"; }
+    else { pill.className = "pill active"; pill.textContent = "Alert active"; }
+    $("test-pill").classList.toggle("hidden", !d.dry_run);
+
+    $("headline").textContent = ended ? `${d.first_name} marked themselves safe` : `${d.first_name} may need help`;
+    $("reason").textContent = ended
+      ? "They cancelled this alert with their Safety PIN. No action is needed, but it's okay to check in with them."
+      : `${d.reason} · started ${clock(d.started_at)} (${ago(d.started_at)})`;
+
+    const disp = $("dispatch");
+    if (d.dispatch && !ended) {
+      disp.classList.remove("hidden");
+      disp.textContent = d.dispatch.provider === "simulated"
+        ? "Emergency dispatch was requested. This is a demo build, so dispatch is simulated and no responders were sent. Call 911 if this is real."
+        : "Professional monitoring (Noonlight) has been asked to send help to their location.";
+    } else disp.classList.add("hidden");
+
+    $("act-card").classList.toggle("hidden", ended);
+    $("map-card").classList.toggle("hidden", ended);
+
+    const loc = d.location;
+    if (loc && window.L && !ended) {
+      $("nomap").classList.add("hidden"); $("map").classList.remove("hidden");
+      const ll = [loc.lat, loc.lng];
+      if (!map) {
+        map = L.map("map", { zoomControl: true, attributionControl: true }).setView(ll, 16);
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        }).addTo(map);
+        marker = L.circleMarker(ll, { radius: 9, color: "#fff", weight: 3, fillColor: "#c4446a", fillOpacity: 1 }).addTo(map);
+        circle = L.circle(ll, { radius: loc.accuracy || 30, color: "#c4446a", weight: 1, fillOpacity: 0.12 }).addTo(map);
+      } else {
+        marker.setLatLng(ll); circle.setLatLng(ll); circle.setRadius(loc.accuracy || 30);
+        if (!map.getBounds().pad(-0.2).contains(ll)) map.panTo(ll);
+      }
+      $("age").textContent = ago(loc.at);
+      $("acc").textContent = loc.accuracy != null ? "±" + Math.round(loc.accuracy) + " m" : "–";
+      const dir = $("directions");
+      dir.href = `https://maps.apple.com/?daddr=${loc.lat},${loc.lng}`;
+      dir.classList.remove("hidden");
+    } else if (!ended) {
+      $("map").classList.add("hidden"); $("nomap").classList.remove("hidden");
+      $("age").textContent = "–"; $("acc").textContent = "–";
+    }
+    $("battery").textContent = d.battery != null ? Math.round(d.battery * 100) + "%" : "–";
+
+    const sc = $("sealed-card");
+    if (d.sealed_details && !ended) { sc.classList.remove("hidden"); $("sealed").textContent = d.sealed_details; }
+    else sc.classList.add("hidden");
+
+    const tl = $("timeline"); tl.textContent = "";
+    for (const e of d.events || []) {
+      const li = document.createElement("li");
+      const t = document.createElement("time"); t.dateTime = e.at; t.textContent = clock(e.at);
+      const p = document.createElement("div");
+      const b = document.createElement("strong"); b.textContent = (LABELS[e.action] || e.action.replace(/_/g, " ")) + " ";
+      const s = document.createElement("span"); s.className = "muted"; s.textContent = (e.detail || e.who).replace(/: dry_run$/, ": test only, not sent");
+      p.append(b, s); li.append(t, p); tl.append(li);
+    }
+  }
+
+  let failures = 0;
+  async function refresh() {
+    if (!token) return showError("This link looks incomplete", "Check that you opened the full link from the text message. If you think someone is in danger, call 911.");
+    try {
+      render(await call("share/get", { token }));
+      failures = 0; $("refresh").textContent = "updated " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+    } catch (e) {
+      if (e.status === 404) return showError("This link isn't available", "The link may be mistyped. If you think someone is in danger, call 911.");
+      if (e.status === 410) return showError("This alert has ended", "The live link expired after the alert ended. If you're still worried, call or text them, or call 911.");
+      failures++; $("refresh").textContent = "reconnecting…";
+      if (!last && failures > 2) showError("Can't reach SafetySense", "Check your connection. If you think someone is in danger, call 911.");
+    }
+  }
+
+  try { $("rname").value = localStorage.getItem("ss_responder") || ""; } catch {}
+
+  document.querySelectorAll("[data-action]").forEach((btn) => btn.addEventListener("click", async () => {
+    const action = btn.dataset.action;
+    let name = $("rname").value.trim();
+    if (!name) { $("rname").focus(); toast("Add your name first so they know who's responding."); return; }
+    try { localStorage.setItem("ss_responder", name); } catch {}
+    if (action === "send_help" && !confirm(`Ask SafetySense to send emergency help to ${firstName}'s location now?`)) return;
+    btn.disabled = true;
+    try {
+      await call("share/action", { token, action, responder_name: name });
+      toast(action === "on_my_way" ? `We told ${firstName} you're on your way.` :
+            action === "called_911" ? "Thank you. We've noted that you called 911." :
+            "Help has been requested. Stay on the line with 911 if you've called.");
+      refresh();
+    } catch (e) {
+      toast(e.message === "this alert has ended" ? "This alert has already ended." : "That didn't go through. Try again, or call 911.");
+    } finally { setTimeout(() => (btn.disabled = false), 2500); }
+  }));
+
+  refresh();
+  setInterval(refresh, 5000);
+  setInterval(() => { if (last && last.location) $("age").textContent = ago(last.location.at); }, 1000);
+})();
+</script>
+</body>
+</html>
