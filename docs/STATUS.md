@@ -17,7 +17,7 @@ Last checked 2026-11-04 by the final verification pass (build, all tests, simula
 
 6. **Re-check NM text-to-911** once in a browser on the FCC Text-to-911 registry (it blocks automated fetches). The docs say "still listed as the only US state".
 7. **Real-device run on the iPhone 16e**: set `DEVELOPMENT_TEAM` in `app/project.yml`, run `xcodegen generate`, install from Xcode. Test the microphone, SpeechAnalyzer, Face ID, the Action Button and Siri, and the **fake call** end to end (ring after a delay, Lock Screen Answer/Decline, ringtone on silent, the spoken script, ringtone while a Guard session is listening). `presentation/IPHONE_DEMO_SCRIPT.md` has the shot list. When the trial call rings, press a key to get past Twilio's trial message.
-8. **Deck placeholders** (slide 2 year/major, in amber) before the Nov 16 noon deadline if you're a finalist.
+8. ~~Deck placeholders~~ Done: slide 2 year/major filled.
 
 **Later / optional:**
 
