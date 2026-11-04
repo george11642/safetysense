@@ -10,7 +10,7 @@
 4. `04-technical-aspects/SafetySense-Technical.pdf`
 5. `05-security/SafetySense-Security.pdf`
 
-Before sending: fill every `[FILL IN]` (here and in the team bio PDF, then re-render with `submission/_assets/render.sh`), and remove the extra-credit line if it doesn't apply. The Figma prototype is already public (verified signed-out on 2026-11-04), so the link below works as is.
+Everything is filled in (no extra credit claimed). The Figma prototype is already public (verified signed-out on 2026-11-04), so the link below works as is.
 
 ---
 
@@ -22,7 +22,7 @@ Please find our technical submission for the 2026 UNM & CNM App Contest.
 
 **Team:**
 - George Teifel, University of New Mexico, gteifel@unm.edu (lead developer, iOS and backend)
-- Mary Teifel, Central New Mexico Community College, [FILL IN: Mary's email] (research, UX and content)
+- Mary Teifel, Central New Mexico Community College, mteifel@student.cnm.edu (research, UX and content)
 
 **Summary:**
 SafetySense is an iPhone safety app for UNM and CNM students that gets help to them when they can't reach their phone. During a Guard session (a night out, a walk home, a first date or a ride), it listens for signs of danger such as screaming, a spoken safe word, a fall followed by stillness, or missed check-ins. All of this processing happens on the phone, and nothing is recorded unless something is wrong. If the student doesn't respond, SafetySense calls their trusted contacts with a live-location link and then hands off to professional dispatch. If the phone is smashed or switched off mid-session, the server raises the alert by itself. A duress PIN looks like cancelling but silently sends help. SafetySense supplements 911; it never replaces it. Our high-fidelity prototype is backed by a working iOS 26 build and a live backend.
@@ -35,8 +35,6 @@ SafetySense is an iPhone safety app for UNM and CNM students that gets help to t
 3. Purpose, audience, functions and pathway to satisfaction: SafetySense-Purpose-Audience-Functions.pdf
 4. Proposed technical aspects and architecture diagram: SafetySense-Technical.pdf
 5. Security and privacy: SafetySense-Security.pdf
-
-[FILL IN, or delete this line: Extra credit: we attended the Sep 17 kickoff and/or the Oct 8 / Oct 20 mentoring session.]
 
 Thank you,
 George Teifel and Mary Teifel
