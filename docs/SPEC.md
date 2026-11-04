@@ -1,30 +1,30 @@
-# Ward: product spec (v0.1 draft)
+# SafetySense: product spec (v0.1 draft)
 
-> Working name **Ward** (to keep someone in your ward is to watch over them). Alternatives: Vigil, Kin, Nearby. Pick one by Nov 5 because it goes in the submission subject line.
+> Name: **SafetySense** (chosen 2026-11-04). App Store subtitle: "Calls for help when you can't." There's no exact match in a US App Store search on Nov 4; do a trademark check before launch. Previous working name: Ward.
 > Draft dated 2026-11-04. Research sources are listed at the end. Anything marked **(verify)** must be checked before it ships or appears on a slide.
 
 ## 1. The idea in one line
 
-**Ward is a safety app that gets help for you when you can't get it yourself.** During a "Guard" session (a night out, a walk home, a first date), Ward listens and watches *on your phone only* for signs of danger. If you go quiet, can't respond, or your phone is taken, it brings in your people and then professional dispatch, with no tap from you.
+**SafetySense is a safety app that gets help for you when you can't get it yourself.** During a "Guard" session (a night out, a walk home, a first date), SafetySense listens and watches *on your phone only* for signs of danger. If you go quiet, can't respond, or your phone is taken, it brings in your people and then professional dispatch, with no tap from you.
 
 ## 2. Why this has to be proactive
 
 Every app below assumes the person can reach a button. In a real assault that assumption often fails:
 - **Freezing is a normal response.** Many survivors describe being unable to move or speak during an assault. This is called tonic immobility (verify a citable source before using it on a slide). A panic button does nothing for someone who has frozen.
 - **Drugging takes away the ability to act.** Someone who has been drugged may not recognize the danger or be able to unlock their phone.
-- **The phone gets taken or thrown.** Every competitor treats a silent phone as "all clear." Ward treats it as a warning sign.
-- **New Mexico still has no text-to-911.** As of 2026, sources list it as the only US state without it (verify against the FCC registry). If you can't speak out loud, you can't silently reach 911 here. Ward's data-only path to dispatch fills that local gap.
+- **The phone gets taken or thrown.** Every competitor treats a silent phone as "all clear." SafetySense treats it as a warning sign.
+- **New Mexico still has no text-to-911.** As of 2026, sources list it as the only US state without it (verify against the FCC registry). If you can't speak out loud, you can't silently reach 911 here. SafetySense's data-only path to dispatch fills that local gap.
 
 ## 3. What changed from the original idea (pushback)
 
 | Original idea | Change | Reason |
 |---|---|---|
-| AI listens all the time | **Guard sessions**: you turn listening on for a night, a walk, or a date. Ward *suggests* turning it on when the context fits (Friday 10 pm near a bar), but you tap to start. | iOS doesn't let an app start the mic from the background. Listening costs about 5–15% battery per hour. App Review rejects round-the-clock recording. And users are far more likely to trust a session with a clear start and end. |
+| AI listens all the time | **Guard sessions**: you turn listening on for a night, a walk, or a date. SafetySense *suggests* turning it on when the context fits (Friday 10 pm near a bar), but you tap to start. | iOS doesn't let an app start the mic from the background. Listening costs about 5–15% battery per hour. App Review rejects round-the-clock recording. And users are far more likely to trust a session with a clear start and end. |
 | "Doesn't save convos unless it's dangerous" | **Kept and strengthened.** Audio sits in a 30-second rolling buffer in memory only, never written to storage. Only when the risk level reaches **Alert** are those 30 seconds and the live audio after them encrypted and saved as evidence. | Privacy is worth 25 points, and one judge is a data privacy specialist. |
 | AI calls the police | **The AI raises the alert level; it doesn't dial 911 alone.** The steps are: check in with you → alert trusted contacts → professional monitoring → police (through the Noonlight API, which calls you first and then sends police). | iOS can't place a call or send a text without a tap. A false 911 dispatch hurts the user and the police, so professional dispatch is the safe way to automate it. |
 | Press the side button | **Action Button, Lock Screen control, Siri phrase, a safe word you say out loud, and an Apple Watch button.** | Apple doesn't let apps use the side or volume buttons. The Action Button (iPhone 15 Pro and later) and Lock Screen controls are the official equivalents. |
-| Detect if someone's been drugged | **Detect being unable to respond, not the drug.** Ward watches for missed check-ins, unsteady or stopped movement, a sudden fall, and leaving where you said you'd be. It also prompts drink checks during Night Out. | No phone can detect a drug. Promising that would be dishonest and could get someone hurt. |
-| Copy every feature of Lobo Guardian and the others | **Include the expected features (SOS, location sharing, check-in timer, fake call, campus resources) but put the effort into what they lack.** Ward doesn't rebuild UNM Safe's tip reporting or bus tracking; it links to UNM Safe. | Judges score originality. Doing the basics well and the proactive part better beats copying everything. |
+| Detect if someone's been drugged | **Detect being unable to respond, not the drug.** SafetySense watches for missed check-ins, unsteady or stopped movement, a sudden fall, and leaving where you said you'd be. It also prompts drink checks during Night Out. | No phone can detect a drug. Promising that would be dishonest and could get someone hurt. |
+| Copy every feature of Lobo Guardian and the others | **Include the expected features (SOS, location sharing, check-in timer, fake call, campus resources) but put the effort into what they lack.** SafetySense doesn't rebuild UNM Safe's tip reporting or bus tracking; it links to UNM Safe. | Judges score originality. Doing the basics well and the proactive part better beats copying everything. |
 
 ## 4. Who it's for
 
@@ -42,7 +42,7 @@ Every app below assumes the person can reach a button. In a real assault that as
 | **Date** | A first date from an app | Night Out, plus **sealed date details**: their name, photo, profile link and the place, kept encrypted and shown to your contact *only if* an alert fires | Full escalation ladder, plus a scheduled check-in |
 | **Ride** | Uber, Lyft, someone else driving | Log the plate and driver. Alert on route deviation or a stop longer than 3 min in an unexpected place | Check-in, then contacts |
 
-## 6. How Ward decides it's dangerous
+## 6. How SafetySense decides it's dangerous
 
 ### 6.1 Signals (all processed on the phone)
 1. **Audio events.** Apple's SoundAnalysis classifier (built-in model, about 300 labels) listens for `screaming`, `shout`, `yell`, `crying_sobbing`, `gasp`, `slap_smack`, `thump_thud`, `glass_breaking`, `door_slam`, `gunshot_gunfire`.
@@ -50,7 +50,7 @@ Every app below assumes the person can reach a button. In a real assault that as
 3. **Motion.** CoreMotion picks up an impact or fall (a spike followed by stillness), erratic movement followed by long stillness, or the phone dropping.
 4. **Location.** You've left where you said you'd be, you're somewhere unknown late at night, or you're moving at vehicle speed off the planned route.
 5. **Responsiveness.** Missed check-ins, and ignored "You okay?" prompts.
-6. **Heartbeat (server side).** During a session the phone checks in with Ward's server every 60 s. If those check-ins stop with no clean "End session" (the phone was powered off, smashed, or put in airplane mode), **the server raises the alert by itself** using the last known location. This is the feature competitors don't have.
+6. **Heartbeat (server side).** During a session the phone checks in with SafetySense's server every 60 s. If those check-ins stop with no clean "End session" (the phone was powered off, smashed, or put in airplane mode), **the server raises the alert by itself** using the last known location. This is the feature competitors don't have.
 7. **Apple Watch (stretch goal).** A heart-rate spike and the Watch SOS button.
 
 ### 6.2 Risk engine
@@ -77,7 +77,7 @@ Every app below assumes the person can reach a button. In a real assault that as
 1. **Action Button** (iPhone 15 Pro and later): press and hold to start the alert ladder. An App Intent handles it without opening the app.
 2. **Lock Screen and Control Center control:** one tap without unlocking.
 3. **Safe word**, spoken during a Guard session.
-4. **Siri:** "Hey Siri, Ward alert."
+4. **Siri:** "Hey Siri, SafetySense alert."
 5. **Hold-to-release SOS button** in the app, like Noonlight: let go and if you don't enter your PIN, it escalates.
 6. **Apple Watch** complication (stretch goal).
 7. **Fake call**, to get out of a situation without saying why.
@@ -86,13 +86,13 @@ Every app below assumes the person can reach a button. In a real assault that as
 
 Copy is calm, plain and never blames the user. Each permission is asked only when it's needed, with a reason given.
 
-1. **Welcome.** "Ward gets help to you when you can't reach your phone." Small print: *Ward is not a replacement for 911.*
+1. **Welcome.** "SafetySense gets help to you when you can't reach your phone." Small print: *SafetySense is not a replacement for 911.*
 2. **Three promises** (cards you swipe through):
-   - Ward only listens when you turn it on.
+   - SafetySense only listens when you turn it on.
    - Nothing is saved unless something's wrong.
    - Help comes even if you can't tap.
 3. **Your campus:** UNM / CNM / Other. This loads the campus police number, an advocacy center and a nearby SANE unit.
-4. **Trusted contacts** (1–5, from Contacts). Each contact gets a text explaining what Ward is and what to do if they're alerted.
+4. **Trusted contacts** (1–5, from Contacts). Each contact gets a text explaining what SafetySense is and what to do if they're alerted.
 5. **Your triggers:**
    - Set up the Action Button (step-by-step with animation).
    - Add the Lock Screen control.
@@ -120,7 +120,7 @@ Copy is calm, plain and never blames the user. Each permission is asked only whe
 
 ## 10. Feature comparison
 
-| Feature | UNM Safe | Noonlight | bSafe | Apple built-in | **Ward** |
+| Feature | UNM Safe | Noonlight | bSafe | Apple built-in | **SafetySense** |
 |---|---|---|---|---|---|
 | Manual SOS | ✓ | ✓ (hold) | ✓ | ✓ side button | ✓ Action Button, Lock Screen, Siri |
 | Live location to a friend | ✓ Friend Walk | – | ✓ | ✓ Check In | ✓ |
@@ -169,7 +169,7 @@ Copy is calm, plain and never blames the user. Each permission is asked only whe
   - **Twilio** sends texts and voice calls to contacts.
   - **Noonlight Dispatch API** (sandbox for the demo) handles professional monitoring and 911 dispatch.
   - The contact live link is a small web page reading a token-scoped, expiring location feed.
-- **Diagram:** see the visual explainer (`docs/ward-spec.html`). The final diagram goes into `design/`.
+- **Diagram:** see the visual explainer (`docs/safetysense-spec.html`). The final diagram goes into `design/`.
 
 ## 13. Scope for the deadline
 
@@ -193,11 +193,11 @@ Copy is calm, plain and never blames the user. Each permission is asked only whe
 - **Validation:** test with UNM and CNM students (survey plus a usability test of the drill), review copy with LoboRESPECT advocates, and test detection against recorded scenarios.
 - **Rollout:** a TestFlight pilot with a student organization, then a campus partnership (orientation, the Women's Resource Center).
 
-## 15. Open questions for George and Mary
-1. Name: Ward, or something else?
-2. Default escalation: should level 3 (police) happen automatically, or only after a contact taps "Send help"? I recommend contacts first for Night Out and straight to dispatch for manual SOS.
-3. Is a Twilio trial and a Noonlight sandbox account okay to sign up for? Both are free, and George creates the accounts.
-4. Which iPhone will record the demo, and does it have an Action Button?
+## 15. Decisions (2026-11-04)
+1. Name: **SafetySense**.
+2. Who gets alerted first is **configurable**. By default, Night Out alerts contacts first (dispatch happens if a contact taps "Send help" or after a 90 s timeout), and a manual SOS goes straight to dispatch. Both can be changed in Settings.
+3. Twilio trial and Noonlight sandbox: **approved**. George creates the accounts; the agent doesn't sign up for anything.
+4. Demo device: **George's iPhone 16e**, which has the Action Button and Apple Intelligence, so the Action Button trigger and the Foundation Models second opinion can both be shown live.
 
 ## Sources
 - iOS feasibility (Apple docs): background audio interruptions, SoundAnalysis `knownClassifications`, `SpeechAnalyzer`, Foundation Models availability and background rate limits, `ControlWidget`, `CLServiceSession`, `CMFallDetectionManager`, App Review 2.5.4 / 2.5.14 / 5.1.

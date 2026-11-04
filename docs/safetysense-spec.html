@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ward Safety App</title>
+<title>SafetySense</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -185,11 +185,11 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 <header class="hero">
   <div class="hero-copy">
     <span class="eyebrow">UNM / CNM App Contest 2026 · George &amp; Mary Teifel · spec v0.1</span>
-    <h1>Ward<span>.</span></h1>
+    <h1>SafetySense<span>.</span></h1>
     <p class="lede">Help that comes to you when you can't reach your phone.</p>
-    <p class="muted" style="max-width:56ch">During a Guard session, Ward listens and watches on your phone only. If you go quiet, can't answer, or lose your phone, it brings in your people and then professional dispatch, with no tap from you.</p>
+    <p class="muted" style="max-width:56ch">During a Guard session, SafetySense listens and watches on your phone only. If you go quiet, can't answer, or lose your phone, it brings in your people and then professional dispatch, with no tap from you.</p>
     <div class="pills"><span class="pill">iOS 26 · SwiftUI</span><span class="pill">On-device AI</span><span class="pill">Nothing saved unless it's an emergency</span></div>
-    <p class="note">Ward supplements 911 and doesn't replace it. Working name, still open to change.</p>
+    <p class="note">SafetySense supplements 911 and doesn't replace it. Working name.</p>
   </div>
   <div class="phone" aria-label="Guard active screen">
     <div class="status"><span>11:38</span><span>● 62%</span></div>
@@ -210,17 +210,17 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <div class="facts">
     <div class="fact"><b>People freeze</b><p>Being unable to move or speak (tonic immobility) is a common response during an assault. A panic button doesn't help someone who has frozen.</p></div>
     <div class="fact"><b>Drugs remove the choice</b><p>Someone who's been drugged may not recognize danger or be able to unlock a phone.</p></div>
-    <div class="fact"><b>Phones get taken</b><p>Other apps read a phone going silent as "all clear." Ward reads it as a warning sign.</p></div>
-    <div class="fact"><b>NM has no text-to-911</b><p>If you can't speak out loud, there's no silent way to reach 911 here. Ward's data-only path to dispatch fills that gap.</p></div>
+    <div class="fact"><b>Phones get taken</b><p>Other apps read a phone going silent as "all clear." SafetySense reads it as a warning sign.</p></div>
+    <div class="fact"><b>NM has no text-to-911</b><p>If you can't speak out loud, there's no silent way to reach 911 here. SafetySense's data-only path to dispatch fills that gap.</p></div>
   </div>
 </section>
 
 <section class="sec" aria-labelledby="how">
   <div class="sec-head"><span class="eyebrow">How it works</span><h2 id="how">Turn it on. It watches. It decides. Help comes.</h2></div>
   <div class="flow">
-    <div class="step"><span class="n">1 · ARM</span><h3>Start a Guard session</h3><p>Tap, use the Action Button, or accept Ward's suggestion when you arrive at a bar on a Friday night.</p></div>
-    <div class="step"><span class="n">2 · WATCH</span><h3>On-device sensing</h3><p>Ward checks sound, words, motion, and location. Audio stays in a 30-second memory buffer that's never written to storage.</p></div>
-    <div class="step"><span class="n">3 · DECIDE</span><h3>Risk engine</h3><p>Rules you can explain make the decision, and the on-device AI gives a second opinion. Ward checks in with you before raising the alert.</p></div>
+    <div class="step"><span class="n">1 · ARM</span><h3>Start a Guard session</h3><p>Tap, use the Action Button, or accept SafetySense's suggestion when you arrive at a bar on a Friday night.</p></div>
+    <div class="step"><span class="n">2 · WATCH</span><h3>On-device sensing</h3><p>SafetySense checks sound, words, motion, and location. Audio stays in a 30-second memory buffer that's never written to storage.</p></div>
+    <div class="step"><span class="n">3 · DECIDE</span><h3>Risk engine</h3><p>Rules you can explain make the decision, and the on-device AI gives a second opinion. SafetySense checks in with you before raising the alert.</p></div>
     <div class="step"><span class="n">4 · RESPOND</span><h3>People, then dispatch</h3><p>Your contacts get a live-location link. If nobody can confirm you're safe, professional monitoring sends police.</p></div>
   </div>
 </section>
@@ -253,14 +253,14 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 </section>
 
 <section class="sec" aria-labelledby="ladder">
-  <div class="sec-head"><span class="eyebrow">Escalation ladder</span><h2 id="ladder">Ward checks in with you before it brings in anyone else.</h2><p class="muted">Step through a sample Night Out to see what Ward does at each level.</p></div>
+  <div class="sec-head"><span class="eyebrow">Escalation ladder</span><h2 id="ladder">SafetySense checks in with you before it brings in anyone else.</h2><p class="muted">Step through a sample Night Out to see what SafetySense does at each level.</p></div>
   <div class="ladder-wrap">
     <div class="ladder" id="ladderList">
       <div class="lvl active" data-l="0"><div class="badge">0<small>Guarding</small></div><div><h3>Listening, nothing saved</h3><p>A 30-second rolling buffer in memory. The Live Activity shows the session is running.</p><span class="stop">stop: end session (Face ID)</span></div></div>
       <div class="lvl" data-l="1"><div class="badge">1<small>Check-in</small></div><div><h3>"You okay?"</h3><p>A quiet haptic and a 45-second ring. Triggered by the risk score or a scheduled check-in.</p><span class="stop">stop: tap "I'm okay"</span></div></div>
       <div class="lvl" data-l="2"><div class="badge">2<small>Alert</small></div><div><h3>Your people are notified</h3><p>A text and automated call with a live map. Evidence is encrypted and uploaded while it records. Also triggered by the safe word, the Action Button, or a lost heartbeat.</p><span class="stop">stop: safety PIN</span></div></div>
       <div class="lvl" data-l="3"><div class="badge">3<small>Dispatch</small></div><div><h3>Professional help is sent</h3><p>After 90 seconds with no valid cancel, or when a contact taps "Send help." The monitoring center calls you, then sends police to your live location.</p><span class="stop">stop: PIN plus the dispatcher's call</span></div></div>
-      <p class="duress"><b>Duress PIN.</b> If someone forces you to cancel, enter your duress PIN. Ward shows "Cancelled" on screen and goes straight to Dispatch.</p>
+      <p class="duress"><b>Duress PIN.</b> If someone forces you to cancel, enter your duress PIN. SafetySense shows "Cancelled" on screen and goes straight to Dispatch.</p>
     </div>
     <div class="sim">
       <div class="phone" id="simPhone" aria-live="polite"></div>
@@ -275,7 +275,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <div class="strip">
     <figure class="shot"><div class="phone"><div class="status"><span>9:41</span><span>●</span></div><div class="scr">
       <span class="app-sub">Welcome · 2 of 9</span><span class="app-h">Three promises</span>
-      <div class="card"><b>Ward only listens when you turn it on.</b><span class="app-sub">You start a Guard session. You'll always see when it's on.</span></div>
+      <div class="card"><b>SafetySense only listens when you turn it on.</b><span class="app-sub">You start a Guard session. You'll always see when it's on.</span></div>
       <div class="card"><b>Nothing is saved unless something's wrong.</b><span class="app-sub">Audio stays in a 30-second memory buffer on your phone.</span></div>
       <div class="card"><b>Help comes even if you can't tap.</b><span class="app-sub">Missed check-ins and a phone going dark still alert your people.</span></div>
       <div style="flex:1"></div><div class="btn">Continue</div></div></div><figcaption>ONBOARDING · PROMISES</figcaption></figure>
@@ -288,7 +288,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
       <div class="card"><div class="row"><span>UNM Police</span><span class="app-sub">505-277-2241</span></div></div></div></div><figcaption>HOME</figcaption></figure>
 
     <figure class="shot"><div class="phone"><div class="status"><span>11:51</span><span>●</span></div><div class="scr">
-      <span class="app-sub">Ward heard shouting nearby</span><span class="app-h">You okay?</span>
+      <span class="app-sub">SafetySense heard shouting nearby</span><span class="app-h">You okay?</span>
       <div class="big-ring ring-warn"><div><b>0:31</b><span class="app-sub">to respond</span></div></div>
       <div class="btn">I'm okay</div><div class="btn danger">I need help</div>
       <span class="app-sub" style="text-align:center">If you don't answer, Maya and Mom will be alerted.</span></div></div><figcaption>CHECK-IN · LEVEL 1</figcaption></figure>
@@ -306,8 +306,8 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
       <div class="row" style="justify-content:flex-start;gap:6px"><span class="chip on">Evidence encrypted · 2:41</span></div>
       <div style="flex:1"></div><div class="btn ghost">I'm safe now</div></div></div><figcaption>ALERT ACTIVE · LEVEL 3</figcaption></figure>
 
-    <figure class="shot"><div class="phone web"><div class="status"><span style="color:#5b5d72">ward.link/a/8f2…</span><span></span></div><div class="scr">
-      <span class="app-sub">Shared by Ward · expires in 24 hours</span><span class="app-h">Mary needs help</span>
+    <figure class="shot"><div class="phone web"><div class="status"><span style="color:#5b5d72">safetysense.link/a/8f2…</span><span></span></div><div class="scr">
+      <span class="app-sub">Shared by SafetySense · expires in 24 hours</span><span class="app-h">Mary needs help</span>
       <div class="map" style="background:linear-gradient(115deg,transparent 46%,#d6d4e2 46% 49%,transparent 49%),#ebeaf2"><i></i></div>
       <div class="card"><div class="row"><span>Last update</span><b>8 sec ago</b></div><div class="row"><span>Battery</span><b>58%</b></div><div class="row"><span>Near</span><b>Central &amp; Cornell</b></div></div>
       <div class="btn" style="background:#1f7d6c;color:#fff">I'm on my way</div><div class="btn danger">Send help now</div></div></div><figcaption>CONTACT'S LIVE LINK · NO APP NEEDED</figcaption></figure>
@@ -325,22 +325,22 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <div class="sec-head"><span class="eyebrow">Modes</span><h2 id="modes">Each situation gets its own level of protection.</h2></div>
   <div class="grid3">
     <div class="box"><span class="k">Everyday</span><h3>Always on, no mic</h3><p>SOS triggers, trusted contacts, medical info, and campus resources.</p></div>
-    <div class="box"><span class="k">Walk Home</span><h3>Live escort</h3><p>One contact follows you live. Ward alerts them if you leave your route, stop too long, or don't arrive.</p></div>
+    <div class="box"><span class="k">Walk Home</span><h3>Live escort</h3><p>One contact follows you live. SafetySense alerts them if you leave your route, stop too long, or don't arrive.</p></div>
     <div class="box"><span class="k">Night Out</span><h3>Full Guard</h3><p>On-device audio AI, motion, check-ins every 30–90 minutes, and drink-check prompts.</p></div>
     <div class="box"><span class="k">Date</span><h3>Sealed details</h3><p>Their name, photo, and the venue are encrypted. Your friend sees them only if an alert fires.</p></div>
-    <div class="box"><span class="k">Ride</span><h3>Trip watch</h3><p>Log the plate and driver. Ward alerts you if the route changes or the car makes an unplanned stop.</p></div>
-    <div class="box"><span class="k">Triggers</span><h3>Without opening the app</h3><ul><li>Action Button (hold)</li><li>Lock Screen control</li><li>Spoken safe word, recognized offline</li><li>"Hey Siri, Ward alert"</li><li>Fake call to get away</li></ul></div>
+    <div class="box"><span class="k">Ride</span><h3>Trip watch</h3><p>Log the plate and driver. SafetySense alerts you if the route changes or the car makes an unplanned stop.</p></div>
+    <div class="box"><span class="k">Triggers</span><h3>Without opening the app</h3><ul><li>Action Button (hold)</li><li>Lock Screen control</li><li>Spoken safe word, recognized offline</li><li>"Hey Siri, SafetySense alert"</li><li>Fake call to get away</li></ul></div>
   </div>
 </section>
 
 <section class="sec" aria-labelledby="changes">
   <div class="sec-head"><span class="eyebrow">What changed from the first idea</span><h2 id="changes">Same goal, adjusted to what iOS allows and what users will trust.</h2></div>
   <div class="change">
-    <div class="was">AI listens all the time</div><div class="now"><b>Guard sessions you start yourself.</b> Ward suggests a session when the context fits. iOS can't start the mic from the background, the battery cost is real, and App Review rejects always-on recording.</div>
+    <div class="was">AI listens all the time</div><div class="now"><b>Guard sessions you start yourself.</b> SafetySense suggests a session when the context fits. iOS can't start the mic from the background, the battery cost is real, and App Review rejects always-on recording.</div>
     <div class="was">Press the side button</div><div class="now"><b>Action Button, Lock Screen control, Siri, safe word.</b> Apple doesn't let apps use the side button. These are the official ways to trigger an app.</div>
     <div class="was">AI calls the police</div><div class="now"><b>The AI raises the alert level; it doesn't dial 911 alone.</b> iOS can't place calls without a tap, so dispatch goes through professional monitoring, which verifies before sending police.</div>
-    <div class="was">Detect being drugged</div><div class="now"><b>Detect being unable to respond.</b> Ward watches for missed check-ins, unsteady movement, and falls. No phone can detect a drug, so Ward doesn't promise it.</div>
-    <div class="was">Copy every feature of Lobo Guardian</div><div class="now"><b>Cover the basics well and put the effort into proactive protection.</b> Lobo Guardian is being replaced by UNM Safe, and Ward links to it.</div>
+    <div class="was">Detect being drugged</div><div class="now"><b>Detect being unable to respond.</b> SafetySense watches for missed check-ins, unsteady movement, and falls. No phone can detect a drug, so SafetySense doesn't promise it.</div>
+    <div class="was">Copy every feature of Lobo Guardian</div><div class="now"><b>Cover the basics well and put the effort into proactive protection.</b> Lobo Guardian is being replaced by UNM Safe, and SafetySense links to it.</div>
   </div>
 </section>
 
@@ -353,9 +353,9 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 </section>
 
 <section class="sec" aria-labelledby="compare">
-  <div class="sec-head"><span class="eyebrow">Landscape</span><h2 id="compare">What Ward does that others don't.</h2></div>
+  <div class="sec-head"><span class="eyebrow">Landscape</span><h2 id="compare">What SafetySense does that others don't.</h2></div>
   <div class="tbl-wrap"><table>
-    <thead><tr><th>Feature</th><th>UNM Safe</th><th>Noonlight</th><th>bSafe</th><th>Apple built-in</th><th>Ward</th></tr></thead>
+    <thead><tr><th>Feature</th><th>UNM Safe</th><th>Noonlight</th><th>bSafe</th><th>Apple built-in</th><th>SafetySense</th></tr></thead>
     <tbody>
       <tr><td>Manual SOS</td><td class="y">✓</td><td class="y">✓ hold</td><td class="y">✓</td><td class="y">✓ side button</td><td class="y">✓ Action Button, Lock Screen, Siri</td></tr>
       <tr><td>Live location to a friend</td><td class="y">✓ Friend Walk</td><td class="n">–</td><td class="y">✓</td><td class="y">✓ Check In</td><td class="y">✓</td></tr>
@@ -388,8 +388,8 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
      html:'<span class="app-sub">Night Out · Guarding</span><div class="big-ring"><div><b>0:00</b><span class="app-sub">elapsed</span></div></div><div class="row" style="flex-wrap:wrap;justify-content:flex-start;gap:6px"><span class="chip on">Mic</span><span class="chip on">Location</span><span class="chip on">Motion</span></div><div class="card"><div class="row"><span>Next check-in</span><b>12:10 am</b></div></div>'},
     {l:0,t:"11:49 pm",log:"<b>11:49 pm</b> Loud music and laughing. The classifier hears \"shout\" a few times, but the risk score stays low. Party noise is expected.",
      html:'<span class="app-sub">Night Out · Guarding</span><div class="big-ring"><div><b>0:11</b><span class="app-sub">elapsed</span></div></div><div class="card"><div class="row"><span>Risk</span><b style="color:var(--app-calm)">Low</b></div><span class="app-sub">shout ×3 · laughter · music</span></div>'},
-    {l:1,t:"11:51 pm",log:"<b>11:51 pm</b> A sound of impact, \"get off me,\" then the phone goes still. The score crosses the first threshold, so Ward sends a quiet check-in.",
-     html:'<span class="app-sub">Ward heard something</span><span class="app-h">You okay?</span><div class="big-ring ring-warn"><div><b>0:45</b><span class="app-sub">to respond</span></div></div><div class="btn">I\'m okay</div><div class="btn danger">I need help</div>'},
+    {l:1,t:"11:51 pm",log:"<b>11:51 pm</b> A sound of impact, \"get off me,\" then the phone goes still. The score crosses the first threshold, so SafetySense sends a quiet check-in.",
+     html:'<span class="app-sub">SafetySense heard something</span><span class="app-h">You okay?</span><div class="big-ring ring-warn"><div><b>0:45</b><span class="app-sub">to respond</span></div></div><div class="btn">I\'m okay</div><div class="btn danger">I need help</div>'},
     {l:2,t:"11:52 pm",log:"<b>11:52 pm</b> No answer. Maya and Mom get a text and an automated call with a live map. Encrypted audio and location start uploading.",
      html:'<span class="app-sub" style="color:var(--app-warn)">Alert sent</span><span class="app-h">Help is being called</span><div class="big-ring ring-danger" style="width:120px;height:120px"><div><b style="font-size:24px">1:30</b><span class="app-sub">to dispatch</span></div></div><div class="card"><div class="row"><span>Maya</span><span class="app-sub">notified</span></div><div class="row"><span>Mom</span><span class="app-sub">notified</span></div></div>'},
     {l:3,t:"11:54 pm",log:"<b>11:54 pm</b> No valid PIN after 90 seconds. The monitoring center calls, gets no answer, and sends police to the live location. Maya taps \"I'm on my way.\"",
