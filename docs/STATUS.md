@@ -1,34 +1,39 @@
 # SafetySense: project status
 
-Last checked 2026-11-04 by an end-to-end audit (build, tests, live backend, PDFs, video, deck).
+Last checked 2026-11-04 by the final verification pass (build, all tests, simulator screens, live backend end to end, docs, secret scan).
 **Technical submission due Fri Nov 6, 2026, 11:59 pm MT** to itevents@unm.edu. George sends it; no agent sends email.
 
-## George's to-do before Nov 6, 11:59 pm
+## What George must still do
 
-In order of risk:
+**Before Fri Nov 6, 11:59 pm MT (required):**
 
-1. **Make the Figma prototype public (worth 25 points).** Right now a signed-out browser shows "Prototype not found".
-   Open https://www.figma.com/design/Mx4ZCAW032658aaX1uD0vp/SafetySense-%E2%80%94-Prototype → **Share** → on "You're about to get a Full seat", confirm it's free on the Education plan, then **Continue** → set **Anyone with the link: can view** → open the prototype link (in `submission/06-prototype-link/PROTOTYPE_LINK.md`) in an incognito window and check it plays from "Start".
-2. **Mary's details and eligibility.** Confirm she's taking at least 3 credit hours at CNM this fall, or is in a Deep Dive cohort. If she isn't on the registration, email itevents@unm.edu **before Nov 6** to add her. Then fill in:
-   - `submission/01-team-bio/SafetySense-TeamBio.html`: George's year and major, and Mary's year, major and email (yellow `[FILL IN]`). Check both "why we care" lines and Mary's role. Re-render with `submission/_assets/render.sh` (needs network for Google Fonts), then open the PDF.
-   - `submission/EMAIL_DRAFT.md`: Mary's email, plus the extra-credit line (keep it only if one of you went to the Sep 17 kickoff or an Oct 8/20 mentoring session; delete it otherwise).
-3. **Send the email** from gteifel@unm.edu using `submission/EMAIL_DRAFT.md`, with the 5 PDFs attached. The subject is `App Contest Technical Submission – SafetySense`. Record the time and message id in `docs/SUBMISSION_CHECKLIST.md`.
+1. **Mary's eligibility.** Confirm she's taking at least 3 credit hours at CNM this fall, or is in a Deep Dive cohort. If she isn't on the registration, email itevents@unm.edu **before Nov 6** to add her.
+2. **Fill in the team bio.** `submission/01-team-bio/SafetySense-TeamBio.html`: George's year and major, and Mary's year, major and email (yellow `[FILL IN]`). Check both "why we care" lines and Mary's role. Re-render with `submission/_assets/render.sh` (needs network for Google Fonts) and open the PDF.
+3. **Finish the email draft.** `submission/EMAIL_DRAFT.md`: Mary's email, and the extra-credit line (keep it only if one of you went to the Sep 17 kickoff or an Oct 8/20 mentoring session; delete it otherwise).
+4. **Send the email** from gteifel@unm.edu with the 5 PDFs attached. Subject: `App Contest Technical Submission – SafetySense`. Record the time and message id in `docs/SUBMISSION_CHECKLIST.md`. No agent sends email.
+5. **Commit the work.** Nothing from 2026-11-04 is committed (fake call, account deletion, privacy migration, doc and PDF updates). Review `git status` and commit when you're happy. The repo `george11642/safetysense` is **public**: `docs/CONTEST_BRIEF.md` and `docs/OPEN_QUESTIONS.md` contain your personal Gmail address, and `presentation/IPHONE_DEMO_SCRIPT.md` contains the Twilio trial number (a caller ID, not a secret). Remove them first if you'd rather not publish them. No tokens, keys or George/Mary phone numbers are in the tree or the history (scanned 2026-11-04).
 
-Later (not needed for Nov 6):
+**Before Nov 20 (finalists):**
+
+6. **Re-check NM text-to-911** once in a browser on the FCC Text-to-911 registry (it blocks automated fetches). The docs say "still listed as the only US state".
+7. **Real-device run on the iPhone 16e**: set `DEVELOPMENT_TEAM` in `app/project.yml`, run `xcodegen generate`, install from Xcode. Test the microphone, SpeechAnalyzer, Face ID, the Action Button and Siri, and the **fake call** end to end (ring after a delay, Lock Screen Answer/Decline, ringtone on silent, the spoken script, ringtone while a Guard session is listening). `presentation/IPHONE_DEMO_SCRIPT.md` has the shot list. When the trial call rings, press a key to get past Twilio's trial message.
+8. **Deck placeholders** (slide 2 year/major, in amber) before the Nov 16 noon deadline if you're a finalist.
+
+**Later / optional:**
+
 - **Mary's Twilio verification** (deferred, as you asked): Twilio Console → Phone Numbers → Verified Caller IDs → add Mary's number (stored as SAFETYSENSE_MARY_PHONE in ~/.config/global.env). Until then, calls to her fail with a Twilio error. Nobody has called or texted her.
-- **Real-device run on the iPhone 16e**: set `DEVELOPMENT_TEAM` in `app/project.yml`, run `xcodegen generate`, and install from Xcode. Then test the microphone, SpeechAnalyzer, Face ID, the Action Button and Siri. `presentation/IPHONE_DEMO_SCRIPT.md` has the shot list. When the trial call rings, press a key to get past Twilio's trial message.
-- **Fill in the deck placeholders** (slide 2 year/major, in amber) before the Nov 16 noon deadline if you're a finalist.
-- Optional cleanup in the Supabase dashboard: one 64-byte test object in Storage → `evidence`, and the leftover dry-run test devices and alerts (3 devices, 4 alerts, 2 still open: the "Alex Rivera" video demo alert and one drill). None of them can call or text anyone.
+- **Sign-up limit while testing:** `register` now allows 5 sign-ups per network per hour. If several simulator re-installs (or your phone on the same Wi-Fi) hit a 429, clear it in the Supabase SQL editor with `delete from public.register_hits;`.
+- The Figma prototype is done: public ("Anyone · can view") and verified signed-out on 2026-11-04. Nothing to do.
 
 ## What exists and where
 
 | Thing | Where | State |
 |---|---|---|
-| iOS app (Swift 6, SwiftUI, iOS 26) | `app/` (XcodeGen `app/project.yml`) | Builds with 0 errors and 0 warnings. **116/116 tests pass** (re-run 2026-11-04). |
-| Backend (Supabase Edge Function `api`, Postgres, pg_cron watchdog) | `backend/` | Live at `https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api/`. Watchdog cron is active. |
+| iOS app (Swift 6, SwiftUI, iOS 26) | `app/` (XcodeGen `app/project.yml`) | Builds with 0 errors and 0 warnings. **136/136 tests pass** in 10 suites (final run 2026-11-04 via `Tools/xcb.sh test`). |
+| Backend (Supabase Edge Function `api`, Postgres, pg_cron watchdog) | `backend/` | Live at `https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api/` (function v3). Cron jobs: watchdog (every minute) and retention (hourly). `account/delete`, SMS delivery receipts and a sign-up rate limit are live. Database holds only the simulator's "Alex" device; no alerts, events or evidence. |
 | Contact live-link page and landing page | `web/` (Vercel project `safetysense-live`) | Live at https://safetysense-live.vercel.app/ and `/a/<token>` |
 | Submission PDFs 1 to 5 | `submission/01-…` to `05-…` (HTML source next to each PDF) | Built. Pages: 1 / 1 / 4 / 6 / 4. The bio has placeholders. |
-| Prototype | Figma file `Mx4ZCAW032658aaX1uD0vp`; link in `submission/06-prototype-link/PROTOTYPE_LINK.md` | 22 frames and 4 flows, wired. **Private.** |
+| Prototype | Figma file `Mx4ZCAW032658aaX1uD0vp`; link in `submission/06-prototype-link/PROTOTYPE_LINK.md` | 22 frames and 4 flows, wired. **Public** (Anyone · can view), verified signed-out 2026-11-04. |
 | Email draft | `submission/EMAIL_DRAFT.md` | Prototype link is filled in. Mary's email and the extra-credit line are still to fill. |
 | Architecture diagram | `design/architecture.svg` / `.png` | Embedded in PDF 4 and deck slide 10 |
 | App screenshots | `design/screens/` (old integration captures are in `design/screens/archive-integration/`) | Current UI, iPhone 17 Pro and 17e |
@@ -45,13 +50,14 @@ Later (not needed for Nov 6):
 | On-device SoundAnalysis plus safe word / distress phrases (SpeechAnalyzer) | Implemented (`Services/Audio/AudioPipeline.swift`). The simulator uses simulated audio; **not yet tried on a device.** |
 | Escalation ladder with PIN and duress PIN | Done and unit-tested; the duress PIN silently escalates on the server |
 | Contact call/text with live link | Done. Twilio voice works to verified numbers. US SMS is blocked on the trial (30034). |
-| Dispatch against the Noonlight sandbox, never live 911 | Done (Noonlight sandbox, or "simulated" when there's no token or it's a dry run) |
+| Dispatch against the Noonlight sandbox, never live 911 | Done (Noonlight sandbox, or "simulated" when there's no token or it's a dry run). The sandbox token is set, but all 4 alerts in the database so far are `simulated` (dry runs), so no sandbox alarm has been created yet. |
 | Stretch: Live Activity and Dynamic Island | Done (`SafetySenseWidgets/GuardLiveActivity.swift`). Captured on the Lock Screen. |
 | Stretch: Foundation Models second opinion | Implemented (`Services/SecondOpinion/FoundationModelsSecondOpinion.swift`), capped at ±25%, never the only reason to escalate. Not tried on a device. |
 | Stretch: Date-mode sealed details | Done. Encrypted on the server (`v1:`), shown on the contact page only during an alert. |
 | Stretch: server heartbeat monitor | Done (pg_cron watchdog every minute → `heartbeat_lost` alert → auto-escalation) |
 | Stretch: Action Button App Intent, Control Center controls, Siri | Implemented (`Intents/`, `SafetySenseWidgets/SOSControlWidget.swift`). Not tried on a device. |
-| Fake call (§7.7) | **Not built.** It isn't on the must-have list. Don't claim it. |
+| Fake call (§7.7) | Done (`Features/FakeCall/`): setup sheet, scheduled ring with a time-sensitive notification, unbranded incoming and in-call screens, on-device voice script, optional Walk Home guard on answer, Siri/Shortcuts intent. 17 unit tests; screens `design/screens/39–43`. **Not yet tried on a device.** |
+| Account deletion and retention | Done. Settings → Delete everything wipes the phone and calls `account/delete` on the server; an hourly job expires evidence and locations (30 days) and alerts (90 days). Verified live end to end 2026-11-04. |
 | Apple Watch, Critical Alerts, Android | After the contest (per spec) |
 
 ## How to run things
@@ -87,9 +93,17 @@ cd video && scripts/render_all.sh
 - `submission/EMAIL_DRAFT.md` now has the prototype link filled in.
 - The old `design/screens/integration-*.png` captures moved to `design/screens/archive-integration/`.
 
+## Final verification (2026-11-04)
+- App: `account/delete` wired into Settings → Delete everything (best effort, before the phone's credentials are dropped); the Alert-active timeline shows "Text to <name> not delivered" when Twilio reports an undelivered text. Settings copy says the server data is erased too. 3 new tests; **136/136 pass**, 0 warnings.
+- Simulator (iPhone 17 Pro): Home with the Fake call row, Fake call incoming, and Settings → Delete everything → confirmation → back to onboarding all checked by screenshot.
+- Live: landing page 200; a fresh dry-run alert (fictional 555 contact) produced a share page (200) and `share/get`; `account/delete` returned its counts; the old credentials then got 401 and the link "link not found". SQL afterwards: 0 alerts, 0 events, 0 evidence rows, 0 Storage objects, only the "Alex" simulator device.
+- Docs: security PDF (data inventory, abuse row, §06), technical PDF (routes table, cron, test count) and purpose PDF (test count) updated and re-rendered at 1/1/4/6/4 pages.
+- Secret scan of every tracked and untracked file plus full git history: no Twilio, Noonlight or Supabase tokens, no George or Mary phone numbers. `reference/email/` is gitignored and untracked; `reference/contest-site/` (public site mirror) is tracked on purpose.
+
 ## Known limitations (stated openly in the security PDF; fix after the contest)
-- "Delete everything" wipes the phone only. The server has no delete route yet; rows and evidence objects remain until manually removed.
-- No automatic expiry for server evidence. Sealed date details use a key the server holds. `register` is open (no App Attest).
+- Server deletion is best effort from the phone: if the phone is offline when you tap Delete everything, the server copy expires on the retention schedule instead. During a live real alert, deletion waits until the alert ends (48 h at most).
+- Sealed date details use a key the server holds. `register` needs only the publishable key (rate-limited per network, no App Attest).
 - PINs are 4 digits, stored as salted SHA-256.
 - The Noonlight alarm PIN is a fixed placeholder.
-- Claims still marked "verify" in the docs: NM text-to-911 status, NMSA 30-12-1 one-party consent, the Möller 2017 tonic-immobility figure, and the competitor comparison table.
+- On the fake-call in-call screen, Speaker, Mute and the other buttons only change their look.
+- Fact check done 2026-11-04 (table at the end of `docs/SPEC.md`): Möller 2017 figure verified; NM text-to-911 still listed as missing (softened to "still listed as"; re-check before Nov 20); NMSA 30-12-1(C) wording verified (calls only; in-person audio unclear, legal review before launch); competitor table corrected (Noonlight Safety Network and paid crash detection, Apple Check In's offline notice, fall detection on Watch); local numbers verified. The FCC text-to-911 registry blocks automated fetches; George can open it in a browser once.

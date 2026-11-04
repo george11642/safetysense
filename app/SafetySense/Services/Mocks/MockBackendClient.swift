@@ -109,4 +109,15 @@ actor MockBackendClient: BackendClientProtocol {
         try await record(.shareAction)
         return OKResponse(ok: true)
     }
+
+    func deleteAccount() async throws -> AccountDeleteResponse {
+        try await record(.accountDelete)
+        let counts = AccountDeleteResponse.Counts(contacts: contacts.count, sessions: 0, alerts: alerts.count, locations: 0,
+                                                  events: alerts.values.reduce(0) { $0 + $1.events.count },
+                                                  evidenceRows: 0, evidenceObjects: 0, device: 1)
+        contacts = []
+        alerts = [:]
+        credentials = nil
+        return AccountDeleteResponse(ok: true, deleted: counts)
+    }
 }

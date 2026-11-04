@@ -67,8 +67,8 @@ enum SystemBridge {
                 escalation.triggerManual(.manualSOS, reason: command.alertReason)
             }
             return true
-        case .startGuard:
-            return false
+        case .startGuard, .fakeCall:
+            return false   // needs AppModel: waits in the queue, drained as soon as the app is up
         }
     }
 

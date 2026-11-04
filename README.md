@@ -10,12 +10,12 @@ This is the entry by George Teifel (UNM) and Mary Teifel (CNM) for the **15th An
 
 ## Why proactive
 
-Every other safety app assumes you can press a button. In a real assault that assumption often fails:
+Most safety apps rely on you pressing a button or running a timer. In a real assault that can fail:
 
-- **Freezing is a common, involuntary response.** A person who has frozen can't press a panic button.
+- **Freezing is a common, involuntary response.** In one clinical study, 70% of 298 women seen after a sexual assault reported significant tonic immobility (Möller et al., 2017). A person who has frozen can't press a panic button.
 - **Drugging removes the ability to act.** Someone who has been drugged may not recognize the danger in time.
-- **Phones get taken or smashed.** Other apps treat a silent phone as "all clear." SafetySense treats it as a warning sign.
-- **New Mexico has no text-to-911.** A person who can't speak out loud has no silent way to reach 911 here. SafetySense's dispatch path runs over data, not voice.
+- **Phones get taken or smashed.** Most apps can't tell a dead phone from a quiet night. SafetySense's server treats a lost heartbeat as a warning sign.
+- **New Mexico has no text-to-911.** It is still listed as the only US state without it (checked Nov 2026), so a person who can't speak out loud can't simply text 911 here. SafetySense's dispatch path runs over data, not voice.
 
 ## How it works
 
@@ -37,6 +37,7 @@ The full product spec is in [docs/SPEC.md](docs/SPEC.md), and a visual walkthrou
 |---|---|
 | Modes | Everyday · Walk Home · Night Out · Date (details sealed until an alert) · Ride (plate, driver, route deviation) |
 | Triggers | Action Button App Intent · Lock Screen / Control Center control · Siri App Shortcuts · spoken safe word · hold-to-alert SOS |
+| Fake call | A scheduled incoming call to help you leave a situation without explaining why |
 | System | Live Activity + Dynamic Island with "I'm okay" · time-sensitive notifications · configurable dispatch policy per mode |
 | Evidence | AES-GCM encrypted clips (CryptoKit, key in Keychain), SHA-256 hashed, uploaded while recording, Face ID–locked Vault |
 | Aftercare | Trauma-informed Support screen: advocates (24/7), confidential SANE care, reporting options only if and when you choose |
@@ -98,14 +99,15 @@ Real calls are off by default: alerts run as dry runs unless you turn on Setting
 
 - Audio, transcripts, and AI reasoning stay on the device while guarding.
 - Nothing is saved unless an alert fires.
-- The server stores only what an alert needs. Location is deleted after 30 days, and evidence is encrypted before upload.
+- The server stores only what an alert needs. An hourly job deletes evidence and location history after 30 days and alerts after 90, and evidence is encrypted before upload.
+- Settings → Delete everything erases the phone and this device's data on the server (`account/delete`).
 - No ad or analytics SDKs.
 
 The security write-up is in [submission/05-security](submission/05-security).
 
 ## Status
 
-This is a contest prototype, not a released app. Dispatch runs against the Noonlight **sandbox**, and no real police are dispatched. The app is not on the App Store; contest rules require entries to be unpublished. See [docs/STATUS.md](docs/STATUS.md) once it exists.
+This is a contest prototype, not a released app. Dispatch runs against the Noonlight **sandbox**, and no real police are dispatched. The app is not on the App Store; contest rules require entries to be unpublished. See [docs/STATUS.md](docs/STATUS.md).
 
 ## Team
 

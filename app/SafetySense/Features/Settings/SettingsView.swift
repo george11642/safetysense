@@ -135,7 +135,7 @@ struct SettingsView: View {
             } header: {
                 Text("Your data")
             } footer: {
-                Text("Evidence on this iPhone is deleted automatically after this many days. Location is kept only during a session or alert. Evidence is encrypted, and only you can unlock it. Delete everything removes your profile, contacts, PINs, safe word and evidence from this iPhone.")
+                Text("Evidence on this iPhone is deleted automatically after this many days. Location is kept only during a session or alert. Evidence is encrypted, and only you can unlock it. Delete everything removes your profile, contacts, PINs, safe word and evidence from this iPhone, and erases this iPhone's alerts, locations and uploaded evidence on the SafetySense server.")
             }
             .listRowBackground(SSColor.surface)
 
@@ -200,7 +200,7 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This ends any session and permanently removes your profile, contacts, PINs, safe word and saved evidence from this iPhone. It can't be undone.")
+            Text("This ends any session and permanently removes your profile, contacts, PINs, safe word and saved evidence from this iPhone, and erases this iPhone's data on the SafetySense server. It can't be undone.")
         }
         .sheet(isPresented: $erasePINPrompt) {
             ErasePINSheet { Task { await erase() } }

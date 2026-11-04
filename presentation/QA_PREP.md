@@ -55,11 +55,11 @@ During a session the phone sends a heartbeat every 60 seconds. If heartbeats sto
 
 ### Why not Apple Check In, or UNM Safe?
 **Short:** They're good tools and we link to UNM Safe, but both need you to act. We cover the moments you can't.
-**More:** Check In notices when you don't arrive or a timer runs out. It doesn't listen for distress, doesn't involve professional dispatch, and has no duress PIN. UNM Safe (which replaced LoboGuardian) is built around manual actions: calling campus police, Friend Walk, tip reporting. Noonlight is a hold-to-release button. None of them act when the phone goes dark, and none of them have a fake cancel.
+**More:** Check In notices when you don't arrive or a timer runs out. It doesn't listen for distress, doesn't involve professional dispatch, and has no duress PIN. UNM Safe (which replaced LoboGuardian) is built around manual actions: calling campus police, Friend Walk, tip reporting. Noonlight is a hold-to-release button (its paid tier adds crash detection and an Alexa trigger). Check In can tell your contact, sometimes late, if your phone goes offline, but none of them raise a full alert within a minute of the phone going dark, and none of them have a fake cancel.
 
 ### Is recording people legal?
 **Short:** We only keep audio during an alert, the user is a party to the conversation, and we'd get a legal review before launch.
-**More:** New Mexico is generally read as a one-party-consent state (NMSA 30-12-1). **We haven't verified this with a lawyer, so say "generally read as" and not "is".** The clips belong to the user, are encrypted, and are shared only if she chooses. A launch in other states would need a per-state review, because some require all-party consent.
+**More:** NMSA 30-12-1(C) bars intercepting telephone or telegraph messages "without the consent of a sender or intended recipient", so New Mexico is one-party consent for calls. The statute doesn't clearly cover in-person audio picked up by a phone. **We haven't checked this with a lawyer, so say "generally read as one-party consent" and not "it's legal".** The clips belong to the user, are encrypted, and are shared only if she chooses. A launch in other states would need a per-state review, because some require all-party consent.
 
 ### What's the business model?
 **Short:** Free for students, paid for by campus licences.
@@ -108,11 +108,12 @@ Be honest. Good answers: false-alarm rates in real noisy bars, which we haven't 
 
 | Claim | Source | Status |
 |---|---|---|
-| 70% of 298 women reported significant tonic immobility (48% extreme) during sexual assault | Möller, Söndergaard and Helström, *Acta Obstetricia et Gynecologica Scandinavica*, 2017, DOI 10.1111/aogs.13174 | Checked against news coverage of the paper. Read the abstract once before Nov 20 |
-| New Mexico was the last US state without text-to-911. A statewide NG911 upgrade that adds text began rolling out in 2025 | NM DFA press release (Jul 2025); KFOX | Rollout status changes. Re-check before Nov 20 and adjust slide 3 if text-to-911 is now live statewide |
-| NM is one-party consent (NMSA 30-12-1) | Spec, not legal advice | **Unverified.** Use "generally read as" |
+| 70% of 298 women reported significant tonic immobility (48% extreme) during sexual assault | Möller, Söndergaard and Helström, *Acta Obstetricia et Gynecologica Scandinavica* 96(8):932–938, 2017, DOI 10.1111/aogs.13174 | **Verified** (Crossref metadata plus ScienceDaily's summary of the paper). Women seen at a Stockholm emergency clinic within a month of the assault; 189 followed up at 6 months |
+| New Mexico is still listed as the only US state without text-to-911. The statewide NG911 upgrade (which can support text) began in 2025 | Textdrip state guide (Jun 18, 2026); Source NM (Apr 2025); GovTech (Aug 2025); KFOX | **Verified Nov 4, 2026**: no public launch found. Third-party relay accesSOS works in Albuquerque and Santa Fe, so don't say "no way at all". Re-check before Nov 20 |
+| NM is one-party consent for calls (NMSA 30-12-1(C): "a sender or intended recipient") | Statute text; 2013 SB 127 (all-party bill, not enacted) | **Wording verified**; in-person audio unclear; not legal advice. Use "generally read as" |
+| Competitor table (slide 7) | unmsafe.unm.edu, noonlight.com, getbsafe.com/help, Apple iPhone User Guide | **Verified Nov 4, 2026.** Noonlight has Safety Network location sharing and paid crash detection; Apple's fall detection is on the Watch; Check In can warn late if the phone dies |
 | Twilio and Noonlight pricing | Not checked | Say "about a cent or two", no exact figures |
-| Local phone numbers in the Support screen screenshot | `docs/OPEN_QUESTIONS.md` | Verify before the slide shows them large |
+| Local phone numbers in the Support screen | unm.edu, cnm.edu, nmcsap.org | **Verified Nov 4, 2026**: LoboRESPECT 505-277-2911, RCCCNM 505-266-7711, ABQ SANE 505-884-7263, UNMPD 505-277-2241, CEEO/Title IX 505-277-5251, CNM Security 505-224-3001/3002 |
 
 ## Things not to say
 - "It detects drugging." It doesn't.

@@ -196,7 +196,7 @@
   <text class="s" x="620" y="497">watchdog every 60 s: heartbeat lost</text>
   <text class="s" x="620" y="513">→ Alert at last known location;</text>
   <text class="s" x="620" y="529">Alert 90 s, no cancel → dispatch</text>
-  <text class="s" x="620" y="545">retention: locations deleted at 30 days</text>
+  <text class="s" x="620" y="545">retention: evidence + locations 30 days</text>
   <path class="ar-teal" d="M726 456 V434" marker-end="url(#at)"/>
 
   <rect class="box" x="606" y="572" width="240" height="66" rx="9"/>
@@ -269,7 +269,7 @@
   <div class="card tint"><div class="stat">0</div><div class="stat-label">third-party iOS SDKs. Only Apple frameworks, with no analytics or ads.</div></div>
   <div class="card tint"><div class="stat">3</div><div class="stat-label">on-device models: sound events, speech, and an optional LLM second opinion.</div></div>
   <div class="card tint"><div class="stat">60 s</div><div class="stat-label">heartbeat. The server raises an alert by itself if the phone goes dark.</div></div>
-  <div class="card tint"><div class="stat">116</div><div class="stat-label">automated tests (Swift Testing), plus a dry-run backend smoke test.</div></div>
+  <div class="card tint"><div class="stat">136</div><div class="stat-label">automated tests (Swift Testing), plus a dry-run backend smoke test.</div></div>
 </div>
 
 <h2><span class="num">02</span>On-device components (Apple frameworks)</h2>
@@ -300,10 +300,10 @@
     <tr><td>Supabase Edge Function <code>api</code></td><td>One TypeScript/Deno function with every route (table below). It does its own authentication and calls the services below.</td><td>Device ID, hashed secret, session and alert metadata</td></tr>
     <tr><td>Supabase Postgres</td><td>Devices, contacts, sessions, alerts, locations and events. Row-level security is on with no policies, so only the server role can read or write.</td><td>See the data inventory in Attachment 5</td></tr>
     <tr><td>Supabase Vault</td><td>Encrypted secret store: Twilio and Noonlight credentials, the cron secret, and the AES-256 key for sealed date details.</td><td>Secrets only</td></tr>
-    <tr><td>pg_cron + pg_net</td><td>Runs a watchdog every minute (heartbeat lost → Alert, 90 s at Alert → dispatch) and a daily job that deletes location history after 30 days.</td><td>None (internal)</td></tr>
+    <tr><td>pg_cron + pg_net</td><td>Runs a watchdog every minute (heartbeat lost → Alert, 90 s at Alert → dispatch) and an hourly retention job (evidence and locations after 30 days, alerts after 90 days, test alerts after 48 h). An <code>account/delete</code> route erases a device's data on request.</td><td>None (internal)</td></tr>
     <tr><td>Supabase Storage</td><td>Private <code>evidence</code> bucket.</td><td>Ciphertext and SHA-256 only</td></tr>
     <tr><td>Twilio Programmable Voice + SMS</td><td>An automated call to each contact ("press 1 if you're on your way, 9 to send help"), verified with signed webhooks, plus an SMS with the live link.</td><td>Contact phone, user's first name, alert reason, link</td></tr>
-    <tr><td>Noonlight Dispatch API</td><td>Professional monitoring: calls the user to verify, then routes 911 responders to the live location (<code>POST /dispatch/v1/alarms</code>, plus location and status updates).</td><td>Name, phone, location (Level 3 only)</td></tr>
+    <tr><td>Noonlight Dispatch API</td><td>Professional monitoring: a dispatcher texts and calls the user to verify, then, with no PIN or answer, passes the live location to the local 911 center (<code>POST /dispatch/v1/alarms</code>, plus location and status updates).</td><td>Name, phone, location (Level 3 only)</td></tr>
     <tr><td>Vercel (static hosting)</td><td>The contact live-link page <code>/a/&lt;token&gt;</code> and the landing page. Plain HTML and JS with Leaflet 1.9.4 and OpenStreetMap tiles.</td><td>Nothing stored. The page reads the API with its token</td></tr>
   </tbody>
 </table>
@@ -318,8 +318,9 @@
     <tr><td>alert/create · escalate · cancel</td><td>device</td><td>Level 2/3 alerts with the trigger and reason, escalation to dispatch, and cancel (<code>duress:true</code> silently escalates but answers "cancelled").</td></tr>
     <tr><td>alert/location · status</td><td>device</td><td>Live location during an alert, and the contact and dispatch timeline shown in the app.</td></tr>
     <tr><td>evidence/upload</td><td>device</td><td>An encrypted evidence chunk with its sequence number and SHA-256.</td></tr>
+    <tr><td>account/delete</td><td>device</td><td>"Delete everything": erases the device's contacts, sessions, alerts, locations, events and evidence files, and revokes its secret.</td></tr>
     <tr><td>share/get · share/action</td><td>link token</td><td>The live-link page: status, location, battery, sealed details while the alert is active, and "on my way", "called 911" or "send help".</td></tr>
-    <tr><td>twilio/* · cron/watchdog</td><td>signature · secret</td><td>Call TwiML and keypress handling (Twilio-signed), and the minute-by-minute watchdog.</td></tr>
+    <tr><td>twilio/* · cron/*</td><td>signature · secret</td><td>Call TwiML, keypress handling and SMS delivery receipts (Twilio-signed), the minute-by-minute watchdog and the hourly retention job.</td></tr>
   </tbody>
 </table>
 
@@ -351,7 +352,7 @@
 <ul class="keep">
   <li><strong>Swift 6</strong> language mode with complete strict concurrency, SwiftUI, and an XcodeGen project. The build has zero warnings.</li>
   <li><strong>Protocol-based services</strong> (sensing, risk, escalation, backend, vault) with demo and mock versions, so tests and demo videos never touch the network or place calls.</li>
-  <li><strong>116 Swift Testing tests</strong> covering the risk engine, detectors, escalation timing, the duress path, vault encryption and tamper checks, and the backend contract. A shell smoke test runs the whole server flow in dry-run mode.</li>
+  <li><strong>136 Swift Testing tests</strong> covering the risk engine, detectors, escalation timing, the duress path, vault encryption and tamper checks, and the backend contract. A shell smoke test runs the whole server flow in dry-run mode.</li>
   <li><strong>Resilience:</strong> an offline outbox for heartbeats and alert locations, one live alert per session (repeat calls reuse it), and server-side escalation that doesn't depend on the phone surviving.</li>
 </ul>
 
@@ -363,7 +364,7 @@
     <tr><td>Backend, watchdog, live-link page</td><td><span class="pill teal">Live</span></td><td>Deployed on Supabase and Vercel.</td></tr>
     <tr><td>Twilio voice calls to contacts</td><td><span class="pill teal">Working</span></td><td>Trial account: calls reach verified numbers only, after Twilio's trial message. Production needs a paid account.</td></tr>
     <tr><td>Twilio SMS</td><td><span class="pill amber">Blocked on trial</span></td><td>US SMS needs A2P 10DLC registration (error 30034). Failures are recorded and don't stop the calls.</td></tr>
-    <tr><td>Noonlight dispatch</td><td><span class="pill amber">Sandbox / simulated</span></td><td>Uses the sandbox only. With no token it falls back to a clearly labelled "simulated dispatch". It never contacts live 911.</td></tr>
+    <tr><td>Noonlight dispatch</td><td><span class="pill amber">Sandbox / simulated</span></td><td>Uses the sandbox only (<code>api-sandbox.noonlight.com</code>; the token is set). Dry runs, and any run without a token, record a clearly labelled "simulated dispatch" instead; every demo alert so far has been a dry run. It never contacts live 911.</td></tr>
     <tr><td>Next</td><td><span class="pill">Roadmap</span></td><td>App Attest on alert routes, Sign in with Apple for account recovery, the Critical Alerts entitlement, Apple Watch, an Android version, and production Noonlight after legal review.</td></tr>
   </tbody>
 </table>

@@ -15,6 +15,12 @@ const ESCALATE_AFTER_S = 90;
 const MAX_LIVE_ALERTS_PER_HOUR = 6;
 const SHARE_EXPIRES_AFTER_END_S = 2 * 3600;
 const SHARE_MAX_AGE_S = 48 * 3600;
+// Retention (privacy): evidence 30 days, alerts + their events 90 days, test (dry-run) alerts 48 h.
+const EVIDENCE_KEEP_DAYS = 30;
+const LOCATION_KEEP_DAYS = 30;
+const ALERT_KEEP_DAYS = 90;
+const DRY_RUN_KEEP_S = SHARE_MAX_AGE_S;
+const DAY_MS = 86_400_000;
 
 const db: SupabaseClient = createClient(PROJECT_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -194,8 +200,20 @@ type Session = {
   last_accuracy: number | null; last_battery: number | null; sealed_details: string | null;
 };
 
-async function addEvent(alertId: string, who: string, action: string, detail: string | null = null, internal = false) {
-  await db.from("events").insert({ alert_id: alertId, who: who.slice(0, 60), action, detail: detail?.slice(0, 300) ?? null, internal });
+async function addEvent(alertId: string, who: string, action: string, detail: string | null = null, internal = false,
+  extra: { provider_sid?: string | null; delivery_status?: string | null; error_code?: string | null } = {}) {
+  await db.from("events").insert({ alert_id: alertId, who: who.slice(0, 60), action, detail: detail?.slice(0, 300) ?? null, internal, ...extra });
+}
+
+// Event rows as the phone and the share page see them. delivery_status / error_code come from
+// Twilio's SMS status callback ("undelivered" + "30034" means the text never arrived).
+type EventRow = { who: string; action: string; detail: string | null; created_at: string; delivery_status: string | null; error_code: string | null };
+const EVENT_COLS = "who,action,detail,created_at,delivery_status,error_code";
+function eventOut(e: EventRow, withDetail = true) {
+  return {
+    who: e.who, action: e.action, ...(withDetail ? { detail: e.detail } : {}), at: e.created_at,
+    delivery_status: e.delivery_status, error_code: e.error_code,
+  };
 }
 
 async function latestLocation(alert: Alert) {
@@ -243,16 +261,25 @@ async function notifyContacts(alert: Alert, device: Device): Promise<Notified[]>
   for (const c of contacts) {
     // SMS (Twilio trial blocks US SMS with error 30034; recorded, never fatal)
     let smsStatus = "dry_run";
+    let smsSid: string | null = null, smsDelivery: string | null = null, smsError: string | null = null;
     if (!alert.dry_run) {
       const body = `SafetySense: ${who} may need help (${alert.reason}). Live location and what to do: ${url}\n` +
         `If you think ${who} is in danger, call 911.`;
       try {
-        const r = await twilio("/Messages.json", new URLSearchParams({ To: c.phone, From: from ?? "", Body: body }));
+        const r = await twilio("/Messages.json", new URLSearchParams({
+          To: c.phone, From: from ?? "", Body: body,
+          StatusCallback: `${API_BASE}/twilio/sms-status?token=${encodeURIComponent(alert.share_token)}&c=${c.id}`,
+        }));
         smsStatus = r.ok ? String(r.body.status ?? "queued") : `failed:${r.body.code ?? r.status}`;
-      } catch { smsStatus = "failed:network"; }
+        smsSid = r.ok && typeof r.body.sid === "string" ? r.body.sid : null;
+        smsDelivery = r.ok ? smsStatus : "failed";
+        smsError = r.ok ? null : String(r.body.code ?? r.status);
+      } catch { smsStatus = "failed:network"; smsDelivery = "failed"; smsError = "network"; }
     }
     out.push({ name: c.name, channel: "sms", status: smsStatus });
-    await addEvent(alert.id, "SafetySense", "text_sent", `Text to ${c.name}: ${smsStatus}`);
+    await addEvent(alert.id, "SafetySense", "text_sent",
+      smsDelivery === "failed" ? `Text to ${c.name}: not delivered (error ${smsError})` : `Text to ${c.name}: ${smsStatus}`,
+      false, { provider_sid: smsSid, delivery_status: smsDelivery, error_code: smsError });
 
     // Voice call (works on the trial for verified numbers)
     let callStatus = "dry_run";
@@ -390,16 +417,108 @@ async function createAlert(opts: {
   return { alert, notified, reused: false };
 }
 
+// ------------------------------------------------------------------ privacy: storage deletes, account deletion
+// Deletes objects from the private "evidence" bucket with the service role (SQL cannot delete Storage objects).
+async function removeObjects(paths: string[]): Promise<number> {
+  const unique = [...new Set(paths.filter(Boolean))];
+  let removed = 0;
+  for (let i = 0; i < unique.length; i += 100) {
+    const batch = unique.slice(i, i + 100);
+    const { data, error } = await db.storage.from("evidence").remove(batch);
+    if (error) throw new HttpError(500, "evidence storage delete failed");
+    removed += data?.length ?? 0;
+  }
+  return removed;
+}
+
+async function evidenceObjectNames(prefix: string, orphansOnly: boolean, minAgeS = 0): Promise<string[]> {
+  const { data, error } = await db.rpc("ss_evidence_objects", { p_prefix: prefix, p_orphans_only: orphansOnly, p_min_age_s: minAgeS });
+  if (error) throw new HttpError(500, "evidence listing failed");
+  return (data as string[] | null) ?? [];
+}
+
+async function headCount(q: PromiseLike<{ count: number | null; error: { message: string } | null }>): Promise<number> {
+  const { count, error } = await q;
+  if (error) throw new HttpError(500, `database error: ${error.message}`);
+  return count ?? 0;
+}
+
+type DeleteCounts = {
+  contacts: number; sessions: number; alerts: number; locations: number; events: number;
+  evidence_rows: number; evidence_objects: number; device: number;
+};
+
+// Counts everything a device owns on the server. Used for the account/delete response.
+async function countDeviceData(deviceId: string): Promise<{ counts: DeleteCounts; alertIds: string[]; objectPaths: string[] }> {
+  const alertIds = (must(await db.from("alerts").select("id").eq("device_id", deviceId)) as { id: string }[]).map((a) => a.id);
+  const sessionIds = (must(await db.from("sessions").select("id").eq("device_id", deviceId)) as { id: string }[]).map((s) => s.id);
+  const evRows = alertIds.length
+    ? must(await db.from("evidence").select("storage_path").in("alert_id", alertIds)) as { storage_path: string }[] : [];
+  const objectPaths = [...new Set([...evRows.map((r) => r.storage_path), ...(await evidenceObjectNames(`${deviceId}/`, false))])];
+  const ors = [alertIds.length ? `alert_id.in.(${alertIds.join(",")})` : "", sessionIds.length ? `session_id.in.(${sessionIds.join(",")})` : ""]
+    .filter(Boolean).join(",");
+  const counts: DeleteCounts = {
+    contacts: await headCount(db.from("contacts").select("id", { count: "exact", head: true }).eq("device_id", deviceId)),
+    sessions: sessionIds.length,
+    alerts: alertIds.length,
+    locations: ors ? await headCount(db.from("locations").select("id", { count: "exact", head: true }).or(ors)) : 0,
+    events: alertIds.length ? await headCount(db.from("events").select("id", { count: "exact", head: true }).in("alert_id", alertIds)) : 0,
+    evidence_rows: evRows.length,
+    evidence_objects: objectPaths.length,
+    device: 1,
+  };
+  return { counts, alertIds, objectPaths };
+}
+
+// Removes the device's evidence objects, then the device row; the foreign keys cascade to
+// contacts, sessions, alerts, locations, events and evidence rows.
+async function purgeDevice(deviceId: string): Promise<DeleteCounts> {
+  const { counts, objectPaths } = await countDeviceData(deviceId);
+  await removeObjects(objectPaths);
+  must(await db.from("devices").delete().eq("id", deviceId));
+  return counts;
+}
+
+// A non-test alert contacts can still open (share links live 48 h).
+async function liveAlertCount(deviceId: string): Promise<number> {
+  const since = new Date(Date.now() - SHARE_MAX_AGE_S * 1000).toISOString();
+  return headCount(db.from("alerts").select("id", { count: "exact", head: true }).eq("device_id", deviceId)
+    .eq("dry_run", false).in("status", ["active", "dispatched"]).gte("created_at", since));
+}
+
+function clientIp(req: Request): string {
+  const xff = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return xff || req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "unknown";
+}
+
+// Twilio message statuses, in order. A late "sent" never overwrites "delivered"/"undelivered".
+const SMS_RANK: Record<string, number> = { accepted: 0, queued: 0, sending: 1, sent: 2, delivered: 3, undelivered: 3, failed: 3, read: 4 };
+
 // ------------------------------------------------------------------ routes
 type Ctx = { req: Request; body: Record<string, unknown> };
 type Handler = (c: Ctx) => Promise<Response>;
 
 const routes: Record<string, Handler> = {
   // ---------- device lifecycle
-  async "register"({ body }) {
+  async "register"({ req, body }) {
     const name = str(body.name, "name", 80)!;
     const ph = body.phone ? phone(body.phone, "phone") : null;
     const campus = str(body.campus, "campus", 40, false);
+    // Rate limit (no App Attest yet): per network (salted hash of the IP, kept 1 day) and overall.
+    const salt = (await secret("cron_secret")) ?? "safetysense";
+    const ipHash = await sha256hex(`register|${clientIp(req)}|${salt}`);
+    const hourAgo = new Date(Date.now() - 3600_000).toISOString(), dayAgo = new Date(Date.now() - DAY_MS).toISOString();
+    const perHour = await flag<number>("register_per_ip_hour", 5), perDay = await flag<number>("register_per_ip_day", 20);
+    const globalHour = await flag<number>("register_global_hour", 200);
+    const [ipHour, ipDay, allHour] = await Promise.all([
+      headCount(db.from("register_hits").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("at", hourAgo)),
+      headCount(db.from("register_hits").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("at", dayAgo)),
+      headCount(db.from("register_hits").select("id", { count: "exact", head: true }).gte("at", hourAgo)),
+    ]);
+    if (ipHour >= perHour || ipDay >= perDay || allHour >= globalHour) {
+      throw new HttpError(429, "Too many sign-ups from this network right now. Please try again later. If you need help now, call 911.");
+    }
+    must(await db.from("register_hits").insert({ ip_hash: ipHash }));
     const secretValue = randomToken(32);
     const d = must(await db.from("devices").insert({ name, phone: ph, campus, secret_hash: await sha256hex(secretValue) })
       .select("id").single()) as { id: string };
@@ -415,6 +534,26 @@ const routes: Record<string, Handler> = {
     must(await db.from("contacts").delete().eq("device_id", device.id));
     if (rows.length) must(await db.from("contacts").insert(rows));
     return json({ ok: true });
+  },
+
+  // Deletes everything the server holds for this device: contacts, sessions, alerts, locations,
+  // events, evidence rows and the encrypted evidence objects in Storage. The device secret stops
+  // working at once. If a non-test alert is still live, contacts keep their link until it ends
+  // (at most 48 h), then cron/retention finishes the deletion. The response is the same either way.
+  async "account/delete"({ req }) {
+    const device = await authDevice(req);
+    const live = await liveAlertCount(device.id);
+    if (live === 0) {
+      const deleted = await purgeDevice(device.id);
+      return json({ ok: true, deleted });
+    }
+    const { counts } = await countDeviceData(device.id);
+    must(await db.from("devices").update({
+      delete_requested_at: new Date().toISOString(), secret_hash: await sha256hex(randomToken(32)),
+    }).eq("id", device.id));
+    // An open (not alerted) session would otherwise trip the watchdog once heartbeats stop.
+    await db.from("sessions").update({ status: "ended", ended_at: new Date().toISOString() }).eq("device_id", device.id).eq("status", "active");
+    return json({ ok: true, deleted: counts });
   },
 
   async "session/start"({ req, body }) {
@@ -529,19 +668,19 @@ const routes: Record<string, Handler> = {
   async "alert/status"({ req, body }) {
     const device = await authDevice(req);
     const alert = await ownedAlert(device, uuid(body.alert_id, "alert_id"));
-    const events = must(await db.from("events").select("who,action,detail,created_at").eq("alert_id", alert.id)
-      .eq("internal", false).order("created_at")) as { who: string; action: string; detail: string | null; created_at: string }[];
+    const events = must(await db.from("events").select(EVENT_COLS).eq("alert_id", alert.id)
+      .eq("internal", false).order("created_at")) as EventRow[];
     if (alert.duress) {
       // Never reveal the silent escalation on the (possibly coerced) phone.
       return json({
         status: "cancelled", level: alert.level, dispatch: null,
-        events: events.filter((e) => e.action !== "dispatch_requested").map((e) => ({ who: e.who, action: e.action, at: e.created_at })),
+        events: events.filter((e) => e.action !== "dispatch_requested").map((e) => eventOut(e, false)),
       });
     }
     return json({
       status: alert.status, level: alert.level,
       dispatch: alert.dispatch_provider ? { provider: alert.dispatch_provider, status: alert.dispatch_status } : null,
-      events: events.map((e) => ({ who: e.who, action: e.action, detail: e.detail, at: e.created_at })),
+      events: events.map((e) => eventOut(e)),
     });
   },
 
@@ -571,9 +710,8 @@ const routes: Record<string, Handler> = {
     const ended = alert.status === "cancelled" || alert.status === "resolved";
     const live = !ended;
     const loc = live ? await latestLocation(alert) : null;
-    const events = must(await db.from("events").select("who,action,detail,created_at").eq("alert_id", alert.id)
-      .eq("internal", false).order("created_at", { ascending: false }).limit(40)) as
-      { who: string; action: string; detail: string | null; created_at: string }[];
+    const events = must(await db.from("events").select(EVENT_COLS).eq("alert_id", alert.id)
+      .eq("internal", false).order("created_at", { ascending: false }).limit(40)) as EventRow[];
     let sealed: string | null = null;
     if (live && alert.session_id) {
       const s = must(await db.from("sessions").select("sealed_details").eq("id", alert.session_id).maybeSingle()) as { sealed_details: string | null } | null;
@@ -589,7 +727,7 @@ const routes: Record<string, Handler> = {
       dispatch: alert.dispatch_provider ? { provider: alert.dispatch_provider, status: alert.dispatch_status } : null,
       location: loc ? { lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy, at: loc.created_at } : null,
       battery: loc?.battery ?? null,
-      events: events.map((e) => ({ who: e.who, action: e.action, detail: e.detail, at: e.created_at })),
+      events: events.map((e) => eventOut(e)),
       sealed_details: sealed,
     });
   },
@@ -664,6 +802,83 @@ const routes: Record<string, Handler> = {
       await addEvent(alert.id, "SafetySense", "call_status", `Call to ${who}: ${st}`);
     }
     return new Response(null, { status: 204 });
+  },
+
+  // Twilio SMS StatusCallback: records delivered / undelivered (+ error code, e.g. 30034) on the
+  // alert's "text_sent" event, so alert/status and share/get can say "Text not delivered".
+  async "twilio/sms-status"({ req }) {
+    const form = new URLSearchParams(await req.text());
+    if (!(await validTwilio(req, "twilio/sms-status", form))) return new Response("forbidden", { status: 403 });
+    const sid = form.get("MessageSid") ?? form.get("SmsSid") ?? "";
+    const st = (form.get("MessageStatus") ?? form.get("SmsStatus") ?? "").toLowerCase();
+    const code = form.get("ErrorCode") || null;
+    if (!/^(SM|MM)[0-9a-f]{32}$/i.test(sid) || !(st in SMS_RANK)) return new Response(null, { status: 204 });
+    const ev = (must(await db.from("events").select("id,detail,delivery_status").eq("provider_sid", sid).eq("action", "text_sent").limit(1)) as
+      { id: number; detail: string | null; delivery_status: string | null }[])[0];
+    if (!ev) return new Response(null, { status: 204 });
+    if ((SMS_RANK[ev.delivery_status ?? "queued"] ?? 0) > SMS_RANK[st]) return new Response(null, { status: 204 });
+    const name = ev.detail?.match(/^Text to (.+?):/)?.[1] ?? "contact";
+    const failed = st === "undelivered" || st === "failed";
+    const detail = failed ? `Text to ${name}: not delivered${code ? ` (error ${code})` : ""}` : `Text to ${name}: ${st}`;
+    must(await db.from("events").update({ delivery_status: st, error_code: failed ? code : null, detail }).eq("id", ev.id));
+    return new Response(null, { status: 204 });
+  },
+
+  // ---------- retention (pg_cron hourly via pg_net)
+  async "cron/retention"({ req }) {
+    const want = await secret("cron_secret");
+    if (!want || !safeEqual(req.headers.get("x-cron-secret") ?? "", want)) throw new HttpError(401, "unauthorized");
+    const now = Date.now();
+    const ago = (ms: number) => new Date(now - ms).toISOString();
+    const r = {
+      evidence_rows: 0, evidence_objects: 0, orphan_objects: 0, alerts: 0, test_alerts: 0, events: 0,
+      locations: 0, sessions: 0, sealed_cleared: 0, devices_deleted: 0, register_hits: 0,
+    };
+
+    // 1) Evidence older than 30 days: Storage objects first, then rows.
+    const oldEv = must(await db.from("evidence").select("id,storage_path").lt("created_at", ago(EVIDENCE_KEEP_DAYS * DAY_MS)).limit(1000)) as
+      { id: number; storage_path: string }[];
+    if (oldEv.length) {
+      r.evidence_objects += await removeObjects(oldEv.map((e) => e.storage_path));
+      const del = must(await db.from("evidence").delete().in("id", oldEv.map((e) => e.id)).select("id")) as unknown[];
+      r.evidence_rows += del.length;
+    }
+
+    // 2) Alerts older than 90 days, and test (dry-run) alerts older than 48 h. Events and
+    //    locations cascade; any evidence they still have goes first.
+    for (const [kind, q] of [
+      ["alerts", db.from("alerts").select("id").lt("created_at", ago(ALERT_KEEP_DAYS * DAY_MS)).limit(500)],
+      ["test_alerts", db.from("alerts").select("id").eq("dry_run", true).lt("created_at", ago(DRY_RUN_KEEP_S * 1000)).limit(500)],
+    ] as const) {
+      const ids = (must(await q) as { id: string }[]).map((a) => a.id);
+      if (!ids.length) continue;
+      const ev = must(await db.from("evidence").select("storage_path").in("alert_id", ids)) as { storage_path: string }[];
+      r.evidence_objects += await removeObjects(ev.map((e) => e.storage_path));
+      r.evidence_rows += ev.length;
+      r.events += await headCount(db.from("events").select("id", { count: "exact", head: true }).in("alert_id", ids));
+      const del = must(await db.from("alerts").delete().in("id", ids).select("id")) as unknown[];
+      r[kind] += del.length;
+    }
+    const evDel = must(await db.from("events").delete().lt("created_at", ago(ALERT_KEEP_DAYS * DAY_MS)).select("id")) as unknown[];
+    r.events += evDel.length;
+
+    // 3) Location history 30 days; ended sessions 90 days; sealed date details once no share link can show them.
+    r.locations = (must(await db.from("locations").delete().lt("created_at", ago(LOCATION_KEEP_DAYS * DAY_MS)).select("id")) as unknown[]).length;
+    r.sessions = (must(await db.from("sessions").delete().eq("status", "ended").lt("started_at", ago(ALERT_KEEP_DAYS * DAY_MS)).select("id")) as unknown[]).length;
+    r.sealed_cleared = (must(await db.from("sessions").update({ sealed_details: null }).not("sealed_details", "is", null)
+      .lt("started_at", ago(SHARE_MAX_AGE_S * 1000)).select("id")) as unknown[]).length;
+
+    // 4) Account deletions that waited for a live alert to end.
+    const pending = must(await db.from("devices").select("id").not("delete_requested_at", "is", null).limit(100)) as { id: string }[];
+    for (const d of pending) {
+      if ((await liveAlertCount(d.id)) > 0) continue;
+      await purgeDevice(d.id).then(() => r.devices_deleted++).catch((e) => console.error("deferred delete failed", d.id, String(e)));
+    }
+
+    // 5) Storage objects no evidence row points at (older than a day), and old rate-limit hits.
+    r.orphan_objects = await removeObjects(await evidenceObjectNames("", true, 86_400));
+    r.register_hits = (must(await db.from("register_hits").delete().lt("at", ago(DAY_MS)).select("id")) as unknown[]).length;
+    return json({ ok: true, ...r });
   },
 
   // ---------- watchdog (pg_cron every minute via pg_net)

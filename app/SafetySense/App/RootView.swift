@@ -18,6 +18,11 @@ struct RootView: View {
                     }
             }
         }
+        // Fake call (SPEC 7.7) rings in its own window above every cover and sheet.
+        .onChange(of: model.fakeCall.phase) { _, _ in
+            guard model.forcedScreen == nil else { return }
+            FakeCallPresenter.update(model: model)
+        }
     }
 
     private var overlayBinding: Binding<Bool> {

@@ -15,6 +15,9 @@ enum AppScreen: String, CaseIterable, Sendable {
     case dateSetup = "date"
     case rideSetup = "ride"
     case walkSetup = "walk"
+    case fakeCallSetup = "fakecall"
+    case fakeCallIncoming = "fakecallincoming"
+    case fakeCallActive = "fakecallactive"
 
     /// Tab screens select a tab; the rest are shown full screen.
     var tab: MainTab? {
@@ -33,6 +36,8 @@ enum AppScreen: String, CaseIterable, Sendable {
         let aliases: [String: AppScreen] = [
             "guardactive": .guardActive, "check-in": .checkIn, "alertcountdown": .alertCountdown,
             "alertactive": .alertActive, "datesetup": .dateSetup, "ridesetup": .rideSetup, "walksetup": .walkSetup,
+            "fake-call": .fakeCallSetup, "fakecallsetup": .fakeCallSetup, "fakecallringing": .fakeCallIncoming,
+            "fakecallincall": .fakeCallActive,
         ]
         if let s = AppScreen(rawValue: lowered) ?? aliases[lowered] { self = s } else { return nil }
     }

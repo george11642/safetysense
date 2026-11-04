@@ -46,7 +46,10 @@ struct SafetySenseApp: App {
                 .task { if !LaunchOptions.isUnitTestHost { await model.onLaunch() } }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { model.drainSharedCommands() }
+            if phase == .active {
+                model.drainSharedCommands()
+                model.fakeCall.appBecameActive()
+            }
         }
     }
 }

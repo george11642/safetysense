@@ -57,7 +57,7 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
                                             intentIdentifiers: [],
                                             hiddenPreviewsBodyPlaceholder: "SafetySense",
                                             options: [])
-        return [checkIn, status]
+        return [checkIn, status, FakeCallNotifier.category]
     }
 
     // MARK: NotificationServiceProtocol
@@ -208,6 +208,16 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         }
     }
 
+    /// Fake call (SPEC 7.7) notification: tap or Answer rings / answers in the app; Decline ends it.
+    fileprivate static func routeFakeCall(action: String) {
+        switch action {
+        case FakeCallNotifier.Identifier.declineAction: FakeCallNotifier.onDeclined?()
+        case FakeCallNotifier.Identifier.answerAction: FakeCallNotifier.onOpened?(true)
+        case UNNotificationDismissActionIdentifier: break
+        default: FakeCallNotifier.onOpened?(false)
+        }
+    }
+
     fileprivate func handleForegroundCheckIn() {
         onCheckInDue?()
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
@@ -218,6 +228,10 @@ extension NotificationService: UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             didReceive response: UNNotificationResponse) async {
         let action = response.actionIdentifier
+        if response.notification.request.content.categoryIdentifier == FakeCallNotifier.Identifier.category {
+            await Self.routeFakeCall(action: action)
+            return
+        }
         let info = response.notification.request.content.userInfo
         let sessionID = info[Identifier.sessionKey] as? String
         let interval = info[Identifier.intervalKey] as? TimeInterval
@@ -227,6 +241,11 @@ extension NotificationService: UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         let category = notification.request.content.categoryIdentifier
+        if category == FakeCallNotifier.Identifier.category {
+            // The app is open: ring the full-screen call instead of showing a banner.
+            await Self.routeFakeCall(action: UNNotificationDefaultActionIdentifier)
+            return []
+        }
         guard category == Identifier.checkInCategory else { return [.banner, .list, .sound] }
         // The app is open: the full-screen check-in takes over, so skip the banner.
         await handleForegroundCheckIn()

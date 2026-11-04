@@ -248,8 +248,12 @@ input{width:100%;font:400 17px var(--body);padding:12px 14px;border-radius:12px;
       const t = document.createElement("time"); t.dateTime = e.at; t.textContent = clock(e.at);
       const p = document.createElement("div");
       const isTest = /: dry_run$/.test(e.detail || "");
+      const notDelivered = e.action === "text_sent" && (e.delivery_status === "undelivered" || e.delivery_status === "failed");
       const label = isTest && (e.action === "text_sent" || e.action === "call_placed")
-        ? (e.action === "text_sent" ? "Test text" : "Test call") : (LABELS[e.action] || e.action.replace(/_/g, " "));
+        ? (e.action === "text_sent" ? "Test text" : "Test call")
+        : notDelivered ? "Text not delivered"
+        : e.action === "text_sent" && e.delivery_status === "delivered" ? "Text delivered"
+        : (LABELS[e.action] || e.action.replace(/_/g, " "));
       const b = document.createElement("strong"); b.textContent = label + " ";
       const s = document.createElement("span"); s.className = "muted"; s.textContent = (e.detail || e.who).replace(/: dry_run$/, ": test only, not sent");
       p.append(b, s); li.append(t, p); tl.append(li);

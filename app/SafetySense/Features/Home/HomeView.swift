@@ -11,7 +11,7 @@ struct HomeView: View {
     @State private var readiness = ReadinessSnapshot()
     @State private var confirmDrill = false
 
-    enum SetupSheet: String, Identifiable { case walk, date, ride; var id: String { rawValue } }
+    enum SetupSheet: String, Identifiable { case walk, date, ride, fakeCall; var id: String { rawValue } }
 
     var body: some View {
         ScrollView {
@@ -19,6 +19,7 @@ struct HomeView: View {
                 greeting
                 modePicker
                 startRing
+                FakeCallEntryRow { sheet = .fakeCall }
                 contactsCard
                 checklist
                 quickDial
@@ -38,6 +39,7 @@ struct HomeView: View {
                 case .walk: WalkHomeSetupView()
                 case .date: DateModeSetupView()
                 case .ride: RideModeSetupView()
+                case .fakeCall: FakeCallSetupView()
                 }
             }
             .presentationDragIndicator(.visible)

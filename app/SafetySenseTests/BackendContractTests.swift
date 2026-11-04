@@ -64,4 +64,34 @@ struct BackendContractTests {
         let s = try await backend.startSession(SessionStartRequest(mode: "walk", checkInIntervalS: 900))
         #expect(!s.sessionId.isEmpty)
     }
+
+    @Test func accountDeleteNeedsDeviceAuthAndDecodes() throws {
+        #expect(BackendRoute.accountDelete.rawValue == "account/delete")
+        #expect(BackendRoute.accountDelete.requiresDeviceAuth)
+        #expect(try keys(EmptyRequest()).isEmpty)
+        let json = #"{"ok":true,"deleted":{"contacts":2,"sessions":2,"alerts":1,"locations":2,"events":8,"evidence_rows":1,"evidence_objects":1,"device":1}}"#
+        let r = try BackendCoding.makeDecoder().decode(AccountDeleteResponse.self, from: Data(json.utf8))
+        #expect(r.ok)
+        #expect(r.deleted.evidenceObjects == 1)
+        #expect(r.deleted.events == 8)
+    }
+
+    @Test func undeliveredTextShowsAsNotDelivered() throws {
+        let json = #"{"status":"active","level":2,"dispatch":null,"events":[{"who":"Maya","action":"text_sent","detail":"Text to Maya: not delivered (error 30034)","at":"2026-11-04T10:01:00Z","delivery_status":"undelivered","error_code":"30034"},{"who":"Sam","action":"text_sent","detail":null,"at":"2026-11-04T10:01:00Z","delivery_status":null,"error_code":null}]}"#
+        let r = try BackendCoding.makeDecoder().decode(AlertStatusResponse.self, from: Data(json.utf8))
+        #expect(r.events[0].errorCode == "30034")
+        #expect(r.events[0].model.displayText == "Text to Maya not delivered")
+        #expect(r.events[1].model.action == "text_sent")
+    }
+
+    @MainActor @Test func eraseEverythingAlsoDeletesServerData() async throws {
+        let services = ServiceContainer.demo()
+        let model = AppModel(services: services, store: .ephemeral())
+        await model.eraseEverything()
+        let backend = try #require(services.backend as? MockBackendClient)
+        #expect(await backend.calls.contains(.accountDelete))
+        await #expect(throws: BackendError.notRegistered) {
+            _ = try await backend.startSession(SessionStartRequest(mode: "walk", checkInIntervalS: 900))
+        }
+    }
 }

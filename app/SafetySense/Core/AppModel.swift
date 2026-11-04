@@ -39,6 +39,8 @@ final class AppModel {
     let services: ServiceContainer
     let launch: LaunchOptions
     @ObservationIgnored let store: SettingsStore
+    /// Fake call (SPEC 7.7). Silent in unit tests and QA screens.
+    let fakeCall: FakeCallScheduler
 
     var profile: Profile? { didSet { store.profile = profile } }
     var contacts: [TrustedContact] { didSet { store.contacts = contacts } }
@@ -66,6 +68,9 @@ final class AppModel {
         self.hasCompletedOnboarding = store.onboardingComplete
         self.currentSession = store.currentSession
         self.currentAlert = store.currentAlert
+        let quiet = launch.screen != nil || LaunchOptions.isUnitTestHost
+        self.fakeCall = quiet ? FakeCallScheduler()
+                              : FakeCallScheduler(effects: FakeCallAudio(), notifier: FakeCallNotifier())
         wireServices()
     }
 
@@ -207,12 +212,34 @@ final class AppModel {
                 guard !isGuarding else { continue }
                 let mode = command.mode.flatMap(GuardMode.init(rawValue:)) ?? .nightOut
                 Task { await startGuard(mode: mode) }
+            case .fakeCall:
+                // A shortcut from a while ago shouldn't suddenly ring.
+                guard Date.now.timeIntervalSince(command.createdAt) < 300 else { continue }
+                scheduleFakeCall(callerName: command.callerName, delay: command.delaySeconds)
             }
         }
     }
 
+    /// Fake call from a shortcut or Siri: the last setup choices, with any overrides.
+    func scheduleFakeCall(callerName: String? = nil, delay: TimeInterval? = nil) {
+        var config = FakeCallPreferences.load()
+        if let callerName, !callerName.trimmingCharacters(in: .whitespaces).isEmpty { config.callerName = callerName }
+        if let delay { config.delay = max(0, min(delay, 600)) }
+        if isGuarding { config.alsoStartWalkGuard = false }
+        fakeCall.schedule(config)
+    }
+
+    /// Answering can start a Walk Home guard, so someone is watching while you leave.
+    private func fakeCallAnswered(_ config: FakeCallConfig) {
+        guard config.alsoStartWalkGuard, !isGuarding else { return }
+        Task { await startGuard(mode: .walk) }
+    }
+
     func eraseEverything() async {
         await endGuard()
+        // Ask the server to erase this device's data too (contacts, alerts, locations, evidence).
+        // Best effort: the phone is wiped either way, and the server's retention job expires the rest.
+        _ = try? await services.backend.deleteAccount()
         try? services.vault.deleteAll()
         store.eraseAll()
         await services.backend.setCredentials(nil)
@@ -283,6 +310,11 @@ final class AppModel {
     // MARK: Wiring
 
     private func wireServices() {
+        fakeCall.onAnswer = { [weak self] config in self?.fakeCallAnswered(config) }
+        if !LaunchOptions.isUnitTestHost, launch.screen == nil {
+            FakeCallNotifier.onOpened = { [weak self] answer in self?.fakeCall.openedFromNotification(answer: answer) }
+            FakeCallNotifier.onDeclined = { [weak self] in self?.fakeCall.declinedFromNotification() }
+        }
         if let escalation = services.escalation as? EscalationController {
             escalation.serverSessionIDProvider = { [weak self] in self?.currentSession?.serverSessionID }
         }
@@ -329,6 +361,15 @@ final class AppModel {
         case .alertActive:
             currentSession = SampleData.session()
             currentAlert = SampleData.alert(level: .dispatch, secondsAgo: 140)
+        case .fakeCallIncoming:
+            // QA: `-ssFakeCallStyle slide` shows the lock-screen slider instead of buttons.
+            var config = FakeCallConfig(callerName: "Mom")
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-ssFakeCallStyle"), i + 1 < args.count,
+               let style = FakeCallAnswerStyle(rawValue: args[i + 1].lowercased()) { config.answerStyle = style }
+            fakeCall.pinForPreview(.ringing(since: .now), config: config)
+        case .fakeCallActive:
+            fakeCall.pinForPreview(.inCall(answeredAt: .now.addingTimeInterval(-42)), config: FakeCallConfig(callerName: "Mom"))
         default:
             break
         }

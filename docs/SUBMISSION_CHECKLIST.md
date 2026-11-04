@@ -12,8 +12,8 @@ Every item except #6 is a **PDF or Word file attached** to the email, never a li
 - [x] 3. Purpose / Audience / Functions / Pathway to Satisfaction: `submission/03-purpose-audience-functions/` → PDF
 - [x] 4. Proposed technical aspects + **architecture diagram**: `submission/04-technical-aspects/` → PDF (APIs, feeds, libraries, models, third-party services; diagram embedded)
 - [x] 5. Security: `submission/05-security/` → PDF
-- [ ] 6. Prototype link in the email body: Figma link with "Anyone with the link → can view" sharing. **Test it in a signed-out/incognito browser.** Optionally add a TestFlight public link as a bonus.
-  - Built and wired (22 frames, 4 flows). **Not public yet:** George must click Share → accept the Education Full seat → "Anyone with the link: can view". Steps in `submission/06-prototype-link/PROTOTYPE_LINK.md`. The link is already in `submission/EMAIL_DRAFT.md`.
+- [x] 6. Prototype link in the email body: Figma link with "Anyone with the link → can view" sharing (public, verified signed-out 2026-11-04). Optionally add a TestFlight public link as a bonus.
+  - Built and wired (22 frames, 4 flows). **Public** ("Anyone · can view", Education Full seat accepted) and verified in a signed-out browser on 2026-11-04. The link is in `submission/EMAIL_DRAFT.md`.
 - [ ] Email body (`submission/EMAIL_DRAFT.md`, drafted; fill Mary's email + extra-credit line): app name, team members with emails and schools, a one-paragraph summary, the prototype link, and a list of the attachments
 - [x] Check that every attachment opens. File names include the app name. (All 5 open; 1/1/4/6/4 pages; re-check the bio after editing.)
 - [ ] Sent ✅ (record the timestamp and message id here)

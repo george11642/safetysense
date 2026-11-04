@@ -156,6 +156,12 @@ actor HTTPBackendClient: BackendClientProtocol {
         try await post(.shareAction, request, retry: .createOnce)
     }
 
+    func deleteAccount() async throws -> AccountDeleteResponse {
+        let response: AccountDeleteResponse = try await post(.accountDelete, EmptyRequest(), retry: .idempotent)
+        outbox.save([])   // nothing queued for this device may be replayed after deletion
+        return response
+    }
+
     // MARK: Outbox
 
     /// Number of heartbeats / locations waiting for the network.

@@ -23,7 +23,7 @@ swift Tools/generate_icons.swift SafetySense/Resources/Assets.xcassets # regener
 
 | Argument | Effect |
 |---|---|
-| `-ssScreen <name>` | Opens straight to a screen with sample data, using demo services and an isolated in-memory store. Names: `onboarding home guard checkin countdown alert support vault contacts settings date ride` |
+| `-ssScreen <name>` | Opens straight to a screen with sample data, using demo services and an isolated in-memory store. Names: `onboarding home guard checkin countdown alert support vault contacts settings date ride walk fakeCall fakeCallIncoming fakeCallActive` (add `-ssFakeCallStyle slide` for the slide-to-answer variant) |
 | `-ssDemo 1` | Demo services: no mic, no network, dispatch labelled "simulated" |
 | `-ssSkipOnboarding 1` | Marks onboarding done. Seeds the sample profile and contacts if they're empty |
 | `-ssReset 1` | Wipes persisted state at launch |
@@ -48,7 +48,7 @@ app/
     Models/       Codable + Sendable value types (+ SampleData)
     Core/         AppModel, ServiceContainer, SettingsStore, KeychainStore, Protocols/, Backend/BackendDTOs
     Services/     Real service implementations (empty now) + Mocks/
-    Features/     Onboarding, Home, Guard, Alert, Support, Vault, Contacts, Settings, Modes
+    Features/     Onboarding, Home, Guard, Alert, Support, Vault, Contacts, Settings, Modes, FakeCall
     Intents/      AppShortcutsProvider (Siri / Action Button phrases)
     Resources/    Assets.xcassets (AppIcon, AppIconDiscreet, AccentColor, LaunchBackground)
   SafetySenseWidgets/  WidgetBundle, GuardLiveActivity, SOSControlWidget
@@ -71,6 +71,7 @@ Intents (Action Button / Control / Siri / Live Activity buttons) --> SharedComma
 - **`AppModel`** (`@Observable @MainActor`) is the single UI state object. It holds `profile`, `contacts`, `settings`, `hasCompletedOnboarding`, `currentSession`, `currentAlert`, `selectedTab`, `banner` and `forcedScreen`. Every stored property persists through `SettingsStore` in `didSet`. It is injected with `.environment(model)`, and views read it with `@Environment(AppModel.self) private var model`.
 - **`model.overlay`** (`none / guardActive / checkIn / alertCountdown / alertActive`) comes from `services.escalation.level` plus `currentSession`. `RootView` shows it in a single `fullScreenCover` (`OverlayHost`).
 - **`ServiceContainer`** handles dependency injection. `.demo()` returns all mocks. `.live()` is the production wiring: each module swaps in its real class at the marked slot, and every slot falls back to a mock until then. Use `services.flavor == .demo` to show demo-only controls, such as "simulate scream".
+- **Fake call (SPEC 7.7)** lives in `Features/FakeCall/`. `AppModel.fakeCall` (`FakeCallScheduler`) runs idle → scheduled → ringing → in call. A timer and a time-sensitive local notification (`FakeCallNotifier`, synthesized ringtone in `Library/Sounds`) are both set, and `appBecameActive()` catches up if iOS suspended the app. `FakeCallPresenter` shows the call in its own `UIWindow` above every cover and sheet. `FakeCallAudio` plays the ring and vibration, and speaks the script with `AVSpeechSynthesizer`; it leaves a Guard `.playAndRecord` session alone so the mic keeps running. Answering can start a Walk Home guard. `FakeCallIntent` ("SafetySense fake call") queues a `.fakeCall` shared command. It never contacts anyone or touches the ladder.
 - **`SettingsStore`** writes JSON to App Group `UserDefaults` for non-secret data. Secrets go through the `SecretStore` protocol: the Keychain in the app and `InMemorySecretStore` in tests and QA. PINs are stored only as salted SHA-256 hashes. `verifyPIN` checks the duress PIN first and returns `.valid`, `.duress` or `.invalid`.
 
 ## Protocols (Core/Protocols)
@@ -119,6 +120,7 @@ Swift DTOs use camelCase. Always encode and decode with `BackendCoding.makeEncod
 | `alert/location` | `AlertLocationRequest` | `OKResponse` |
 | `alert/status` | `AlertStatusRequest` | `AlertStatusResponse` |
 | `evidence/upload` | `EvidenceUploadRequest` | `OKResponse` |
+| `account/delete` | `EmptyRequest` | `AccountDeleteResponse` (called by `AppModel.eraseEverything()`) |
 | `share/get` (public) | `ShareGetRequest` | `ShareGetResponse` |
 | `share/action` (public) | `ShareActionRequest` | `OKResponse` |
 

@@ -2,6 +2,7 @@
 # SafetySense backend smoke test (dry run: no Twilio calls or texts are placed).
 # Usage: backend/scripts/smoke.sh   (reads SAFETYSENSE_GEORGE_PHONE / SAFETYSENSE_MARY_PHONE from ~/.config/global.env)
 # Prints responses with secrets and phone numbers redacted. Writes state to $STATE (default: mktemp).
+# Cleans up after itself with account/delete. KEEP=1 leaves the rows (and the stale session) for the watchdog.
 set -euo pipefail
 set -a; source ~/.config/global.env; set +a
 API=${API:-https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api}
@@ -69,4 +70,15 @@ step "stale session for the watchdog (grace 5 s, dry run)"
 S2=$(post session/start '{"mode":"walk","check_in_interval_s":15,"grace_s":5,"dry_run":true}' dev)
 echo "$S2"; echo "$S2" | jq -r .session_id > "$STATE/session2"
 post session/heartbeat "$(jq -n --arg s "$(cat "$STATE/session2")" '{session_id:$s, lat:35.0786, lng:-106.6189, accuracy:15, battery:0.41}')" dev; echo
+
+if [ "${KEEP:-}" = 1 ]; then echo "KEEP=1: rows left in place. state dir: $STATE"; exit 0; fi
+
+step "account/delete (removes every row and evidence object for this test device)"
+post account/delete '{}' dev | jq -c .
+
+step "old credentials no longer work (expect unauthorized)"
+post alert/status "$(jq -n --arg a "$(cat "$STATE/alert")" '{alert_id:$a}')" dev; echo
+
+step "share link is gone (expect link not found)"
+post share/get "{\"token\":\"$TOKEN\"}"; echo
 echo "state dir: $STATE"

@@ -14,6 +14,8 @@ enum ScreenRouter {
         case .dateSetup: NavigationStack { DateModeSetupView() }
         case .rideSetup: NavigationStack { RideModeSetupView() }
         case .walkSetup: NavigationStack { WalkHomeSetupView() }
+        case .fakeCallSetup: NavigationStack { FakeCallSetupView() }
+        case .fakeCallIncoming, .fakeCallActive: FakeCallScreen()
         }
     }
 }

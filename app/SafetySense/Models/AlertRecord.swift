@@ -61,6 +61,7 @@ struct AlertEvent: Codable, Sendable, Equatable, Identifiable, Hashable {
         case "send_help": return "\(who) asked for help to be sent"
         case "notified_by_call": return "Calling \(who)"
         case "notified_by_sms": return "Texted \(who) your live link"
+        case "text_not_delivered": return "Text to \(who) not delivered"
         case "dispatch_requested": return "Professional help requested"
         case "cancelled": return "Alert cancelled"
         case "alert_resumed": return "Alert resumed"

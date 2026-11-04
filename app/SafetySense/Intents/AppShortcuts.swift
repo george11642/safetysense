@@ -28,6 +28,16 @@ struct SafetySenseShortcuts: AppShortcutsProvider {
             systemImageName: "shield.checkered"
         )
         AppShortcut(
+            intent: FakeCallIntent(),
+            phrases: [
+                "\(.applicationName) fake call",
+                "Start a \(.applicationName) fake call",
+                "Call me with \(.applicationName)",
+            ],
+            shortTitle: "Fake Call",
+            systemImageName: "phone.arrow.down.left"
+        )
+        AppShortcut(
             intent: ImOkayIntent(),
             phrases: [
                 "Tell \(.applicationName) I'm okay",

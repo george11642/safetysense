@@ -10,7 +10,7 @@
 4. `04-technical-aspects/SafetySense-Technical.pdf`
 5. `05-security/SafetySense-Security.pdf`
 
-Before sending: fill every `[FILL IN]` (here and in the team bio PDF, then re-render with `submission/_assets/render.sh`), make the Figma file public (see `06-prototype-link/PROTOTYPE_LINK.md`; the link below is filled in but returns "Prototype not found" until sharing is on), and test it in a signed-out or incognito window.
+Before sending: fill every `[FILL IN]` (here and in the team bio PDF, then re-render with `submission/_assets/render.sh`), and remove the extra-credit line if it doesn't apply. The Figma prototype is already public (verified signed-out on 2026-11-04), so the link below works as is.
 
 ---
 

@@ -19,6 +19,7 @@ enum BackendRoute: String, Sendable, CaseIterable {
     case evidenceUpload = "evidence/upload"
     case shareGet = "share/get"
     case shareAction = "share/action"
+    case accountDelete = "account/delete"
 
     /// Device routes need `x-device-id` + `x-device-secret`.
     var requiresDeviceAuth: Bool {
@@ -164,14 +165,43 @@ struct EventDTO: Codable, Sendable, Equatable {
     var who: String
     var action: String
     var at: String
+    /// Server text for the row, e.g. "Text to Maya: not delivered (error 30034)".
+    var detail: String? = nil
+    /// Twilio SMS delivery receipt on "text_sent" rows: queued, sent, delivered, undelivered, failed.
+    var deliveryStatus: String? = nil
+    var errorCode: String? = nil
 
-    var model: AlertEvent { AlertEvent(who: who, action: action, at: BackendCoding.date(from: at) ?? .now) }
+    /// True when Twilio reported that a text never reached the contact.
+    var textNotDelivered: Bool { deliveryStatus == "undelivered" || deliveryStatus == "failed" }
+
+    var model: AlertEvent {
+        AlertEvent(who: who, action: textNotDelivered ? "text_not_delivered" : action,
+                   at: BackendCoding.date(from: at) ?? .now)
+    }
 }
 struct AlertStatusResponse: Codable, Sendable, Equatable {
     var status: String
     var level: Int
     var dispatch: DispatchDTO?
     var events: [EventDTO]
+}
+
+// MARK: - account
+struct EmptyRequest: Codable, Sendable, Equatable {}
+/// `account/delete`: what the server removed for this device. The device secret stops working at once.
+struct AccountDeleteResponse: Codable, Sendable, Equatable {
+    struct Counts: Codable, Sendable, Equatable {
+        var contacts: Int
+        var sessions: Int
+        var alerts: Int
+        var locations: Int
+        var events: Int
+        var evidenceRows: Int
+        var evidenceObjects: Int
+        var device: Int
+    }
+    var ok: Bool
+    var deleted: Counts
 }
 
 // MARK: - evidence

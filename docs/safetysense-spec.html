@@ -206,12 +206,12 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 </header>
 
 <section class="sec" aria-labelledby="why">
-  <div class="sec-head"><span class="eyebrow">The problem</span><h2 id="why">Every safety app assumes you can press a button.</h2></div>
+  <div class="sec-head"><span class="eyebrow">The problem</span><h2 id="why">Most safety apps assume you can press a button.</h2></div>
   <div class="facts">
-    <div class="fact"><b>People freeze</b><p>Being unable to move or speak (tonic immobility) is a common response during an assault. A panic button doesn't help someone who has frozen.</p></div>
+    <div class="fact"><b>People freeze</b><p>In a study of 298 women seen after a sexual assault, 70% reported significant tonic immobility, an involuntary inability to move (Möller et al., 2017). A panic button doesn't help someone who has frozen.</p></div>
     <div class="fact"><b>Drugs remove the choice</b><p>Someone who's been drugged may not recognize danger or be able to unlock a phone.</p></div>
-    <div class="fact"><b>Phones get taken</b><p>Other apps read a phone going silent as "all clear." SafetySense reads it as a warning sign.</p></div>
-    <div class="fact"><b>NM has no text-to-911</b><p>If you can't speak out loud, there's no silent way to reach 911 here. SafetySense's data-only path to dispatch fills that gap.</p></div>
+    <div class="fact"><b>Phones get taken</b><p>Most apps can't tell a dead phone from a quiet night. SafetySense's server notices a lost heartbeat and raises the alert itself.</p></div>
+    <div class="fact"><b>NM has no text-to-911</b><p>New Mexico is still listed as the only US state without text-to-911 (checked Nov 4, 2026). If you can't speak out loud, the usual way to reach 911 silently isn't there. SafetySense's data-only path to dispatch helps cover that gap.</p></div>
   </div>
 </section>
 
@@ -340,7 +340,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
     <div class="was">Press the side button</div><div class="now"><b>Action Button, Lock Screen control, Siri, safe word.</b> Apple doesn't let apps use the side button. These are the official ways to trigger an app.</div>
     <div class="was">AI calls the police</div><div class="now"><b>The AI raises the alert level; it doesn't dial 911 alone.</b> iOS can't place calls without a tap, so dispatch goes through professional monitoring, which verifies before sending police.</div>
     <div class="was">Detect being drugged</div><div class="now"><b>Detect being unable to respond.</b> SafetySense watches for missed check-ins, unsteady movement, and falls. No phone can detect a drug, so SafetySense doesn't promise it.</div>
-    <div class="was">Copy every feature of Lobo Guardian</div><div class="now"><b>Cover the basics well and put the effort into proactive protection.</b> Lobo Guardian is being replaced by UNM Safe, and SafetySense links to it.</div>
+    <div class="was">Copy every feature of Lobo Guardian</div><div class="now"><b>Cover the basics well and put the effort into proactive protection.</b> UNM Safe replaced LoboGuardian (retired Jul 31, 2026), and SafetySense links to it.</div>
   </div>
 </section>
 
@@ -348,21 +348,21 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <div class="sec-head"><span class="eyebrow">Privacy &amp; security</span><h2 id="privacy">Private by design.</h2></div>
   <div class="grid2">
     <div class="box"><h3>On the phone</h3><ul><li>Audio, transcripts, and AI reasoning never leave the device while guarding</li><li>The 30-second buffer stays in memory and is overwritten continuously</li><li>Face ID locks the Vault. Optional discreet app icon</li><li>Duress PIN</li></ul></div>
-    <div class="box"><h3>On the server</h3><ul><li>Evidence is encrypted (AES-GCM) before upload, so the server stores only data it can't read</li><li>Each clip has a SHA-256 hash and timestamp to show it hasn't been altered</li><li>Location is kept only during sessions and alerts, and auto-deleted after 30 days</li><li>No ad or analytics SDKs. App Attest on dispatch</li></ul></div>
+    <div class="box"><h3>On the server</h3><ul><li>Evidence is encrypted (AES-GCM) before upload, so the server stores only data it can't read</li><li>Each clip has a SHA-256 hash and timestamp to show it hasn't been altered</li><li>Location is kept only during sessions and alerts, and auto-deleted after 30 days</li><li>No ad or analytics SDKs. App Attest on dispatch is planned</li></ul></div>
   </div>
 </section>
 
 <section class="sec" aria-labelledby="compare">
-  <div class="sec-head"><span class="eyebrow">Landscape</span><h2 id="compare">What SafetySense does that others don't.</h2></div>
+  <div class="sec-head"><span class="eyebrow">Landscape</span><h2 id="compare">What SafetySense adds.</h2></div>
   <div class="tbl-wrap"><table>
     <thead><tr><th>Feature</th><th>UNM Safe</th><th>Noonlight</th><th>bSafe</th><th>Apple built-in</th><th>SafetySense</th></tr></thead>
     <tbody>
       <tr><td>Manual SOS</td><td class="y">✓</td><td class="y">✓ hold</td><td class="y">✓</td><td class="y">✓ side button</td><td class="y">✓ Action Button, Lock Screen, Siri</td></tr>
-      <tr><td>Live location to a friend</td><td class="y">✓ Friend Walk</td><td class="n">–</td><td class="y">✓</td><td class="y">✓ Check In</td><td class="y">✓</td></tr>
-      <tr><td>Professional dispatch</td><td class="n">campus call</td><td class="y">✓</td><td class="n">–</td><td class="n">911 call</td><td class="y">✓ Noonlight API</td></tr>
-      <tr><td>Voice trigger</td><td class="n">–</td><td class="n">Alexa</td><td class="y">✓</td><td class="n">Siri</td><td class="y">✓ offline safe word</td></tr>
-      <tr class="diff"><td>Detects distress automatically</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">crash and fall only</td><td class="y">✓ on-device</td></tr>
-      <tr class="diff"><td>Alerts when the phone goes dark</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="y">✓ heartbeat</td></tr>
+      <tr><td>Live location to a friend</td><td class="y">✓ Friend Walk</td><td class="y">✓ Safety Network</td><td class="y">✓</td><td class="y">✓ Check In</td><td class="y">✓</td></tr>
+      <tr><td>Professional dispatch</td><td class="n">call to UNMPD</td><td class="y">✓</td><td class="n">–</td><td class="n">911 call</td><td class="y">✓ Noonlight API</td></tr>
+      <tr><td>Voice trigger</td><td class="n">–</td><td class="n">Alexa (paid)</td><td class="y">✓</td><td class="n">Siri</td><td class="y">✓ offline safe word</td></tr>
+      <tr class="diff"><td>Detects distress automatically</td><td class="n">–</td><td class="n">crash only (paid)</td><td class="n">–</td><td class="n">crash; fall on Watch</td><td class="y">✓ on-device</td></tr>
+      <tr class="diff"><td>Alerts when the phone goes dark</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">Check In, may be delayed</td><td class="y">✓ heartbeat</td></tr>
       <tr class="diff"><td>Duress PIN</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="y">✓</td></tr>
       <tr class="diff"><td>Date details revealed only in an alert</td><td class="n">–</td><td class="n">notes</td><td class="n">–</td><td class="n">–</td><td class="y">✓</td></tr>
     </tbody>
@@ -378,7 +378,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   </div>
 </section>
 
-<footer>Draft spec v0.1, Nov 4 2026. Full details are in <code>docs/SPEC.md</code>. Check local phone numbers, the text-to-911 status, and recording-consent law before they appear in the app or on slides.</footer>
+<footer>Draft spec v0.1, Nov 4 2026. Full details are in <code>docs/SPEC.md</code>. Local phone numbers, text-to-911 status, NMSA 30-12-1 wording and the comparison table were checked on Nov 4, 2026 (sources in <code>docs/SPEC.md</code>). Re-check text-to-911 before Nov 20.</footer>
 </main>
 
 <script>

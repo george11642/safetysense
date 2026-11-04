@@ -21,4 +21,11 @@ protocol BackendClientProtocol: Sendable {
     func uploadEvidence(_ request: EvidenceUploadRequest) async throws -> OKResponse
     func getShare(_ request: ShareGetRequest) async throws -> ShareGetResponse
     func shareAction(_ request: ShareActionRequest) async throws -> OKResponse
+    /// Erases everything this device stored on the server (contacts, sessions, alerts, locations,
+    /// events, evidence) and revokes its credentials.
+    func deleteAccount() async throws -> AccountDeleteResponse
+}
+
+extension BackendClientProtocol {
+    func deleteAccount() async throws -> AccountDeleteResponse { throw BackendError.notRegistered }
 }

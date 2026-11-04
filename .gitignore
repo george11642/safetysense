@@ -10,7 +10,11 @@ node_modules/
 video/raw/
 video/out/
 *.sb-*
-presentation/build/
 .vercel/
 # Private correspondence stays local (contest site mirror is public and kept)
 reference/email/
+!presentation/build/
+presentation/build/*
+!presentation/build/*.js
+!presentation/build/*.py
+!presentation/build/package.json

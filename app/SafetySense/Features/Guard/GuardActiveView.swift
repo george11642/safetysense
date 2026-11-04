@@ -10,6 +10,7 @@ struct GuardActiveView: View {
     @State private var isEnding = false
     @State private var authFailed = 0
     @State private var biometry = "Face ID"
+    @State private var showFakeCall = false
 
     private var session: GuardSession? { model.currentSession }
 
@@ -23,6 +24,7 @@ struct GuardActiveView: View {
                 Card { RiskMeterView(assessment: assessment) }
                 if let sealed = sealedSummary { sealedCard(sealed) }
                 contactsCard
+                FakeCallEntryRow { showFakeCall = true }
                 if model.services.flavor == .demo { demoControls }
                 actions
             }
@@ -38,6 +40,9 @@ struct GuardActiveView: View {
             PINEntrySheet(title: "End session", message: "Enter your safety PIN to stop guarding.",
                           verify: { model.store.verifyPIN($0) },
                           onResult: { result in finishEnd(duress: result == .duress) })
+        }
+        .sheet(isPresented: $showFakeCall) {
+            NavigationStack { FakeCallSetupView() }.presentationDragIndicator(.visible)
         }
         .confirmationDialog("End this Guard session?", isPresented: $confirmEnd, titleVisibility: .visible) {
             Button("End session", role: .destructive) { finishEnd(duress: false) }

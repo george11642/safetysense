@@ -6,7 +6,7 @@ Contacts named on the site: Kimberly Waseta (kvwaseta@unm.edu), Logistics Coordi
 
 ## Team
 
-- **George Teifel** (UNM, gteifel@unm.edu / george.teifel@gmail.com). Registered, per George on 2026-11-03.
+- **George Teifel** (UNM, gteifel@unm.edu / George’s personal Gmail). Registered, per George on 2026-11-03.
 - **Mary Teifel** (George's sister), **CNM student** (George confirmed 2026-11-04). Year, major, credit hours, and email are not yet recorded. **She must be a current UNM or CNM student taking at least 3 credit hours this fall, or be in a current CNM Deep Dive cohort.** Team changes must be emailed to itevents@unm.edu **before the Nov 6 submission deadline** (FAQ).
 
 ## Prizes

@@ -8,6 +8,7 @@ public struct SharedCommand: Codable, Sendable, Equatable, Identifiable {
         case checkInOkay       // "I'm okay" from the Live Activity
         case checkInNeedHelp   // "Need help" from the Live Activity
         case startGuard        // "Start Guard" shortcut
+        case fakeCall          // "SafetySense fake call" shortcut (SPEC 7.7)
     }
 
     public enum Source: String, Codable, Sendable {
@@ -22,13 +23,20 @@ public struct SharedCommand: Codable, Sendable, Equatable, Identifiable {
     public var createdAt: Date
     /// `GuardMode.rawValue` for `.startGuard` (nil = the app's default mode).
     public var mode: String?
+    /// `.fakeCall`: who's calling (nil = the last name used, or "Mom").
+    public var callerName: String?
+    /// `.fakeCall`: seconds until it rings (nil = the last delay used).
+    public var delaySeconds: Double?
 
-    public init(kind: Kind, source: Source, id: UUID = UUID(), createdAt: Date = .now, mode: String? = nil) {
+    public init(kind: Kind, source: Source, id: UUID = UUID(), createdAt: Date = .now, mode: String? = nil,
+                callerName: String? = nil, delaySeconds: Double? = nil) {
         self.id = id
         self.kind = kind
         self.source = source
         self.createdAt = createdAt
         self.mode = mode
+        self.callerName = callerName
+        self.delaySeconds = delaySeconds
     }
 
     /// Calm, human reason recorded on the alert (shown to contacts on the live page).

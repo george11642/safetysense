@@ -36,12 +36,12 @@
 
 <h2><span class="num">01</span>Purpose</h2>
 <p class="purpose">Get help to a student <em>when they can't get it themselves</em>, without recording their life or asking them to give up their privacy.</p>
-<p>Every safety app we reviewed, including UNM Safe, Noonlight, bSafe and Apple's built-in Emergency SOS, assumes the person can reach a button. In a sexual assault that assumption often fails:</p>
+<p>The safety apps we reviewed (UNM Safe, Noonlight, bSafe and Apple's built-in Emergency SOS and Check In) mostly rely on the person pressing a button or running a timer. In a sexual assault that can fail:</p>
 <div class="why-grid">
-  <div class="card tint"><h3>Freezing is normal</h3><p>In one study of 298 women seen after a sexual assault, 70% reported significant tonic immobility, an involuntary inability to move.<sup>1</sup></p></div>
+  <div class="card tint"><h3>Freezing is normal</h3><p>In a study of 298 women seen after a sexual assault, 70% reported significant tonic immobility, an involuntary inability to move.<sup>1</sup></p></div>
   <div class="card tint"><h3>Drugging removes choice</h3><p>Someone who has been drugged may not recognise danger or be able to unlock a phone. No phone can detect a drug, but it can notice that you stopped responding.</p></div>
-  <div class="card tint"><h3>Phones get taken</h3><p>Other apps treat a silent phone as "all clear". SafetySense's server treats a lost heartbeat as a warning sign.</p></div>
-  <div class="card tint"><h3>No silent 911 here</h3><p>New Mexico has been the only US state without text-to-911. Its NG911 rollout began in 2025 and is still phased.<sup>2</sup></p></div>
+  <div class="card tint"><h3>Phones get taken</h3><p>Most apps can't tell a dead phone from a quiet night. If SafetySense's heartbeat stops mid-session, its server raises the alert itself.</p></div>
+  <div class="card tint"><h3>No text-to-911 here</h3><p>New Mexico is still listed as the only US state without text-to-911. Its NG911 upgrade began in 2025.<sup>2</sup></p></div>
 </div>
 <p>SafetySense keeps the basics students expect (SOS, live location, check-in timers, campus resources) and puts its effort into what's missing: <strong>proactive, on-device detection</strong> and a <strong>calm, trauma-informed escalation ladder</strong> that gets the right help without a tap.</p>
 
@@ -84,10 +84,10 @@
     <tr><td><span class="pill teal">0 · Guarding</span></td><td>Session on</td><td>Audio is held only in a 30-second memory buffer. Nothing is saved. Lock Screen Live Activity.</td><td>End session (PIN or Face ID)</td></tr>
     <tr><td><span class="pill">1 · Check-in</span></td><td>Risk above threshold, or a scheduled check-in</td><td>A quiet haptic and "You okay?" with 45 seconds to answer.</td><td>Tap "I'm okay"</td></tr>
     <tr><td><span class="pill amber">2 · Alert</span></td><td>No answer, high risk, safe word, Action Button, or lost heartbeat</td><td>Contacts get a call and a live link. Encrypted evidence capture starts.</td><td>Safety PIN</td></tr>
-    <tr><td><span class="pill red">3 · Dispatch</span></td><td>90 s at Alert with no cancel, a contact taps "Send help", or held SOS</td><td>Professional monitoring calls the user, then sends police to the live location.</td><td>Safety PIN, plus the dispatcher's call</td></tr>
+    <tr><td><span class="pill red">3 · Dispatch</span></td><td>90 s at Alert with no cancel, a contact taps "Send help", or held SOS</td><td>Professional monitoring texts and calls the user, then, if there's no PIN or answer, passes the live location to 911.</td><td>Safety PIN, plus the dispatcher's call</td></tr>
   </tbody>
 </table>
-<p class="small"><strong>Duress PIN:</strong> it looks exactly like cancelling but silently goes to Level 3, for when someone forces the user to cancel. <strong>Manual triggers:</strong> Action Button, a Lock Screen and Control Center control, Siri ("SafetySense alert"), the safe word, a hold-to-release SOS button, and a fake call to leave a situation.</p>
+<p class="small"><strong>Duress PIN:</strong> it looks exactly like cancelling but silently goes to Level 3, for when someone forces the user to cancel. <strong>Manual triggers:</strong> Action Button, a Lock Screen and Control Center control, Siri ("SafetySense alert"), the safe word, and a hold-to-release SOS button. A <strong>Fake call</strong> helps the user leave a situation without explaining why.</p>
 
 <h3>After an incident</h3>
 <p>The <strong>Support</strong> screen offers a 24/7 advocate, medical and SANE care, and reporting options (UNMPD, APD, Title IX or CNM), and also says plainly that keeping it private is fine. Nothing is required. The Face ID–locked <strong>Vault</strong> holds encrypted, hash-stamped evidence that the user shares only if they choose to.</p>
@@ -96,19 +96,20 @@
 <table class="plain keep">
   <thead><tr><th style="width:46%">Capability</th><th>UNM Safe</th><th>Noonlight</th><th>bSafe</th><th>Apple built-in</th><th>SafetySense</th></tr></thead>
   <tbody>
-    <tr><td>Detects distress automatically</td><td>–</td><td>–</td><td>–</td><td>crash / fall</td><td><strong>sound, words, motion</strong></td></tr>
-    <tr><td>Alerts when the phone goes dark</td><td>–</td><td>–</td><td>–</td><td>–</td><td><strong>server heartbeat</strong></td></tr>
+    <tr><td>Detects distress automatically</td><td>–</td><td>crash only (paid)</td><td>–</td><td>crash / fall</td><td><strong>sound, words, motion</strong></td></tr>
+    <tr><td>Alerts when the phone goes dark</td><td>–</td><td>–</td><td>–</td><td>Check In (may be delayed)</td><td><strong>server heartbeat</strong></td></tr>
     <tr><td>Duress PIN</td><td>–</td><td>–</td><td>–</td><td>–</td><td><strong>yes</strong></td></tr>
     <tr><td>Date details revealed only if needed</td><td>–</td><td>partial</td><td>–</td><td>–</td><td><strong>yes, encrypted</strong></td></tr>
-    <tr><td>Professional dispatch with live location</td><td>campus call</td><td>yes</td><td>–</td><td>911 call</td><td><strong>yes (Noonlight API)</strong></td></tr>
+    <tr><td>Professional dispatch with live location</td><td>call to UNMPD</td><td>yes</td><td>–</td><td>911 call</td><td><strong>yes (Noonlight API)</strong></td></tr>
     <tr><td>UNM <em>and</em> CNM resources</td><td>UNM only</td><td>–</td><td>–</td><td>–</td><td><strong>both</strong></td></tr>
   </tbody>
 </table>
 
 <div class="eyebrow" style="margin-top:0.18in;color:var(--muted)">Sources</div>
 <ol class="refs" style="margin-top:4px">
-  <li>Möller A., Söndergaard H. P., Helström L. "Tonic immobility during sexual assault: a common reaction predicting post-traumatic stress disorder and severe depression." <em>Acta Obstetricia et Gynecologica Scandinavica</em>, 2017.</li>
-  <li>KFOX14, "New Mexico lacks technology allowing people to text 911 for an emergency"; NM Department of Finance &amp; Administration, "State begins roll out of new modernized 911 system", July 17, 2025. We'll check current status against the FCC text-to-911 registry before the final pitch.</li>
+  <li>Möller A., Söndergaard H. P., Helström L. "Tonic immobility during sexual assault: a common reaction predicting post-traumatic stress disorder and severe depression." <em>Acta Obstetricia et Gynecologica Scandinavica</em> 96(8):932–938, 2017. doi:10.1111/aogs.13174.</li>
+  <li>KFOX14, "New Mexico lacks technology allowing people to text 911 for an emergency"; Source NM, "New Mexico expected to launch new 911 system in August", Apr 11, 2025; GovTech, "Bernalillo County Leads New Mexico Next-Gen 911 Upgrade", Aug 11, 2025; Textdrip state-by-state guide, Jun 18, 2026 ("only one state ... doesn't support Text-to-911: New Mexico"). Checked Nov 4, 2026. Third-party relays such as accesSOS exist in Albuquerque and Santa Fe.</li>
+  <li>Comparison table: unmsafe.unm.edu; noonlight.com/noonlight-app; getbsafe.com/help; Apple iPhone User Guide (Check In, Crash Detection; Fall Detection is on Apple Watch). Checked Nov 4, 2026.</li>
 </ol>
 
 <h2 class="page-break"><span class="num">04</span>Pathway to satisfaction</h2>
@@ -129,7 +130,7 @@
 
 <h3>Validation and rollout</h3>
 <div class="card keep">
-  <div class="phase"><div class="when">Done · Nov 2026</div><p><b>Working prototype.</b> A native iOS app with real on-device detection, a live backend, and real automated calls to a verified test phone. A dry-run test covers the full flow without calling anyone, and 116 automated tests cover the risk engine, escalation, vault and API contract.</p></div>
+  <div class="phase"><div class="when">Done · Nov 2026</div><p><b>Working prototype.</b> A native iOS app with real on-device detection, a live backend, and real automated calls to a verified test phone. A dry-run test covers the full flow without calling anyone, and 136 automated tests cover the risk engine, escalation, vault and API contract.</p></div>
   <div class="phase"><div class="when">Dec 2026</div><p><b>Detection lab tests.</b> Run the detector against recorded scenarios: parties, bars, arguments, screams and falls. Tune thresholds against the false-alarm and speed targets.</p></div>
   <div class="phase"><div class="when">Spring 2027</div><p><b>Students and advocates.</b> A survey and moderated usability tests with UNM and CNM students (onboarding and the practice drill). Ask LoboRESPECT and Rape Crisis Center of Central NM advocates to review every word of the alert and support copy.</p></div>
   <div class="phase"><div class="when">Fall 2027</div><p><b>TestFlight pilot</b> with a student organization, with opt-in, privacy-preserving metrics only. Move from the Noonlight sandbox to production dispatch only after a legal and privacy review.</p></div>
