@@ -8,7 +8,7 @@ Last checked 2026-11-04 by the final verification pass (build, all tests, simula
 **Before Fri Nov 6, 11:59 pm MT (required):**
 
 1. **Mary's eligibility.** Confirm she's taking at least 3 credit hours at CNM this fall, or is in a Deep Dive cohort. If she isn't on the registration, email itevents@unm.edu **before Nov 6** to add her.
-2. **Fill in the team bio.** `submission/01-team-bio/SafetySense-TeamBio.html`: George's year and major, and Mary's year, major and email (yellow `[FILL IN]`). Check both "why we care" lines and Mary's role. Re-render with `submission/_assets/render.sh` (needs network for Google Fonts) and open the PDF.
+2. **Fill in the team bio.** `submission/01-team-bio/SafetySense-TeamBio.html`: years and majors are filled in (George: senior EE; Mary: freshman ME, 3+ CNM credits confirmed). Only Mary's email is left (yellow `[FILL IN]`). Check both "why we care" lines and Mary's role. Re-render with `submission/_assets/render.sh` (needs network for Google Fonts) and open the PDF.
 3. **Finish the email draft.** `submission/EMAIL_DRAFT.md`: Mary's email, and the extra-credit line (keep it only if one of you went to the Sep 17 kickoff or an Oct 8/20 mentoring session; delete it otherwise).
 4. **Send the email** from gteifel@unm.edu with the 5 PDFs attached. Subject: `App Contest Technical Submission – SafetySense`. Record the time and message id in `docs/SUBMISSION_CHECKLIST.md`. No agent sends email.
 5. ~~Commit the work.~~ Done: everything is committed and pushed to the public repo https://github.com/george11642/safetysense. Your personal Gmail address has been removed from the docs. The secret and phone-number scan passed (2026-11-04).

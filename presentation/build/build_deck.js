@@ -120,8 +120,8 @@ Hi, I'm George Teifel from UNM, and this is my sister Mary Teifel from CNM. We b
     eyebrow(s, "Who we are", 0.6, 0.5, 6);
     title(s, "Two siblings, two campuses, one problem");
     const people = [
-      ["George Teifel", "University of New Mexico", "Year and major: fill in before Nov 16", "Built the iOS app and the backend"],
-      ["Mary Teifel", "Central New Mexico Community College", "Year and major: fill in before Nov 16", "Role: fill in before Nov 16"],
+      ["George Teifel", "University of New Mexico", "Senior · Electrical Engineering", "Built the iOS app and the backend"],
+      ["Mary Teifel", "Central New Mexico Community College", "Freshman · Mechanical Engineering", "Research, UX and the app's wording"],
     ];
     for (let i = 0; i < 2; i++) {
       const y = 1.95 + i * 2.35;
@@ -130,7 +130,7 @@ Hi, I'm George Teifel from UNM, and this is my sister Mary Teifel from CNM. We b
       const p = people[i];
       s.addText(p[0], { x: 1.7, y: y + 0.25, w: 4.3, h: 0.45, margin: 0, fontFace: SANS, fontSize: 22, bold: true, color: C.ink });
       s.addText(p[1], { x: 1.7, y: y + 0.72, w: 4.3, h: 0.35, margin: 0, fontFace: SANS, fontSize: 14, color: C.muted });
-      s.addText(p[2], { x: 1.7, y: y + 1.1, w: 4.3, h: 0.3, margin: 0, fontFace: SANS, fontSize: 12, color: C.amber });
+      s.addText(p[2], { x: 1.7, y: y + 1.1, w: 4.3, h: 0.3, margin: 0, fontFace: SANS, fontSize: 12, color: C.muted });
       s.addText(p[3], { x: 1.7, y: y + 1.45, w: 4.3, h: 0.35, margin: 0, fontFace: SANS, fontSize: 14, color: C.ink });
     }
     // right: the 30-second version
@@ -152,7 +152,7 @@ Hi, I'm George Teifel from UNM, and this is my sister Mary Teifel from CNM. We b
     footer(s, 2);
     s.addNotes(
 `[0:15 to 0:45, 30 s]
-George is a [year] studying [major] at UNM, and he built the app and the backend. Mary is a [year] studying [major] at CNM, and she [Mary's role].
+George is a senior studying electrical engineering at UNM, and he built the app and the backend. Mary is a freshman studying mechanical engineering at CNM, and she led research, UX and the app's wording.
 Here's the whole idea: before a night out, a walk home, a date or a ride, you start a Guard session. SafetySense watches on your phone only. If you go quiet, can't answer, or your phone goes dark, it calls your people, then professional dispatch.
 (Fill in the brackets before Nov 16. The contest asks for name, institution, year and area of study.)`);
   }
