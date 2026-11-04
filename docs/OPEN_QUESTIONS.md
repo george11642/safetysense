@@ -4,7 +4,7 @@
 2. **Extra credit:** Did George (or Mary) attend the Sep 17 kickoff or a mentoring session (Oct 8 / Oct 20)? Each is worth up to 5 points, max 10. If yes, mention it in the submission email.
 3. **App design:** What should it do? George will describe it. Also pick an app name and team name for the subject line.
 4. **Apple Developer team for TestFlight:** George's own paid team, or none (simulator-only demo)? The only distribution cert on this Mac belongs to Josh Jarrett's team (K89F44WFKH).
-5. **Figma seat:** Figma MCP is connected (Claude + Codex) as george.teifel@gmail.com, but both teams show a **View** seat (Starter + Student). Figma limits Starter/View seats to about 6 MCP tool calls per month. To build the prototype through the MCP, get a Full seat (the Figma Education plan is free for verified students).
+5. **Figma (resolved 2026-11-04):** The Figma MCP is connected in Claude and Codex as **gteifel@unm.edu**, a verified student and admin of "gteifel's team" on the Education plan. Figma's docs give Education plans the Professional Full-seat MCP limits: 200 calls/day, 10/min. `whoami` still shows "View", which looks cosmetic. If we hit a 20/month limit, that's the cause. Don't use george.teifel@gmail.com; it's an unverified View member.
 6. **Slides tool:** Decide after finalist notification (Nov 9). Default is PPTX/Google Slides with embedded video.
 
 ## Domain notes for a sexual-assault prevention/safety app (verify before citing)
