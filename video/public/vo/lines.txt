@@ -1,0 +1,13 @@
+s1|Most safety apps need you to press a button. [[slnc 500]] What if you can't?
+s2|In an assault, many people freeze. That's a normal, involuntary response. Drugs can take away the ability to act. Phones get taken. And in New Mexico, you can't text 9 1 1.
+s3|Meet SafetySense. It calls for help when you can't.
+s4|Arm it before a night out, a walk home, or a first date. It watches for danger on your phone, decides with clear rules, and responds, step by step.
+s5a|Here's a real Night Out session. SafetySense hears a thud, and the words, get off me.
+s5b|It asks: You okay? No answer in 45 seconds, so it calls and texts your trusted people.
+s5c|Still no answer? It requests professional dispatch. In this demo, dispatch is simulated.
+s5d|Your safety PIN cancels it, and support is one tap away.
+s6|Your people get a live link with your location and battery, and they can say they're on the way.
+s7|It only listens when you turn it on. Audio stays on your phone. Evidence is encrypted, and saved only when something's wrong.
+s8|Unlike other safety apps, it detects distress automatically, raises the alarm when your phone goes dark, and has a duress PIN that looks like cancelling, but quietly gets help.
+s9|SafetySense. Calls for help when you can't. It supplements 9 1 1. It never replaces it.
+s4b|Or trigger it yourself, with the Action Button, a spoken safe word, Siri, or the Lock Screen.

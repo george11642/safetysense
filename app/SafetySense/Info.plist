@@ -48,9 +48,9 @@
 	<key>SSBackendBaseURL</key>
 	<string>https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api</string>
 	<key>SSBackendPublishableKey</key>
-	<string></string>
+	<string>sb_publishable__JyRQ8x_BXI2FWlRsgUULA__5tdSYuh</string>
 	<key>SSShareBaseURL</key>
-	<string></string>
+	<string>https://safetysense-live.vercel.app/a/</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

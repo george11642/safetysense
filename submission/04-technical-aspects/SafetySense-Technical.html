@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafetySense Technical Aspects</title>
+<link rel="stylesheet" href="../_assets/safetysense-doc.css">
+<style>
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.1in; margin: 0.02in 0 0.06in; }
+  .stats .card { padding: 0.1in 0.12in; }
+  .stats .stat { font-size: 16pt; }
+  .arch { margin: 0.06in 0 0.08in; }
+  .arch svg { display: block; width: 100%; height: auto; border-radius: 12px; }
+  td code { white-space: nowrap; }
+  .routes td:first-child { font-family: var(--mono); font-size: 8.2pt; font-weight: 600; white-space: nowrap; }
+  .flow { counter-reset: step; list-style: none; padding: 0; margin: 0.04in 0 0.12in; }
+  .flow li { position: relative; padding: 0 0 6px 30px; margin: 0; font-size: 9.6pt; break-inside: avoid; }
+  .flow li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: 1px; width: 19px; height: 19px; border-radius: 50%;
+    background: var(--night); color: var(--on-night); font: 600 8pt/19px var(--mono); text-align: center;
+  }
+  .flow .t { font: 600 7.6pt/1 var(--mono); color: var(--pink-ink); letter-spacing: .04em; margin-right: 4px; }
+  .status td:nth-child(2) { white-space: nowrap; }
+  .cover h1 { font-size: 23pt; max-width: none; }
+  .stats { margin-top: 0.12in; }
+  .appendix { break-before: page; text-align: center; }
+  .appendix p { margin: 0 0 6px; font-size: 8.4pt; color: var(--muted); text-align: left; }
+  .appendix img { height: 9.15in; width: auto; border-radius: 12px; }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="brand"><img src="../_assets/icon.png" alt=""><div><div class="name">SafetySense</div><div class="tag">Calls for help when you can't</div></div></div>
+  <div class="eyebrow">Attachment 4 of 5 · Proposed technical aspects</div>
+  <h1>On-device intelligence, a small server, real calls</h1>
+  <p class="lede">The iPhone does all the sensing and deciding. A minimal Supabase backend keeps a heartbeat, calls contacts through Twilio, and hands off to dispatch through the Noonlight API.</p>
+  <div class="meta"><span>iOS <b>Swift 6 · SwiftUI · iOS 26</b></span><span>Server <b>Supabase Edge Functions · Postgres</b></span><span>Services <b>Twilio · Noonlight · Vercel</b></span></div>
+</header>
+
+
+<h2><span class="num">01</span>Architecture diagram</h2>
+<figure class="arch">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-labelledby="t d">
+  <title id="t">SafetySense system architecture</title>
+  <desc id="d">On-device sensing, risk engine and escalation on the iPhone; a Supabase edge function, Postgres, Vault, pg_cron watchdog and private evidence storage on the server; Twilio, Noonlight and a Vercel live-link page reaching trusted contacts and professional dispatch.</desc>
+  <defs>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&amp;family=JetBrains+Mono:wght@400;600&amp;family=Source+Sans+3:wght@400;600&amp;display=swap");
+      .bg { fill: #14131f; }
+      .panel { fill: #1a1928; stroke-width: 1.5; }
+      .p-pink { stroke: #ef7b9b; stroke-opacity: .55; }
+      .p-teal { stroke: #5cc7b2; stroke-opacity: .55; }
+      .box { fill: #211f31; stroke: #34314a; stroke-width: 1.2; }
+      .box-pink { fill: #2c1f2c; stroke: #ef7b9b; stroke-width: 1.6; }
+      .box-teal { fill: #1c2a2b; stroke: #5cc7b2; stroke-width: 1.4; }
+      .box-amber { fill: #2b251c; stroke: #f0b55a; stroke-width: 1.4; }
+      .box-people { fill: #f1eff8; stroke: none; }
+      .box-dash { fill: #211f31; stroke: #a19fb6; stroke-width: 1.2; stroke-dasharray: 5 4; }
+      .h { font-family: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif; font-weight: 600; font-size: 14.5px; fill: #f1eff8; }
+      .hb { font-family: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif; font-weight: 700; font-size: 18px; fill: #f1eff8; }
+      .s { font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; font-size: 11.5px; fill: #a19fb6; }
+      .s-ink { font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; font-size: 11.5px; fill: #d9d6e6; }
+      .dark { fill: #14131f; }
+      .m { font-family: "JetBrains Mono", Menlo, monospace; font-size: 10px; letter-spacing: .08em; }
+      .lab-pink { fill: #ef7b9b; }
+      .lab-teal { fill: #5cc7b2; }
+      .lab-amber { fill: #f0b55a; }
+      .lab-muted { fill: #a19fb6; }
+      .ar { fill: none; stroke: #c9c6d8; stroke-width: 1.6; }
+      .ar-pink { fill: none; stroke: #ef7b9b; stroke-width: 2; }
+      .ar-teal { fill: none; stroke: #5cc7b2; stroke-width: 1.8; }
+      .ar-amber { fill: none; stroke: #f0b55a; stroke-width: 1.8; }
+      .ar-dash { fill: none; stroke: #a19fb6; stroke-width: 1.5; stroke-dasharray: 5 4; }
+      .lvl { font-family: "JetBrains Mono", Menlo, monospace; font-size: 10.5px; fill: #f1eff8; }
+    </style>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#c9c6d8"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ef7b9b"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5cc7b2"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#f0b55a"/></marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a19fb6"/></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="800"/>
+
+  <!-- header -->
+  <text class="hb" x="28" y="42">SafetySense · system architecture</text>
+  <text class="m lab-muted" x="1172" y="42" text-anchor="end">AUDIO, SPEECH &amp; AI NEVER LEAVE THE PHONE WHILE GUARDING</text>
+
+  <!-- ================= iPhone panel ================= -->
+  <rect class="panel p-pink" x="24" y="64" width="520" height="634" rx="16"/>
+  <text class="m lab-pink" x="44" y="90">IPHONE · ON-DEVICE · SWIFT 6 / SWIFTUI · iOS 26</text>
+
+  <!-- sensors -->
+  <text class="m lab-muted" x="44" y="114">SIGNALS</text>
+  <rect class="box" x="44" y="122" width="210" height="56" rx="9"/>
+  <text class="h" x="58" y="145">AVAudioEngine</text>
+  <text class="s" x="58" y="163">mic only during Guard · 30 s RAM buffer</text>
+
+  <rect class="box" x="44" y="188" width="210" height="56" rx="9"/>
+  <text class="h" x="58" y="211">SoundAnalysis</text>
+  <text class="s" x="58" y="229">scream · shout · glass · thud</text>
+
+  <rect class="box" x="44" y="254" width="210" height="56" rx="9"/>
+  <text class="h" x="58" y="277">Speech · SpeechAnalyzer</text>
+  <text class="s" x="58" y="295">safe word · distress phrases (offline)</text>
+
+  <rect class="box" x="44" y="320" width="210" height="56" rx="9"/>
+  <text class="h" x="58" y="343">CoreMotion</text>
+  <text class="s" x="58" y="361">fall · impact · long stillness</text>
+
+  <rect class="box" x="44" y="386" width="210" height="56" rx="9"/>
+  <text class="h" x="58" y="409">CoreLocation</text>
+  <text class="s" x="58" y="427">CLServiceSession · CLMonitor · route</text>
+
+  <rect class="box" x="44" y="452" width="210" height="56" rx="9"/>
+  <text class="h" x="58" y="475">Check-ins</text>
+  <text class="s" x="58" y="493">missed "You okay?" · no response</text>
+
+  <!-- bus into risk engine -->
+  <path class="ar" d="M254 150 H274 M254 216 H274 M254 282 H274 M254 348 H274 M254 414 H274 M254 480 H274 M274 150 V480"/>
+  <path class="ar" d="M274 250 H292" marker-end="url(#a)"/>
+
+  <!-- foundation models -->
+  <rect class="box-dash" x="296" y="122" width="200" height="62" rx="9"/>
+  <text class="h" x="310" y="145">FoundationModels</text>
+  <text class="s" x="310" y="163">on-device LLM second opinion</text>
+  <text class="s" x="310" y="177">bounded ±25% · never sole trigger</text>
+  <path class="ar-dash" d="M396 184 V208" marker-end="url(#ad)"/>
+
+  <!-- risk engine -->
+  <rect class="box-pink" x="296" y="212" width="200" height="74" rx="10"/>
+  <text class="h" x="310" y="237">Risk engine</text>
+  <text class="s-ink" x="310" y="255">weighted, decaying, explainable</text>
+  <text class="s-ink" x="310" y="271">rules · mode &amp; time aware</text>
+  <path class="ar-pink" d="M396 286 V306" marker-end="url(#ap)"/>
+
+  <!-- escalation -->
+  <rect class="box-pink" x="296" y="310" width="200" height="124" rx="10"/>
+  <text class="h" x="310" y="334">Escalation ladder</text>
+  <text class="lvl" x="310" y="356">L0  Guarding</text>
+  <text class="lvl" x="310" y="373">L1  Check-in · 45 s</text>
+  <text class="lvl" x="310" y="390">L2  Alert contacts</text>
+  <text class="lvl" x="310" y="407">L3  Dispatch · after 90 s</text>
+  <text class="s-ink" x="310" y="425">Safety PIN · duress PIN</text>
+  <path class="ar-pink" d="M396 434 V458" marker-end="url(#ap)"/>
+  <text class="m lab-pink" x="404" y="451">L2+</text>
+
+  <!-- vault -->
+  <rect class="box" x="296" y="462" width="200" height="66" rx="9"/>
+  <text class="h" x="310" y="485">Evidence vault</text>
+  <text class="s" x="310" y="503">CryptoKit AES-GCM · Keychain key</text>
+  <text class="s" x="310" y="519">SHA-256 per chunk · Face ID</text>
+
+  <!-- system surfaces -->
+  <text class="m lab-muted" x="44" y="560">TRIGGERS IN · STATUS OUT</text>
+  <rect class="box" x="44" y="568" width="452" height="112" rx="10"/>
+  <text class="h" x="58" y="592">Widgets, intents &amp; Live Activity</text>
+  <text class="s-ink" x="58" y="614">AppIntents: Action Button · Siri "SafetySense alert"</text>
+  <text class="s-ink" x="58" y="632">WidgetKit ControlWidget: Lock Screen / Control Center SOS</text>
+  <text class="s-ink" x="58" y="650">ActivityKit: Live Activity &amp; Dynamic Island, "I'm okay" button</text>
+  <text class="s-ink" x="58" y="668">UserNotifications (Time-Sensitive) · LocalAuthentication</text>
+  <path class="ar" d="M496 600 H518 V380 H500" marker-end="url(#a)"/>
+
+  <!-- phone -> api -->
+
+  <!-- ================= Supabase panel ================= -->
+  <rect class="panel p-teal" x="588" y="64" width="276" height="634" rx="16"/>
+  <text class="m lab-teal" x="606" y="90">SUPABASE · SERVER</text>
+
+  <rect class="box" x="606" y="104" width="240" height="78" rx="9"/>
+  <text class="h" x="620" y="127">Supabase Vault</text>
+  <text class="s" x="620" y="145">Twilio &amp; Noonlight credentials</text>
+  <text class="s" x="620" y="161">cron secret · AES-256 key for</text>
+  <text class="s" x="620" y="175">sealed date details</text>
+
+  <rect class="box" x="606" y="196" width="240" height="96" rx="9"/>
+  <text class="h" x="620" y="219">Postgres</text>
+  <text class="s" x="620" y="237">RLS on, no policies: service role only</text>
+  <text class="s" x="620" y="253">devices · contacts · sessions</text>
+  <text class="s" x="620" y="269">alerts · locations · events</text>
+  <text class="s" x="620" y="285">PII-minimal, cascade delete</text>
+
+  <path class="ar-teal" d="M726 306 V296" marker-end="url(#at)"/>
+  <rect class="box-teal" x="606" y="308" width="240" height="122" rx="10"/>
+  <text class="h" x="620" y="332">Edge Function "api"</text>
+  <text class="s-ink" x="620" y="350">TypeScript on Deno · one function</text>
+  <text class="s-ink" x="620" y="366">hashed device secrets, constant-time</text>
+  <text class="s-ink" x="620" y="382">Twilio webhook signature check</text>
+  <text class="s-ink" x="620" y="398">6 live alerts/h · ≤5 contacts · US only</text>
+  <text class="s-ink" x="620" y="414">duress cancel → silent escalation</text>
+
+  <rect class="box" x="606" y="456" width="240" height="96" rx="9"/>
+  <text class="h" x="620" y="479">pg_cron + pg_net</text>
+  <text class="s" x="620" y="497">watchdog every 60 s: heartbeat lost</text>
+  <text class="s" x="620" y="513">→ Alert at last known location;</text>
+  <text class="s" x="620" y="529">Alert 90 s, no cancel → dispatch</text>
+  <text class="s" x="620" y="545">retention: locations deleted at 30 days</text>
+  <path class="ar-teal" d="M726 456 V434" marker-end="url(#at)"/>
+
+  <rect class="box" x="606" y="572" width="240" height="66" rx="9"/>
+  <text class="h" x="620" y="595">Storage · private "evidence"</text>
+  <text class="s" x="620" y="613">client-side ciphertext + SHA-256</text>
+  <text class="s" x="620" y="629">server never holds the key</text>
+  <path class="ar-teal" d="M606 418 H596 V605 H602" marker-end="url(#at)"/>
+
+  <text class="m lab-pink" x="566" y="330" text-anchor="middle">HTTPS</text>
+  <text class="m lab-pink" x="566" y="358" text-anchor="middle">JSON</text>
+
+  <!-- ================= Third parties ================= -->
+  <text class="m lab-amber" x="910" y="90">THIRD-PARTY SERVICES &amp; PEOPLE</text>
+
+  <!-- trusted contacts -->
+  <rect class="box-people" x="910" y="104" width="266" height="84" rx="10"/>
+  <text class="h dark" x="926" y="129">Trusted contacts (1–5)</text>
+  <text class="s dark" x="926" y="148" style="fill:#3d3a52">no app needed: a phone call, a text,</text>
+  <text class="s dark" x="926" y="164" style="fill:#3d3a52">and a live link in any browser</text>
+  <text class="s dark" x="926" y="180" style="fill:#3d3a52">"I'm on my way" · "Send help"</text>
+
+  <!-- twilio -->
+  <rect class="box-amber" x="910" y="296" width="266" height="92" rx="10"/>
+  <text class="h" x="926" y="320">Twilio Programmable Voice + SMS</text>
+  <text class="s-ink" x="926" y="338">automated call per contact:</text>
+  <text class="s-ink" x="926" y="354">press 1 = on my way · 9 = send help</text>
+  <text class="s-ink" x="926" y="370">SMS with the live link</text>
+  <path class="ar-amber" d="M1043 296 V194" marker-end="url(#aa)"/>
+  <text class="m lab-amber" x="1052" y="248">CALL · SMS</text>
+
+  <!-- noonlight -->
+  <rect class="box-amber" x="910" y="414" width="266" height="98" rx="10"/>
+  <text class="h" x="926" y="438">Noonlight Dispatch API</text>
+  <text class="s-ink" x="926" y="456">professional monitoring calls the user,</text>
+  <text class="s-ink" x="926" y="472">then routes police to the live location</text>
+  <text class="s-ink" x="926" y="488">sandbox in the demo, never live 911;</text>
+  <text class="s-ink" x="926" y="504">"simulated" fallback if no token</text>
+
+  <!-- vercel -->
+  <rect class="box-amber" x="910" y="560" width="266" height="88" rx="10"/>
+  <text class="h" x="926" y="584">Vercel · live-link page</text>
+  <text class="s-ink" x="926" y="602">/a/&lt;token&gt; · 24 random bytes per alert</text>
+  <text class="s-ink" x="926" y="618">expires 2 h after cancel, 48 h max</text>
+  <text class="s-ink" x="926" y="634">calls share/get · share/action</text>
+
+  <!-- api -> twilio -->
+  <path class="ar-amber" d="M846 336 H906" marker-end="url(#aa)"/>
+  <!-- api -> noonlight -->
+  <path class="ar-amber" d="M846 372 H890 V462 H906" marker-end="url(#aa)"/>
+  <text class="m lab-amber" x="894" y="420">L3</text>
+  <!-- vercel -> api -->
+  <path class="ar" d="M910 604 H872 V404 H850" marker-end="url(#a)"/>
+  <!-- contacts open link -->
+  <path class="ar" d="M1176 146 H1188 V604 H1180" marker-end="url(#a)"/>
+
+  <path class="ar-pink" d="M496 340 H604" marker-end="url(#ap)"/>
+
+  <!-- ================= legend ================= -->
+  <rect x="24" y="716" width="1152" height="64" rx="12" fill="#1a1928"/>
+  <path class="ar-pink" d="M44 740 H84" marker-end="url(#ap)"/><text class="s-ink" x="92" y="744">decision path (on the phone)</text>
+  <path class="ar-teal" d="M290 740 H330" marker-end="url(#at)"/><text class="s-ink" x="338" y="744">server-side flow</text>
+  <path class="ar-amber" d="M470 740 H510" marker-end="url(#aa)"/><text class="s-ink" x="518" y="744">outbound to third parties</text>
+  <path class="ar-dash" d="M700 740 H740" marker-end="url(#ad)"/><text class="s-ink" x="748" y="744">optional (Apple Intelligence devices)</text>
+  <text class="s" x="44" y="768">While guarding, the server receives only a heartbeat (time, location, battery). Audio, transcripts and AI reasoning stay on the iPhone; evidence leaves only as ciphertext after an Alert.</text>
+</svg>
+  <figcaption>Everything in the pink panel runs on the phone. The server sees a heartbeat while guarding, and encrypted evidence only after an Alert. A full-page, larger copy is on the last page.</figcaption>
+</figure>
+
+<div class="stats">
+  <div class="card tint"><div class="stat">0</div><div class="stat-label">third-party iOS SDKs. Only Apple frameworks, with no analytics or ads.</div></div>
+  <div class="card tint"><div class="stat">3</div><div class="stat-label">on-device models: sound events, speech, and an optional LLM second opinion.</div></div>
+  <div class="card tint"><div class="stat">60 s</div><div class="stat-label">heartbeat. The server raises an alert by itself if the phone goes dark.</div></div>
+  <div class="card tint"><div class="stat">116</div><div class="stat-label">automated tests (Swift Testing), plus a dry-run backend smoke test.</div></div>
+</div>
+
+<h2><span class="num">02</span>On-device components (Apple frameworks)</h2>
+<table>
+  <thead><tr><th style="width:27%">Framework / API</th><th>What SafetySense uses it for</th></tr></thead>
+  <tbody>
+    <tr><td>AVAudioEngine, AVAudioSession</td><td>Background microphone capture, only during a Guard session. Audio is held in a fixed 30-second ring buffer in RAM.</td></tr>
+    <tr><td>SoundAnalysis</td><td>Apple's built-in sound classifier (<code>SNClassifySoundRequest</code>, about 300 labels). We watch 10 of them (screaming, shout, yell, crying, gasp, slap, thud, glass breaking, door slam, gunshot), each with its own confidence threshold.</td></tr>
+    <tr><td>Speech: <code>SpeechAnalyzer</code></td><td>iOS 26 on-device transcription that spots the safe word and distress phrases. It falls back to <code>SFSpeechRecognizer</code> with <code>requiresOnDeviceRecognition</code>, so nothing goes to a server.</td></tr>
+    <tr><td>FoundationModels</td><td>Apple's on-device LLM (<code>LanguageModelSession</code> with a <code>@Generable</code> structured answer and greedy sampling). It adjusts the risk score by at most ±25% and can't be the sole trigger. Phones without Apple Intelligence use rules only.</td></tr>
+    <tr><td>CoreMotion</td><td>Impact or fall (a spike, then stillness), erratic movement followed by long stillness, or the phone being dropped.</td></tr>
+    <tr><td>CoreLocation</td><td><code>CLServiceSession</code> and <code>CLLocationUpdate</code> for live location, and <code>CLMonitor</code> geofences for arrival checks and route deviation.</td></tr>
+    <tr><td>AppIntents, WidgetKit</td><td>Action Button and Siri trigger, and a <code>ControlWidget</code> SOS for the Lock Screen and Control Center. These work without opening the app.</td></tr>
+    <tr><td>ActivityKit</td><td>Live Activity and Dynamic Island with the check-in countdown and an "I'm okay" button.</td></tr>
+    <tr><td>UserNotifications, BackgroundTasks</td><td>Time-Sensitive check-in alerts. <code>BGTaskScheduler</code> flushes the offline outbox.</td></tr>
+    <tr><td>CryptoKit, Security (Keychain)</td><td>AES-256-GCM evidence sealing with a this-device-only Keychain key. SHA-256 tamper hashes. Hashed PINs.</td></tr>
+    <tr><td>LocalAuthentication, ContactsUI, MapKit</td><td>Face ID for the Vault and ending a session, picking trusted contacts, and the in-app map.</td></tr>
+  </tbody>
+</table>
+
+<h3>The risk engine (our code)</h3>
+<p>Each signal adds weighted points that fade over time. Weights depend on the mode (Night Out, Date, Walk, Ride) and the time of day, and the user picks Relaxed, Balanced or Vigilant sensitivity. The engine is deterministic and unit-tested, and every escalation carries a plain-language reason ("Scream, then no movement"). A "playful context" rule halves shouting when laughter or cheering is clearly present, which cuts party false alarms.</p>
+
+<h2><span class="num">03</span>Server, APIs and third-party services</h2>
+<table>
+  <thead><tr><th style="width:21%">Service</th><th style="width:44%">Role</th><th>Data it receives</th></tr></thead>
+  <tbody>
+    <tr><td>Supabase Edge Function <code>api</code></td><td>One TypeScript/Deno function with every route (table below). It does its own authentication and calls the services below.</td><td>Device ID, hashed secret, session and alert metadata</td></tr>
+    <tr><td>Supabase Postgres</td><td>Devices, contacts, sessions, alerts, locations and events. Row-level security is on with no policies, so only the server role can read or write.</td><td>See the data inventory in Attachment 5</td></tr>
+    <tr><td>Supabase Vault</td><td>Encrypted secret store: Twilio and Noonlight credentials, the cron secret, and the AES-256 key for sealed date details.</td><td>Secrets only</td></tr>
+    <tr><td>pg_cron + pg_net</td><td>Runs a watchdog every minute (heartbeat lost → Alert, 90 s at Alert → dispatch) and a daily job that deletes location history after 30 days.</td><td>None (internal)</td></tr>
+    <tr><td>Supabase Storage</td><td>Private <code>evidence</code> bucket.</td><td>Ciphertext and SHA-256 only</td></tr>
+    <tr><td>Twilio Programmable Voice + SMS</td><td>An automated call to each contact ("press 1 if you're on your way, 9 to send help"), verified with signed webhooks, plus an SMS with the live link.</td><td>Contact phone, user's first name, alert reason, link</td></tr>
+    <tr><td>Noonlight Dispatch API</td><td>Professional monitoring: calls the user to verify, then routes 911 responders to the live location (<code>POST /dispatch/v1/alarms</code>, plus location and status updates).</td><td>Name, phone, location (Level 3 only)</td></tr>
+    <tr><td>Vercel (static hosting)</td><td>The contact live-link page <code>/a/&lt;token&gt;</code> and the landing page. Plain HTML and JS with Leaflet 1.9.4 and OpenStreetMap tiles.</td><td>Nothing stored. The page reads the API with its token</td></tr>
+  </tbody>
+</table>
+
+<h3>API surface (all <code>POST</code> JSON)</h3>
+<table class="routes keep">
+  <thead><tr><th style="width:27%">Route</th><th style="width:14%">Auth</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>register</td><td>public key</td><td>Creates a device and returns <code>device_id</code> and <code>device_secret</code> once. The server keeps only a SHA-256 of the secret.</td></tr>
+    <tr><td>contacts/set</td><td>device</td><td>Replaces the trusted-contact list (at most 5, US numbers only).</td></tr>
+    <tr><td>session/start · heartbeat · end</td><td>device</td><td>Starts a Guard session (mode, check-in interval, grace period, sealed date details), sends a 60 s heartbeat with location and battery, and ends the session cleanly.</td></tr>
+    <tr><td>alert/create · escalate · cancel</td><td>device</td><td>Level 2/3 alerts with the trigger and reason, escalation to dispatch, and cancel (<code>duress:true</code> silently escalates but answers "cancelled").</td></tr>
+    <tr><td>alert/location · status</td><td>device</td><td>Live location during an alert, and the contact and dispatch timeline shown in the app.</td></tr>
+    <tr><td>evidence/upload</td><td>device</td><td>An encrypted evidence chunk with its sequence number and SHA-256.</td></tr>
+    <tr><td>share/get · share/action</td><td>link token</td><td>The live-link page: status, location, battery, sealed details while the alert is active, and "on my way", "called 911" or "send help".</td></tr>
+    <tr><td>twilio/* · cron/watchdog</td><td>signature · secret</td><td>Call TwiML and keypress handling (Twilio-signed), and the minute-by-minute watchdog.</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="num">04</span>Key flows</h2>
+<div class="grid2">
+  <div class="card keep">
+    <h3>A scream, then silence</h3>
+    <ol class="flow">
+      <li><span class="t">0 s</span>SoundAnalysis flags screaming. Then CoreMotion sees stillness.</li>
+      <li>The risk engine crosses its threshold, and a Level 1 check-in starts with a haptic and the Live Activity.</li>
+      <li><span class="t">+45 s</span>No answer. Level 2: the app seals the 30 s buffer as evidence and calls <code>alert/create</code>.</li>
+      <li>The server calls and texts each contact through Twilio. Contacts open the live link.</li>
+      <li><span class="t">+90 s</span>No PIN. The watchdog or the app escalates to Noonlight, which calls the user and then dispatches.</li>
+    </ol>
+  </div>
+  <div class="card keep">
+    <h3>The phone goes dark</h3>
+    <ol class="flow">
+      <li>During a session the app sends a heartbeat every 60 s. Missed sends wait in an offline outbox.</li>
+      <li>The phone is smashed, switched off or put in airplane mode, and heartbeats stop without "End session".</li>
+      <li>After the grace period, pg_cron's watchdog creates a Level 2 <code>heartbeat_lost</code> alert at the last known location.</li>
+      <li>Contacts are called, and dispatch follows after 90 s unless a contact resolves it.</li>
+      <li>Evidence uploaded before the phone went dark is already safe on the server, encrypted.</li>
+    </ol>
+  </div>
+</div>
+
+<h2><span class="num">05</span>Engineering quality</h2>
+<ul class="keep">
+  <li><strong>Swift 6</strong> language mode with complete strict concurrency, SwiftUI, and an XcodeGen project. The build has zero warnings.</li>
+  <li><strong>Protocol-based services</strong> (sensing, risk, escalation, backend, vault) with demo and mock versions, so tests and demo videos never touch the network or place calls.</li>
+  <li><strong>116 Swift Testing tests</strong> covering the risk engine, detectors, escalation timing, the duress path, vault encryption and tamper checks, and the backend contract. A shell smoke test runs the whole server flow in dry-run mode.</li>
+  <li><strong>Resilience:</strong> an offline outbox for heartbeats and alert locations, one live alert per session (repeat calls reuse it), and server-side escalation that doesn't depend on the phone surviving.</li>
+</ul>
+
+<h2><span class="num">06</span>What's real today, and what comes next</h2>
+<table class="status keep">
+  <thead><tr><th style="width:36%">Component</th><th style="width:17%">Status</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>On-device detection, risk engine, ladder, PINs</td><td><span class="pill teal">Built</span></td><td>Runs in the iOS 26 simulator. The iPhone 16e demo device adds the Action Button and Apple Intelligence.</td></tr>
+    <tr><td>Backend, watchdog, live-link page</td><td><span class="pill teal">Live</span></td><td>Deployed on Supabase and Vercel.</td></tr>
+    <tr><td>Twilio voice calls to contacts</td><td><span class="pill teal">Working</span></td><td>Trial account: calls reach verified numbers only, after Twilio's trial message. Production needs a paid account.</td></tr>
+    <tr><td>Twilio SMS</td><td><span class="pill amber">Blocked on trial</span></td><td>US SMS needs A2P 10DLC registration (error 30034). Failures are recorded and don't stop the calls.</td></tr>
+    <tr><td>Noonlight dispatch</td><td><span class="pill amber">Sandbox / simulated</span></td><td>Uses the sandbox only. With no token it falls back to a clearly labelled "simulated dispatch". It never contacts live 911.</td></tr>
+    <tr><td>Next</td><td><span class="pill">Roadmap</span></td><td>App Attest on alert routes, Sign in with Apple for account recovery, the Critical Alerts entitlement, Apple Watch, an Android version, and production Noonlight after legal review.</td></tr>
+  </tbody>
+</table>
+
+<section class="appendix">
+  <p><span class="eyebrow">Appendix</span>&nbsp; The architecture diagram at full size (rotated). Source: <code>design/architecture.svg</code>.</p>
+  <img src="architecture-rotated.png" alt="SafetySense system architecture diagram, full size, rotated.">
+</section>
+
+</body>
+</html>

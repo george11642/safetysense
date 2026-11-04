@@ -193,9 +193,17 @@ struct AlertActiveView: View {
         return "Updated \(lastPoll.formatted(.dateTime.hour().minute().second()))"
     }
 
+    /// Every contact came back "dry_run": the server logged the alert but called and texted nobody.
+    private var isTestAlert: Bool {
+        let notified = alert?.notified ?? []
+        return !notified.isEmpty && notified.allSatisfy { $0.status == "dry_run" || $0.status == "test" }
+    }
+
     private func eventText(_ event: AlertEvent) -> String {
         switch event.action {
-        case "notified": "Your contacts were called and texted"
+        case "notified": isTestAlert ? "Test alert: your contacts were not contacted" : "Your contacts were called and texted"
+        case "call_placed": isTestAlert ? "Test call logged, nobody was called" : "Automated calls placed to your contacts"
+        case "text_sent": isTestAlert ? "Test text logged, nothing was sent" : "Texts sent with your live link"
         case "alert_started": "Alert started"
         case "dispatched", "escalated": "Professional dispatch started"
         default: event.displayText

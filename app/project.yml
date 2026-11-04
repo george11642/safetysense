@@ -54,9 +54,9 @@ targets:
           - com.georgeteifel.SafetySense.refresh
           - com.georgeteifel.SafetySense.evidence-upload
         SSBackendBaseURL: "https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api"
-        # Publishable (anon) key is not a secret; the System Integration module fills it in.
-        SSBackendPublishableKey: ""
-        SSShareBaseURL: ""
+        # Publishable (anon) key is a public client key, not a secret. Config.swift falls back to the same values.
+        SSBackendPublishableKey: "sb_publishable__JyRQ8x_BXI2FWlRsgUULA__5tdSYuh"
+        SSShareBaseURL: "https://safetysense-live.vercel.app/a/"
     entitlements:
       path: SafetySense/SafetySense.entitlements
       properties:

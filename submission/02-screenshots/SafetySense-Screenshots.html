@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafetySense Screenshots</title>
+<link rel="stylesheet" href="../_assets/safetysense-doc.css">
+<style>
+  .cover { padding-bottom: 0.24in; }
+  .cover h1 { font-size: 23pt; }
+  .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.22in; margin: 0 0.12in; }
+  .shots figure { margin: 0; }
+  .shot { break-inside: avoid; }
+  .frame {
+    background: var(--night); border-radius: 26px; padding: 7px;
+    box-shadow: 0 0 0 1px #2c2a3d;
+  }
+  .frame img { display: block; width: 100%; border-radius: 20px; }
+  .label { display: flex; align-items: baseline; gap: 8px; margin: 12px 0 4px; }
+  .label .n {
+    font: 700 9pt/1 var(--mono); color: var(--paper); background: var(--pink-ink);
+    border-radius: 999px; width: 20px; height: 20px; display: inline-grid; place-items: center; flex: none;
+  }
+  .shot:nth-child(1) .n { background: var(--teal-ink); }
+  .shot:nth-child(2) .n { background: var(--amber-ink); }
+  .label h3 { margin: 0; font-size: 12pt; }
+  .shot p { font-size: 9pt; line-height: 1.42; margin: 0 0 5px; }
+  .shot .lvl { margin: 0 0 6px; }
+  .flow {
+    margin-top: 0.14in; display: flex; align-items: center; justify-content: center; gap: 10px;
+    font: 600 7.6pt/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  }
+  .flow i { font-style: normal; color: var(--pink-ink); }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="brand"><img src="../_assets/icon.png" alt=""><div><div class="name">SafetySense</div><div class="tag">Calls for help when you can't</div></div></div>
+  <div class="eyebrow">Attachment 2 of 5 · Screenshots</div>
+  <h1>Three moments in one night out</h1>
+  <p class="lede">Real screens from our working iOS 26 build in the iPhone 17 Pro simulator, not mock-ups. They follow one Night Out session from calm guarding to an alert and help on the way.</p>
+</header>
+
+<div class="shots">
+  <figure class="shot">
+    <div class="frame"><img src="img/14-guard-active.png" alt="Guard active screen showing a 38:02 elapsed timer, next check-in at 2:10 PM, mic on-device, location, motion and server linked, and a low risk meter."></div>
+    <div class="label"><span class="n">1</span><h3>Guard active</h3></div>
+    <div class="lvl"><span class="pill teal">Level 0 · Guarding</span></div>
+    <p>The user started a Night Out session. Sound, speech and motion are analysed <strong>on the phone</strong>. The next check-in, the sensors in use and a plain-language risk meter are always visible.</p>
+    <p class="muted">"Nothing is saved unless something seems wrong."</p>
+  </figure>
+
+  <figure class="shot">
+    <div class="frame"><img src="img/16-alert-countdown.png" alt="Alert countdown screen with 68 seconds to dispatch, the reason 'Scream, then no movement', two notified contacts, and a PIN pad."></div>
+    <div class="label"><span class="n">2</span><h3>Alert countdown</h3></div>
+    <div class="lvl"><span class="pill amber">Level 2 · Alert</span></div>
+    <p>A scream followed by no movement, with no answer to the check-in, raised an alert <strong>without a tap</strong>. Contacts got a call and a live link, and the screen says why. Dispatch starts in 90 s unless the user cancels with their PIN.</p>
+    <p class="muted">A duress PIN looks exactly like cancelling but silently sends help.</p>
+  </figure>
+
+  <figure class="shot">
+    <div class="frame"><img src="img/17-alert-active.png" alt="Alert active screen headed 'Help is on the way', with a live map shared with contacts, encrypted evidence recording, monitoring center status and contact responses."></div>
+    <div class="label"><span class="n">3</span><h3>Help is on the way</h3></div>
+    <div class="lvl"><span class="pill pink">Level 3 · Dispatch</span></div>
+    <p>Professional monitoring takes over. Contacts see the live location and respond ("Maya is on the way"), and evidence is recorded <strong>encrypted on the device</strong>.</p>
+    <p class="muted">In the demo, dispatch is clearly labelled "simulated". No real responders are sent.</p>
+  </figure>
+</div>
+
+<div class="flow"><span>Guarding</span><i>→</i><span>Check-in</span><i>→</i><span>Alert contacts</span><i>→</i><span>Professional dispatch</span></div>
+
+</body>
+</html>

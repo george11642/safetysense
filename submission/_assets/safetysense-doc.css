@@ -45,7 +45,7 @@
     color: #8a879c;
   }
 }
-@page :first { margin-top: 0; }
+@page :first { margin-top: 0.5in; }
 
 * { box-sizing: border-box; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -61,8 +61,9 @@ body {
 
 /* ---------- cover band ---------- */
 .cover {
-  margin: 0 -0.7in 0.3in;
-  padding: 0.5in 0.7in 0.36in;
+  margin: 0 0 0.26in;
+  padding: 0.3in 0.36in 0.3in;
+  border-radius: 16px;
   background: var(--night);
   color: var(--on-night);
   position: relative;
@@ -71,7 +72,7 @@ body {
 .cover::after {
   content: "";
   position: absolute;
-  right: -1.1in; top: -1.3in;
+  right: -1.3in; top: -1.5in;
   width: 3.6in; height: 3.6in;
   border-radius: 50%;
   border: 14px solid rgba(239,123,155,.20);
@@ -81,7 +82,7 @@ body {
 .brand img { width: 34px; height: 34px; border-radius: 8px; }
 .brand .name { font: 700 13pt/1 var(--display); letter-spacing: -0.01em; }
 .brand .tag { font: 400 7.6pt/1 var(--mono); color: var(--on-night-muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
-.cover .eyebrow { color: var(--pink); margin-top: 0.34in; }
+.cover .eyebrow { color: var(--pink); margin-top: 0.3in; display: block; position: relative; z-index: 1; }
 .cover h1 {
   font: 700 26pt/1.05 var(--display);
   letter-spacing: -0.02em;

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafetySense Security and Privacy</title>
+<link rel="stylesheet" href="../_assets/safetysense-doc.css">
+<style>
+  .principles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.1in; margin: 0.04in 0 0.1in; }
+  .principles .card { padding: 0.1in 0.11in; }
+  .principles h3 { font-size: 10.2pt; margin: 0 0 3px; }
+  .principles p { font-size: 8.7pt; line-height: 1.38; margin: 0; }
+  table.inv { font-size: 8.4pt; }
+  table.inv td:first-child { width: 19%; }
+  table.threat { font-size: 8.5pt; }
+  table.threat td:first-child { width: 17%; }
+  .tl { list-style: none; padding: 0; margin: 0.04in 0 0.12in; }
+  .tl li { display: grid; grid-template-columns: 1.15in 1fr; gap: 0.12in; padding: 6px 0; border-bottom: 1px solid var(--line); margin: 0; break-inside: avoid; }
+  .tl li:last-child { border-bottom: 0; }
+  .tl .k { font: 600 7.4pt/1.45 var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--pink-ink); }
+  .verify { font: 600 6.8pt/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--amber-ink); background: var(--amber-tint); border: 1px solid #f2d9a6; border-radius: 4px; padding: 2px 4px; vertical-align: 1px; white-space: nowrap; }
+  .lim li { margin-bottom: 5px; }
+  body { font-size: 10pt; }
+  .cover h1 { font-size: 23pt; }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="brand"><img src="../_assets/icon.png" alt=""><div><div class="name">SafetySense</div><div class="tag">Calls for help when you can't</div></div></div>
+  <div class="eyebrow">Attachment 5 of 5 · Security &amp; privacy</div>
+  <h1>Listens only when asked. Keeps nothing unless something's wrong.</h1>
+  <p class="lede">SafetySense handles some of the most sensitive data a student has: where they are, what's happening around them, and possibly evidence of an assault. This document lists every piece of data we hold, how it's protected, the threats we designed for, and the limits we haven't solved yet.</p>
+  <div class="meta"><span>Scope <b>iOS app · Supabase backend · Twilio · Noonlight · Vercel</b></span><span>Build <b>contest prototype, Nov 2026</b></span></div>
+</header>
+
+<h2><span class="num">01</span>Design principles</h2>
+<div class="principles">
+  <div class="card tint"><h3>On-device first</h3><p>Sound classification, speech recognition and the AI second opinion all run on the iPhone. None of them has a server path.</p></div>
+  <div class="card tint"><h3>Nothing saved by default</h3><p>While guarding, audio exists only in a 30-second RAM buffer that's constantly overwritten. Nothing is written to disk.</p></div>
+  <div class="card tint"><h3>Server sees the minimum</h3><p>The server gets a heartbeat and contact details. Evidence reaches it only as ciphertext, and it never holds the key.</p></div>
+  <div class="card tint"><h3>No trackers</h3><p>No third-party iOS SDKs at all: no analytics, ads or crash reporters. Data is never sold or shared for marketing.</p></div>
+</div>
+
+<h2><span class="num">02</span>Data inventory</h2>
+<table class="inv">
+  <thead><tr><th>Data</th><th style="width:22%">Where it lives</th><th style="width:24%">Retention</th><th>Protection</th></tr></thead>
+  <tbody>
+    <tr><td>Live audio while guarding</td><td>iPhone RAM only (30 s ring buffer)</td><td>Overwritten continuously and gone when the session ends</td><td>Never written to disk and never transmitted</td></tr>
+    <tr><td>Sound labels, transcripts, AI reasoning</td><td>iPhone memory</td><td>Discarded after scoring</td><td>Processed by on-device models. Never logged, never sent</td></tr>
+    <tr><td>Evidence audio (after an Alert)</td><td>iPhone Vault, plus a copy in the private Supabase Storage bucket</td><td>Device: user's setting (30 days by default). Server: until deleted (see §06)</td><td>AES-256-GCM per 15 s chunk. Key in the Keychain, this device only. SHA-256 per chunk. Alert ID and sequence number bound as authenticated data. iOS file protection</td></tr>
+    <tr><td>Safety PIN, duress PIN, safe word</td><td>iPhone Keychain</td><td>Until changed or erased</td><td>PINs stored only as salted SHA-256 hashes. Never sent to the server</td></tr>
+    <tr><td>Responder profile (description, medical notes)</td><td>iPhone only</td><td>Until the user deletes it</td><td>Complete file protection. Not sent anywhere in the current build</td></tr>
+    <tr><td>Account: name, phone, campus</td><td>Postgres <code>devices</code></td><td>Until the device is deleted</td><td>Row-level security with no policies (service role only)</td></tr>
+    <tr><td>Device credential</td><td>Phone Keychain; server keeps a SHA-256</td><td>Until re-registration</td><td>The secret is shown once and compared in constant time</td></tr>
+    <tr><td>Trusted contacts (name, phone)</td><td>iPhone and Postgres <code>contacts</code></td><td>Replaced on every edit; cascade delete</td><td>At most 5, US numbers only. Used only to call and text during an alert</td></tr>
+    <tr><td>Session status, last location, battery</td><td>Postgres <code>sessions</code></td><td>Kept with the session record</td><td>Written only while a Guard session is on</td></tr>
+    <tr><td>Location history</td><td>Postgres <code>locations</code></td><td><strong>Deleted after 30 days</strong> by a daily job</td><td>Recorded only during a session or alert</td></tr>
+    <tr><td>Sealed date details</td><td>Postgres <code>sessions</code></td><td>Kept with the session record</td><td>AES-256-GCM with a key in Supabase Vault. Shown to contacts only while an alert is active</td></tr>
+    <tr><td>Alert timeline and share token</td><td>Postgres <code>alerts</code>, <code>events</code></td><td>Link dies 2 h after cancel, 48 h maximum</td><td>A 192-bit random token. The page is <code>noindex</code>, <code>no-referrer</code> and <code>no-store</code></td></tr>
+    <tr><td>Data held by third parties</td><td>Twilio, Noonlight, Vercel</td><td>Under each provider's policy</td><td>Twilio: contact numbers, first name, alert reason. Noonlight (Level 3 only): name, phone, location. Vercel: standard access logs</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="num">03</span>How the protections work</h2>
+<ul class="tl">
+  <li><span class="k">RAM-only buffer</span><span>A fixed-size <code>PCMRingBuffer</code> of mono samples is overwritten in place. When the ladder reaches Alert, those 30 seconds and the live audio after them are encrypted the moment they're captured. Below Alert, nothing is persisted.</span></li>
+  <li><span class="k">Evidence vault</span><span>CryptoKit AES-GCM with a 256-bit key generated on the device (<code>kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly</code>). Each chunk's SHA-256 is shown in the Vault and stored with the upload, so tampering is detectable. A swapped or reordered chunk fails to decrypt because the alert ID and sequence number are bound in. Chunks upload <em>while recording</em>, so evidence survives a smashed phone. The Vault opens only with Face ID or the passcode, and sharing it with an advocate or police is always the user's choice.</span></li>
+  <li><span class="k">Server lockdown</span><span>Every table has RLS enabled with no policies, and <code>anon</code> and <code>authenticated</code> have no grants. Only the edge function's service role touches data, so the public key alone reads nothing. Secrets live in Supabase Vault and are read through a <code>SECURITY DEFINER</code> function that only the service role can run. The cron job reads its secret from Vault at run time, so it never appears in the job table.</span></li>
+  <li><span class="k">Authentication</span><span>Device routes need the device ID and secret, checked against a stored hash in constant time. Share routes are scoped to one alert's token. Twilio callbacks must carry a valid <code>X-Twilio-Signature</code> (HMAC-SHA1), and the watchdog requires a secret header. Admin setup is hash-gated and switched off.</span></li>
+  <li><span class="k">Abuse limits</span><span>At most 6 live alerts per device per hour, 5 contacts, and US numbers only. One live alert per session, so repeat requests reuse it. A practice drill runs as a dry run and is labelled <strong>TEST</strong>, and dry runs never call Twilio.</span></li>
+  <li><span class="k">Duress PIN</span><span>Duress is checked before the real PIN, so it can never count as a valid cancel. The phone shows "cancelled" and the API answers <code>{status:"cancelled"}</code>, but the server silently escalates and keeps the alert live for contacts. <code>alert/status</code> hides the dispatch from the phone, so someone looking over the user's shoulder sees nothing unusual. A wrong PIN never cancels.</span></li>
+</ul>
+
+<h2><span class="num">04</span>Threat model</h2>
+<table class="threat">
+  <thead><tr><th>Threat</th><th style="width:21%">Scenario</th><th style="width:33%">Mitigations</th><th>What's left</th></tr></thead>
+  <tbody>
+    <tr><td>Abuser has the phone (or the passcode)</td><td>Forces the user to cancel, browses the app, or watches the screen.</td><td>Duress PIN, Face ID on the Vault and on ending a session, a discreet alternate app icon, and no audio history to browse.</td><td>Someone who knows the passcode can see the contacts and settings, or delete the app outside a session.</td></tr>
+    <tr><td>SafetySense used as stalkerware</td><td>A partner installs it to track someone, or adds themselves as a contact.</td><td>Location is shared only during a session or alert the phone's owner starts, the Live Activity is always visible, links expire, and there's no silent-tracking mode.</td><td>Planned: notify the user when contacts change, and ask contacts to confirm by text before their first alert.</td></tr>
+    <tr><td>False positives</td><td>A loud party, a playful "stop!", or a dropped phone.</td><td>A 45 s check-in before any alert, the laughter/cheering rule, an LLM that can only nudge the score, PIN cancel, contacts first by default, and Noonlight's verification call before dispatch.</td><td>Thresholds still need tuning on real recordings (see Attachment 3 metrics).</td></tr>
+    <tr><td>Phone destroyed or taken</td><td>Smashed, switched off, or put in airplane mode mid-assault.</td><td>The server watchdog raises an alert from the last known location, and evidence is uploaded during recording.</td><td>The evidence key never leaves the device, so a destroyed phone means uploaded ciphertext can't be decrypted (see §06).</td></tr>
+    <tr><td>Server breach</td><td>An attacker reads the database.</td><td>Minimal data, hashed device secrets, ciphertext-only evidence, and secrets in Vault.</td><td>An attacker with both the database <em>and</em> Vault could read sealed date details, contacts and recent locations.</td></tr>
+    <tr><td>Link forwarded or leaked</td><td>The SMS link reaches someone it shouldn't.</td><td>A 192-bit token, short expiry, no location once the alert is cancelled, <code>noindex</code> and <code>no-referrer</code>.</td><td>Anyone holding a live link sees location until it expires. The map loads OpenStreetMap tiles, which reveals the general area to the tile server.</td></tr>
+    <tr><td>API abuse</td><td>Scripts register devices to trigger spam calls.</td><td>Rate limits, US-only numbers, a 5-contact cap, and Twilio's verified-number restriction on the trial account.</td><td><code>register</code> is open to anyone with the publishable key. App Attest and registration rate limits are needed before public launch.</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="num">05</span>Legal and compliance posture</h2>
+<ul>
+  <li><strong>Recording consent (New Mexico).</strong> NMSA 1978 § 30-12-1(C) prohibits intercepting telegraph or telephone communications "without the consent of a sender or intended recipient," which makes New Mexico a one-party-consent state for calls. The statute's text addresses telegraph and telephone communications, and how it applies to in-person audio captured by a phone is less clear. § 30-12-11 also gives a civil remedy for intercepted wire or oral communications. SafetySense lowers the risk by design: it records nothing until an Alert, the user is present at the conversation, and evidence is never shared automatically. <span class="verify">To verify with counsel before launch</span></li>
+  <li><strong>HIPAA:</strong> doesn't apply. SafetySense isn't a covered entity or business associate. Medical notes are entered by the user, stay on the device, and are still treated as sensitive.</li>
+  <li><strong>FERPA:</strong> doesn't apply. We don't receive education records from UNM or CNM. If a campus integration ever shares institutional data, we'd work under the institution's data-sharing agreement.</li>
+  <li><strong>Title IX and Clery:</strong> SafetySense never reports to a school or the police on its own. Reporting options are offered, never required, so the student stays in control. Any campus partnership would be reviewed with the Title IX offices for responsible-employee implications.</li>
+  <li><strong>Breach response:</strong> we'd follow New Mexico's Data Breach Notification Act (NMSA 57-12C) <span class="verify">To verify</span> and notify affected users directly.</li>
+  <li><strong>App Store:</strong> privacy nutrition label "Data Linked to You" (contact info, location), no tracking, a purpose string for each permission, and permissions requested only when needed. The audience is 18 and over.</li>
+  <li><strong>Emergency services:</strong> SafetySense supplements 911 and never replaces it. The demo uses only the Noonlight sandbox or a clearly labelled simulated dispatch, never live 911.</li>
+</ul>
+
+<h2><span class="num">06</span>Limitations we're stating plainly</h2>
+<ul class="lim">
+  <li><strong>Evidence key recovery.</strong> The key is bound to the device, so if the phone is destroyed the server-side ciphertext can't be read. Planned fix: an optional recovery key the user stores themselves, or an escrow shared with an advocate the user picks.</li>
+  <li><strong>Server-side deletion.</strong> "Delete everything" erases all local data and the app's credentials today, but server rows and evidence objects aren't yet removed through the API. A cascade-delete route that also clears Storage is the next backend task. Server evidence has no automatic expiry yet either.</li>
+  <li><strong>Sealed date details</strong> are encrypted with a server-held key so the contact's browser can show them. A stronger design puts the key in the link's URL fragment so the server can never decrypt them.</li>
+  <li><strong>PIN hashing</strong> uses salted SHA-256 inside the Keychain. A 4-digit PIN would be brute-forceable if the Keychain were extracted, so we'll move to a slow KDF or a Secure Enclave–bound check.</li>
+  <li><strong>Prototype accounts:</strong> Twilio is on a trial account (US SMS is blocked by A2P 10DLC rules, and calls go only to verified numbers), Noonlight is sandbox-only, and the Noonlight alarm PIN is a fixed placeholder. None of these are production settings.</li>
+  <li><strong>Not yet built:</strong> App Attest, Sign in with Apple account recovery, contact opt-in confirmation, and an independent security review. All are needed before any public release.</li>
+</ul>
+
+<div class="callout teal keep">
+  <span class="eyebrow">Our commitment</span>
+  <p>Before SafetySense goes to real students, we'll have an independent privacy and legal review, publish a plain-language privacy policy, and ask UNM's Information Security &amp; Privacy Office and campus advocates to review the data flows in this document.</p>
+</div>
+
+</body>
+</html>

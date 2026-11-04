@@ -157,7 +157,10 @@ struct DrillStepView: View {
                                             : "Here's what happened on the server. In a real alert, these people would be called and texted.") {
                 if let record, !failed { DrillResultCard(record: record, events: events) }
             } footer: {
-                PrimaryButton("Finish", systemImage: "arrow.right") { phase = .finished }
+                PrimaryButton("Finish", systemImage: "arrow.right") {
+                    endDrillOnServer()
+                    phase = .finished
+                }
                 if failed {
                     PrimaryButton("Try again", role: .secondary) { Task { await runDrill() } }
                 }
@@ -168,7 +171,17 @@ struct DrillStepView: View {
         }
     }
 
+    /// Closes the TEST alert on the server once the person is done looking at it, so the
+    /// watchdog never escalates the drill into a (simulated) dispatch and the contact page
+    /// reads "marked safe" instead of "help requested".
+    private func endDrillOnServer() {
+        guard let id = record?.serverAlertID else { return }
+        let backend = model.services.backend
+        Task { _ = try? await backend.cancelAlert(AlertCancelRequest(alertId: id, duress: false)) }
+    }
+
     private func runDrill() async {
+        endDrillOnServer()
         withAnimation(.smooth) { phase = .running }
         failed = false
         let started = Date.now
@@ -249,6 +262,15 @@ private struct DrillResultCard: View {
     let record: AlertRecord
     let events: [AlertEvent]
 
+    /// Server rows for a drill are always dry runs: say so instead of "call placed".
+    static func drillText(_ e: AlertEvent) -> String {
+        switch e.action {
+        case "call_placed": "TEST call logged, nobody was called"
+        case "text_sent": "TEST text logged, nothing was sent"
+        default: e.displayText
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: SSSpacing.md) {
             Card(tint: SSColor.calm) {
@@ -284,7 +306,7 @@ private struct DrillResultCard: View {
                         ForEach(events) { e in
                             HStack(alignment: .firstTextBaseline) {
                                 Text(e.at.formatted(date: .omitted, time: .standard)).font(SSFont.mono(12)).foregroundStyle(SSColor.inkMuted)
-                                Text(e.displayText).font(SSFont.callout)
+                                Text(Self.drillText(e)).font(SSFont.callout)
                             }
                         }
                     }

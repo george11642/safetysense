@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafetySense Purpose and Audience</title>
+<link rel="stylesheet" href="../_assets/safetysense-doc.css">
+<style>
+  .why-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.1in; margin: 0.06in 0 0.14in; }
+  .why-grid .card { padding: 0.1in 0.11in; }
+  .why-grid h3 { font-size: 10.4pt; margin: 0 0 3px; }
+  .why-grid p { font-size: 8.8pt; line-height: 1.38; margin: 0; }
+  .ladder td:first-child { white-space: nowrap; }
+  .metrics td:nth-child(2) { font: 600 9pt/1.3 var(--display); white-space: nowrap; }
+  .phase { display: grid; grid-template-columns: 1.05in 1fr; gap: 0 0.14in; padding: 7px 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+  .phase:last-child { border-bottom: 0; }
+  .phase .when { font: 600 7.4pt/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--pink-ink); padding-top: 2px; }
+  .phase p { margin: 0; font-size: 9.6pt; }
+  .phase b { font-family: var(--display); font-weight: 600; }
+  .purpose { font: 500 13.5pt/1.35 var(--display); letter-spacing: -0.005em; margin: 0.04in 0 0.12in; }
+  .purpose em { font-style: normal; color: var(--pink-ink); }
+  sup { font-size: 0.68em; color: var(--muted); }
+  .refs { font-size: 7.9pt; color: var(--muted); line-height: 1.4; }
+  .refs li { margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="brand"><img src="../_assets/icon.png" alt=""><div><div class="name">SafetySense</div><div class="tag">Calls for help when you can't</div></div></div>
+  <div class="eyebrow">Attachment 3 of 5 · Purpose, audience, functions, pathway to satisfaction</div>
+  <h1>A safety app that doesn't wait for you to press a button</h1>
+  <p class="lede">During a night out, a walk home, a first date or a ride, SafetySense notices on the phone itself when something is wrong. If you can't respond, it brings in your trusted people and then professional dispatch. It supplements 911 and never replaces it.</p>
+  <div class="meta"><span>Team <b>George Teifel (UNM) · Mary Teifel (CNM)</b></span><span>Platform <b>iOS 26 · iPhone</b></span><span>Status <b>working prototype</b></span></div>
+</header>
+
+<h2><span class="num">01</span>Purpose</h2>
+<p class="purpose">Get help to a student <em>when they can't get it themselves</em>, without recording their life or asking them to give up their privacy.</p>
+<p>Every safety app we reviewed, including UNM Safe, Noonlight, bSafe and Apple's built-in Emergency SOS, assumes the person can reach a button. In a sexual assault that assumption often fails:</p>
+<div class="why-grid">
+  <div class="card tint"><h3>Freezing is normal</h3><p>In one study of 298 women seen after a sexual assault, 70% reported significant tonic immobility, an involuntary inability to move.<sup>1</sup></p></div>
+  <div class="card tint"><h3>Drugging removes choice</h3><p>Someone who has been drugged may not recognise danger or be able to unlock a phone. No phone can detect a drug, but it can notice that you stopped responding.</p></div>
+  <div class="card tint"><h3>Phones get taken</h3><p>Other apps treat a silent phone as "all clear". SafetySense's server treats a lost heartbeat as a warning sign.</p></div>
+  <div class="card tint"><h3>No silent 911 here</h3><p>New Mexico has been the only US state without text-to-911. Its NG911 rollout began in 2025 and is still phased.<sup>2</sup></p></div>
+</div>
+<p>SafetySense keeps the basics students expect (SOS, live location, check-in timers, campus resources) and puts its effort into what's missing: <strong>proactive, on-device detection</strong> and a <strong>calm, trauma-informed escalation ladder</strong> that gets the right help without a tap.</p>
+
+<h2><span class="num">02</span>Audience</h2>
+<table class="keep">
+  <thead><tr><th style="width:22%">Who</th><th style="width:38%">Who they are</th><th>What they need from SafetySense</th></tr></thead>
+  <tbody>
+    <tr><td>Primary users</td><td>UNM and CNM students aged 18–25 who go out at night: parties, bars, concerts, first dates from dating apps, walks to a car or dorm, rideshares.</td><td>Protection that works even if they freeze or are drugged, privacy they can trust, and a setup that takes under 3 minutes.</td></tr>
+    <tr><td>Trusted contacts</td><td>Friends, roommates and family the user picks (1–5). They <strong>don't need the app</strong>.</td><td>A phone call and a text with a live link: where the person is, their battery, what happened, and one-tap "I'm on my way" or "Send help".</td></tr>
+    <tr><td>Campus &amp; community partners</td><td>LoboRESPECT Advocacy Center, the UNM Women's Resource Center, UNMPD, CNM Security, and the Rape Crisis Center of Central NM.</td><td>A tool that routes students to advocacy, SANE care and reporting options on the student's terms. These are <em>proposed</em> partners and haven't been contacted yet.</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="num">03</span>Functions</h2>
+<h3>Modes: the user turns guarding on for a specific situation</h3>
+<table class="keep">
+  <thead><tr><th style="width:15%">Mode</th><th style="width:28%">When</th><th>What's on</th></tr></thead>
+  <tbody>
+    <tr><td>Everyday</td><td>Always (default)</td><td>No microphone. Manual SOS, trusted contacts, medical info, campus resources.</td></tr>
+    <tr><td>Walk Home</td><td>Walking to a car, dorm or bus</td><td>Live location to a contact, an arrival check, and an alert if you leave the route or stop too long.</td></tr>
+    <tr><td>Night Out</td><td>Party, bar, concert</td><td>Full Guard: on-device sound and speech detection, motion, check-ins every 30–90 min, drink-check prompts.</td></tr>
+    <tr><td>Date</td><td>A first date from an app</td><td>Night Out plus <strong>sealed date details</strong> (name, profile, place), encrypted and shown to contacts <em>only if</em> an alert fires.</td></tr>
+    <tr><td>Ride</td><td>Uber, Lyft, someone else driving</td><td>Logs the plate and driver. Alerts on a route change or an unexpected stop longer than 3 minutes.</td></tr>
+  </tbody>
+</table>
+
+<h3>How it decides, all on the phone</h3>
+<ul>
+  <li><strong>Sound:</strong> Apple's SoundAnalysis classifier listens for screaming, shouting, crying, gasps, slaps, thuds and breaking glass. Shouting counts for less when laughter or cheering is clearly present.</li>
+  <li><strong>Words:</strong> offline speech recognition catches the user's <strong>safe word</strong> (an instant alert) and distress phrases such as "stop", "get off me" and "let me go".</li>
+  <li><strong>Motion and location:</strong> a fall or impact followed by stillness, leaving where you said you'd be, or an off-route ride.</li>
+  <li><strong>Responsiveness:</strong> missed check-ins, and a server heartbeat that raises an alert if the phone goes dark.</li>
+  <li>A <strong>rules engine</strong> scores these signals and can always explain why it escalated. On Apple Intelligence phones, an on-device language model gives a bounded second opinion. It can never be the only reason for an alert and can never block an SOS.</li>
+</ul>
+
+<h3>The escalation ladder</h3>
+<table class="ladder keep">
+  <thead><tr><th style="width:17%">Level</th><th style="width:34%">Trigger</th><th style="width:31%">What happens</th><th>How to stop it</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill teal">0 · Guarding</span></td><td>Session on</td><td>Audio is held only in a 30-second memory buffer. Nothing is saved. Lock Screen Live Activity.</td><td>End session (PIN or Face ID)</td></tr>
+    <tr><td><span class="pill">1 · Check-in</span></td><td>Risk above threshold, or a scheduled check-in</td><td>A quiet haptic and "You okay?" with 45 seconds to answer.</td><td>Tap "I'm okay"</td></tr>
+    <tr><td><span class="pill amber">2 · Alert</span></td><td>No answer, high risk, safe word, Action Button, or lost heartbeat</td><td>Contacts get a call and a live link. Encrypted evidence capture starts.</td><td>Safety PIN</td></tr>
+    <tr><td><span class="pill red">3 · Dispatch</span></td><td>90 s at Alert with no cancel, a contact taps "Send help", or held SOS</td><td>Professional monitoring calls the user, then sends police to the live location.</td><td>Safety PIN, plus the dispatcher's call</td></tr>
+  </tbody>
+</table>
+<p class="small"><strong>Duress PIN:</strong> it looks exactly like cancelling but silently goes to Level 3, for when someone forces the user to cancel. <strong>Manual triggers:</strong> Action Button, a Lock Screen and Control Center control, Siri ("SafetySense alert"), the safe word, a hold-to-release SOS button, and a fake call to leave a situation.</p>
+
+<h3>After an incident</h3>
+<p>The <strong>Support</strong> screen offers a 24/7 advocate, medical and SANE care, and reporting options (UNMPD, APD, Title IX or CNM), and also says plainly that keeping it private is fine. Nothing is required. The Face ID–locked <strong>Vault</strong> holds encrypted, hash-stamped evidence that the user shares only if they choose to.</p>
+
+<h3>What no other app combines</h3>
+<table class="plain keep">
+  <thead><tr><th style="width:46%">Capability</th><th>UNM Safe</th><th>Noonlight</th><th>bSafe</th><th>Apple built-in</th><th>SafetySense</th></tr></thead>
+  <tbody>
+    <tr><td>Detects distress automatically</td><td>–</td><td>–</td><td>–</td><td>crash / fall</td><td><strong>sound, words, motion</strong></td></tr>
+    <tr><td>Alerts when the phone goes dark</td><td>–</td><td>–</td><td>–</td><td>–</td><td><strong>server heartbeat</strong></td></tr>
+    <tr><td>Duress PIN</td><td>–</td><td>–</td><td>–</td><td>–</td><td><strong>yes</strong></td></tr>
+    <tr><td>Date details revealed only if needed</td><td>–</td><td>partial</td><td>–</td><td>–</td><td><strong>yes, encrypted</strong></td></tr>
+    <tr><td>Professional dispatch with live location</td><td>campus call</td><td>yes</td><td>–</td><td>911 call</td><td><strong>yes (Noonlight API)</strong></td></tr>
+    <tr><td>UNM <em>and</em> CNM resources</td><td>UNM only</td><td>–</td><td>–</td><td>–</td><td><strong>both</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="eyebrow" style="margin-top:0.18in;color:var(--muted)">Sources</div>
+<ol class="refs" style="margin-top:4px">
+  <li>Möller A., Söndergaard H. P., Helström L. "Tonic immobility during sexual assault: a common reaction predicting post-traumatic stress disorder and severe depression." <em>Acta Obstetricia et Gynecologica Scandinavica</em>, 2017.</li>
+  <li>KFOX14, "New Mexico lacks technology allowing people to text 911 for an emergency"; NM Department of Finance &amp; Administration, "State begins roll out of new modernized 911 system", July 17, 2025. We'll check current status against the FCC text-to-911 registry before the final pitch.</li>
+</ol>
+
+<h2 class="page-break"><span class="num">04</span>Pathway to satisfaction</h2>
+<p>We'll know SafetySense works when students trust it enough to turn it on, it rarely bothers them for nothing, and it gets help moving fast when it counts.</p>
+
+<h3>Success metrics</h3>
+<table class="metrics keep">
+  <thead><tr><th style="width:33%">Outcome</th><th style="width:15%">Target</th><th>How we measure it</th></tr></thead>
+  <tbody>
+    <tr><td>False alarms stay rare</td><td>&lt; 1 per 10 h</td><td>Alerts per 10 hours of Night Out guarding in pilot sessions, counted on the device and reported only with opt-in.</td></tr>
+    <tr><td>Help moves fast</td><td>&lt; 60 s</td><td>Time from a scream in a scripted test to the first contact being called (event timestamps on the server).</td></tr>
+    <tr><td>Battery is acceptable</td><td>&lt; 8% / hour</td><td>Measured with Xcode Energy tools on an iPhone 16e during 2-hour Guard sessions.</td></tr>
+    <tr><td>Setup is quick</td><td>≥ 80% finish</td><td>Share of pilot users who complete onboarding, including the practice drill, in under 3 minutes.</td></tr>
+    <tr><td>Students feel safer, not watched</td><td>≥ 4 / 5</td><td>Post-pilot survey: "I would turn this on for a night out" and "I trust what it does with my data."</td></tr>
+    <tr><td>Contacts know what to do</td><td>≥ 90%</td><td>Contacts in the practice drill who open the link and pick an action without instructions.</td></tr>
+  </tbody>
+</table>
+
+<h3>Validation and rollout</h3>
+<div class="card keep">
+  <div class="phase"><div class="when">Done · Nov 2026</div><p><b>Working prototype.</b> A native iOS app with real on-device detection, a live backend, and real automated calls to a verified test phone. A dry-run test covers the full flow without calling anyone, and 116 automated tests cover the risk engine, escalation, vault and API contract.</p></div>
+  <div class="phase"><div class="when">Dec 2026</div><p><b>Detection lab tests.</b> Run the detector against recorded scenarios: parties, bars, arguments, screams and falls. Tune thresholds against the false-alarm and speed targets.</p></div>
+  <div class="phase"><div class="when">Spring 2027</div><p><b>Students and advocates.</b> A survey and moderated usability tests with UNM and CNM students (onboarding and the practice drill). Ask LoboRESPECT and Rape Crisis Center of Central NM advocates to review every word of the alert and support copy.</p></div>
+  <div class="phase"><div class="when">Fall 2027</div><p><b>TestFlight pilot</b> with a student organization, with opt-in, privacy-preserving metrics only. Move from the Noonlight sandbox to production dispatch only after a legal and privacy review.</p></div>
+  <div class="phase"><div class="when">Next</div><p><b>Campus partnership.</b> Offer it at new-student orientation and through the Women's Resource Center, with campus police numbers and SANE locations kept current by partners.</p></div>
+</div>
+
+<div class="callout keep">
+  <span class="eyebrow">Fit with the contest mission</span>
+  <p>SafetySense improves a real part of student life at UNM and CNM: getting home safely. It's built around local gaps, such as New Mexico's lack of text-to-911 and the move from LoboGuardian to UNM Safe, and around local resources. It also works for anyone, on any campus, who wants a friend in their pocket on a night out.</p>
+</div>
+
+
+</body>
+</html>
