@@ -11,7 +11,8 @@ import { BED_SEAT, DormRoom } from "../kit3d/sets/Dorm";
 import { CityMap, MapMover, MapPin, Route } from "../kit3d/sets/CityMap";
 // v3 r2: every vignette uses the finished CharacterHD (real hands, blinking eyes with lids, brows, Fresnel rim),
 // one locked look for Ava (AVA below) and the same rim rig, so she reads as the same person in every scene.
-import { CharacterHD, LOOKS_HD as LOOKS } from "../kit3d/CharacterHD";
+import { LOOKS_HD as LOOKS } from "../kit3d/CharacterHD";
+import { GltfCharacter } from "../kit3d/gltf/GltfCharacter";
 import type { CharacterProps, Look } from "../kit3d/CharacterHD";
 // v3 r6: shared v2 props (an HD hand wrapped around a phone for close-ups, soft cast shadows of an unseen follower)
 import { PhoneInHand, SoftShadow } from "../v2/props3d";
@@ -29,7 +30,7 @@ import { w } from "./timing";
 export const AVA: Look = { ...LOOKS.maya, hairStyle: "bob", eyes: "#5a3b2a", lashes: true };
 /** v3 r6: every v3 character gets anatomical arms + shoes and a low idle-acting layer (breathing, weight shifts,
  *  glances, blinks) unless a shot asks for stillness (act={0}). */
-const Character: React.FC<CharacterProps> = (p) => <CharacterHD anatomy act={0.35} life={1} {...p} />;
+const Character: React.FC<CharacterProps> = (p) => <GltfCharacter act={0.35} {...p} />;
 /** Fear / worry / relief face overrides (expression acting on top of the clip). */
 const FEAR = { eyesWide: 1, brow: 0.95, worry: 1, mouth: 0.42, smile: -0.5, blink: 0 } as const;
 

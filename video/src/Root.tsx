@@ -6,6 +6,7 @@ import { FPS, TOTAL } from "./timeline";
 import { ReelV2 } from "./v2/ReelV2";
 import { HybridV3 } from "./v3/HybridV3";
 import { Kit3DShowcase, SHOWCASE_FRAMES } from "./kit3d/Showcase";
+import { GltfLab } from "./kit3d/gltf/Lab";
 import v2Timeline from "../scripts/v2_timeline.json";
 import v3Timeline from "../scripts/v3_timeline.json";
 
@@ -24,5 +25,6 @@ export const Root: React.FC = () => (
     <Composition id="ReelV2" component={ReelV2} durationInFrames={V2_FRAMES} fps={30} width={1080} height={1920} />
     <Composition id="HybridV3" component={HybridV3} durationInFrames={V3_FRAMES} fps={30} width={1920} height={1080} />
     <Composition id="Kit3DShowcase" component={Kit3DShowcase} durationInFrames={SHOWCASE_FRAMES} fps={30} width={1080} height={1920} />
+    <Composition id="GltfLab" component={GltfLab} durationInFrames={240} fps={30} width={1920} height={1080} />
   </>
 );

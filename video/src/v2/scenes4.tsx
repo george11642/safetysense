@@ -204,6 +204,7 @@ export const EndScene: React.FC = () => {
         </div>
         <div style={{ width: "100%", ...el(4) }}>{rainn(true)}</div>
       </div>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 1850, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 24, color: "#b9b5cc", opacity: 0.85 }}>3D characters: Quaternius (CC0 / CC-BY 3.0, via poly.pizza)</div>
       <Grade vignette={0.4} grain={0.04} />
     </AbsoluteFill>
   );
@@ -281,6 +282,7 @@ export const Close: React.FC = () => {
       <div style={{ position: "absolute", top: 1620, left: 70, right: 70, boxSizing: "border-box", padding: "16px 26px", borderRadius: 30, background: "rgba(8,26,24,.92)", border: `6px solid ${C.calm}`, fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.ink, textAlign: "center", lineHeight: 1.12, boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${16 + 14 * Math.sin(f / 11)}px ${C.calm}66`, opacity: fadeIn(f, rainnAt, 8) }}>
         Support 24/7 · RAINN<br /><span style={{ color: C.calm, fontSize: 78 }}>1-800-656-4673</span>
       </div>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 1850, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 24, color: "#b9b5cc", opacity: 0.85 }}>3D characters: Quaternius (CC0 / CC-BY 3.0, via poly.pizza)</div>
       <Grade vignette={0.4} grain={0.04} />
     </AbsoluteFill>
   );

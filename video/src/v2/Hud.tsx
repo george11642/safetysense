@@ -170,7 +170,7 @@ export const ReelHud: React.FC = () => {
     <AbsoluteFill style={{ pointerEvents: "none", opacity: gone }}>
       {/* state pill */}
       {frame >= T.pillIn && (
-        <div style={{ position: "absolute", left: 40, top: 214, opacity: pillK, transform: `translateX(${(1 - pillK) * -140 + gl}px) scale(${0.92 + 0.08 * pop})`, transformOrigin: "left center" }}>
+        <div style={{ position: "absolute", left: 34, top: 150, opacity: pillK, transform: `translateX(${(1 - pillK) * -140 + gl}px) scale(${(0.92 + 0.08 * pop) * 0.7})`, transformOrigin: "left top" }}>
           <div style={{ ...glass, maxWidth: 600, overflow: "hidden", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 20, padding: "18px 34px 18px 24px", borderRadius: 999, borderColor: `${pill.color}99`, boxShadow: `${glass.boxShadow}, 0 0 ${urgent ? 18 + 26 * pulse : 0}px ${pill.color}88` }}>
             <div style={{ width: 74, height: 74, borderRadius: 99, display: "grid", placeItems: "center", background: `${pill.color}2e`, border: `3px solid ${pill.color}` }}>
               <Icon kind={pill.icon} color={pill.color} size={44} />
@@ -192,7 +192,7 @@ export const ReelHud: React.FC = () => {
         </div>
       )}
       {/* TAPS + clock */}
-      <div style={{ position: "absolute", right: 40, top: 206, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12, opacity: slam, transform: `translateX(${(1 - slam) * 180}px)` }}>
+      <div style={{ position: "absolute", right: 34, top: 146, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12, opacity: slam, transform: `translateX(${(1 - slam) * 180}px) scale(0.7)`, transformOrigin: "right top" }}>
         <div style={{ ...glass, borderRadius: 30, padding: "8px 26px 10px", display: "flex", alignItems: "center", gap: 16, borderColor: `${tapCol}99` }}>
           <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.0, fontFamily: OF.caption, fontWeight: 900, fontSize: 38, color: C.ink, letterSpacing: 1.5, textAlign: "right" }}><span>CALLS</span><span>SHE MADE</span></span>
           <span style={{ display: "inline-block", fontFamily: OF.caption, fontWeight: 900, fontSize: 124, lineHeight: 1, color: tapCol, transform: `scale(${1 + 0.8 * (1 - tapPop) + 0.25 * escGlow})`, textShadow: `0 0 ${26 + 50 * escGlow}px ${tapCol}`, fontVariantNumeric: "tabular-nums" }}>0</span>

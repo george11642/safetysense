@@ -1385,6 +1385,7 @@ export const EndCard: React.FC<{ from: number }> = ({ from }) => {
         </div>
         <div style={{ marginTop: 30, ...r(tNever + 24) }}>
           <div style={{ fontFamily: F.mono, fontWeight: 600, fontSize: 30, color: "#c9c6da", letterSpacing: "0.08em" }}>GEORGE TEIFEL · MARY TEIFEL · UNM & CNM APP CONTEST 2026</div>
+          <div style={{ fontFamily: F.mono, fontWeight: 500, fontSize: 20, color: "#9d99b2", letterSpacing: "0.06em", marginTop: 10 }}>3D CHARACTERS: QUATERNIUS (CC0 / CC-BY 3.0, VIA POLY.PIZZA)</div>
         </div>
       </div>
     </AbsoluteFill>

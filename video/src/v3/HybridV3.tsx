@@ -246,7 +246,7 @@ const FlashCut: React.FC = () => {
 
 /* ------------------------------------------------------------------ COMPOSITION */
 /** 2D sections that get a slow push-in so motion never fully stops (3D shots already have camera moves). */
-const DRIFT = new Set<K>(["problem", "stat", "barriers", "modes", "triggers", "listenReal", "checkin", "contacts", "live", "pins", "heart", "fake", "privacy", "team"]);
+const DRIFT = new Set<K>(["problem", "stat", "barriers", "modes", "triggers", "listenReal", "checkin", "contacts", "live", "pins", "heart", "fake", "privacy", "team", "end"]);
 export const HybridV3: React.FC = () => {
   const S = (k: K, kind: "cut" | "fade" | "push", node: React.ReactNode, inT = 8, outT = 8) => (
     <Shot key={k} name={k} from={CUTS[k][0]} to={CUTS[k][1]} kind={kind} inT={inT} outT={outT} drift={DRIFT.has(k) ? 0.035 : 0}>{node}</Shot>

@@ -249,7 +249,7 @@ const RearMirror: React.FC<{ eyes: number }> = ({ eyes }) => (
 /** Back seat of the rideshare: Maya rear right, the driver seen from behind. */
 const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eyes?: number; worry?: number; sweep?: number; dome?: number; mayaClips?: { anim: "sit" | "phoneUp"; start: number; mask?: "armR" }[] }> = ({ speed = 0.4, tension = 0, phone, eyes = 0.15, worry = 0, sweep = 0.6, dome = 0.35, mayaClips }) => (
   <>
-    <CarInterior speed={speed} tension={tension} sweep={sweep} dome={dome} passengerSeat={false} />
+    <CarInterior speed={speed} tension={tension} sweep={sweep} dome={dome} passengerSeat={false} plush detail />
     <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} position={SEATS.driver} seed={2} faceFill={0} rim={{ color: "#6fd6c8", strength: 0.35 }} />
     <Character look={MAYA} clips={mayaClips ?? [{ anim: "sit", start: 0 }]} position={MAYA_SEAT} holdR="phone" phoneScreen={phone} phoneGlow={0.6} seed={1} faceFill={0.45} act={0.6} ikOffR={[0.02, -0.06, 0.03]} face={worry > 0 ? { worry, brow: 0.5 * worry, smile: 0.1 - 0.4 * worry, eyesWide: 0.3 * worry } : undefined} />
     <RearMirrorHD eyes={eyes} />
@@ -361,13 +361,14 @@ export const Cancel: React.FC = () => {
             <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={2} distance={1.4} decay={1.8} />
             <pointLight position={[0.0, 1.55, 0.2]} color="#c8c0ff" intensity={1.4} distance={2} decay={1.6} />
             <ambientLight intensity={0.35} color="#8a80c8" />
+            <WindshieldFrame f={f} />
             {/* r7: from the back seat straight at the rear-view mirror: the mirror sits centre frame (~35-45% of the width),
                 the driver's eyes readable in it, slow push; seat / pillar / headrest stay soft in the foreground (blur mask) */}
-            <CameraRig rig={dolly(driver, 130, [-0.22, 1.31, -0.3], [-0.1, 1.305, 0.08], [[0.02, 1.3, 0.78], [0.02, 1.3, 0.78]], 56)} handheld={0.004} near={0.05} />
+            <CameraRig rig={dolly(driver, 150, [-0.3, 1.3, -0.55], [-0.12, 1.3, -0.05], [[0.02, 1.27, 0.78], [0.02, 1.29, 0.78]], 60)} handheld={0.004} near={0.05} />
           </Scene3D>
           <AbsoluteFill style={{
-            pointerEvents: "none", backdropFilter: "blur(9px)", WebkitBackdropFilter: "blur(9px)",
-            maskImage: "radial-gradient(ellipse 36% 13% at 50% 50%, transparent 55%, black 100%)", WebkitMaskImage: "radial-gradient(ellipse 36% 13% at 50% 50%, transparent 55%, black 100%)",
+            pointerEvents: "none", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)",
+            maskImage: "radial-gradient(ellipse 48% 20% at 50% 50%, transparent 60%, black 100%)", WebkitMaskImage: "radial-gradient(ellipse 48% 20% at 50% 50%, transparent 60%, black 100%)",
           }} />
           <Grade vignette={0.8} />
           <SpeechBubble at={W(20, "cancel") - F0 - 2} text="Cancel it." />
@@ -430,7 +431,7 @@ export const Duress: React.FC = () => {
       {!split ? (
         <>
           <Scene3D fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
-            <CarInterior speed={0.4} tension={0.4} sweep={0.6} dome={0.3} passengerSeat={false} />
+            <CarInterior speed={0.4} tension={0.4} sweep={0.6} dome={0.3} passengerSeat={false} plush detail />
             {povPhone}
 
             <CameraRig rig={[camPov, { ...camPov, f: 200, pos: [-0.125, 1.26, -0.52] }]} handheld={0.004} near={0.03} />
@@ -456,7 +457,7 @@ export const Duress: React.FC = () => {
           {/* bottom half: X-ray layer under her calm screen */}
           <div style={{ position: "absolute", left: 0, top: 962, width: 1080, height: 958, overflow: "hidden", filter: "saturate(1.2)" }}>
             <Scene3D width={1080} height={958} fog={{ color: "#1a0608", near: 10, far: 70 }} background="#1a0608">
-              <CarInterior speed={0.4} tension={0.6} sweep={0.3} dome={0.1} passengerSeat={false} />
+              <CarInterior speed={0.4} tension={0.6} sweep={0.3} dome={0.1} passengerSeat={false} plush detail />
               {povPhone}
               <pointLight position={[-0.1, 1.3, -0.3]} color={P.danger} intensity={2} distance={1} decay={2} />
               <CameraRig rig={[camPov]} handheld={0.004} near={0.03} />
@@ -485,6 +486,40 @@ export const Duress: React.FC = () => {
       <Flash at={isnt} dur={6} color={C.danger} max={0.4} />
       {f >= isnt + 6 && <SimCard at={isnt + 6} top={1740} />}
     </AbsoluteFill>
+  );
+};
+
+/** Front cabin read for the mirror shot: dash top, A-pillars, headliner, front headrests, and street lights sweeping across
+ *  the windshield, so the mirror never floats in haze. */
+const WindshieldFrame: React.FC<{ f: number }> = ({ f }) => {
+  const dark = "#0c0b13", trim = "#17151f";
+  return (
+    <group>
+      {/* headliner + visor */}
+      <mesh position={[0, 1.5, 0.45]}><boxGeometry args={[1.6, 0.04, 0.9]} /><meshStandardMaterial color={trim} roughness={0.9} /></mesh>
+      <mesh position={[0.36, 1.43, 0.72]} rotation={[0.25, 0, 0]}><boxGeometry args={[0.38, 0.02, 0.16]} /><meshStandardMaterial color="#24212e" roughness={0.9} /></mesh>
+      {/* A-pillars */}
+      {[1, -1].map((sd) => (
+        <mesh key={sd} position={[sd * 0.68, 1.22, 0.92]} rotation={[0.55, 0, sd * 0.12]}><boxGeometry args={[0.08, 0.62, 0.06]} /><meshStandardMaterial color={dark} roughness={0.8} /></mesh>
+      ))}
+      {/* dash top + hood line + glowing cluster */}
+      <mesh position={[0, 1.0, 1.0]} rotation={[-0.15, 0, 0]}><boxGeometry args={[1.5, 0.08, 0.42]} /><meshStandardMaterial color={dark} roughness={0.7} /></mesh>
+      <mesh position={[0.38, 1.06, 0.86]}><boxGeometry args={[0.34, 0.06, 0.05]} /><meshBasicMaterial color="#2e8f86" toneMapped={false} /></mesh>
+      {/* front headrests (soft foreground silhouettes) */}
+      {[0.38, -0.38].map((x) => (
+        <mesh key={x} position={[x, 1.28, 0.32]} scale={[0.13, 0.11, 0.06]}><sphereGeometry args={[1, 18, 12]} /><meshStandardMaterial color="#1c1a26" roughness={0.95} /></mesh>
+      ))}
+      {/* passing street lights across the glass */}
+      {[0, 1, 2].map((k) => {
+        const t = ((f * 0.018 + k / 3) % 1);
+        return (
+          <mesh key={k} position={[-0.9 + 1.8 * t, 1.26 + 0.05 * k, 1.12]} rotation={[0, 0, 0.35]}>
+            <planeGeometry args={[0.05, 0.42]} />
+            <meshBasicMaterial color="#ffd9a0" transparent opacity={0.35 * Math.sin(Math.PI * t)} toneMapped={false} depthWrite={false} />
+          </mesh>
+        );
+      })}
+    </group>
   );
 };
 
