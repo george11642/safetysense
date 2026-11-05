@@ -3,7 +3,7 @@ import React from "react";
 import { AbsoluteFill, Freeze, interpolate, staticFile, useCurrentFrame } from "remotion";
 import {
   CameraRig, COUNTER_TOP, StringLights, DormRoom, BED_SEAT, Cup as CupProp, Glow, LOOKS, PartyKitchen, Phone, Scene3D, StickerTitle, Grade, Flash, NotificationToast,
-  cuts, dolly, orbit, pushIn, prog, lerp, deg, RUN_SPEED, P, ANIMS,
+  cuts, dolly, orbit, pushIn, prog, lerp, deg, RUN_SPEED, WALK_SPEED, P, ANIMS,
 } from "../kit3d";
 import { C } from "../theme";
 import { Character } from "./Actor";
@@ -275,7 +275,8 @@ export const Notice: React.FC = () => {
         <CameraRig rig={cam} handheld={0.004} />
       </OverlayScene3D>
       <Grade vignette={0.6} grain={0.06} />
-      <div style={{ position: "absolute", left: 60, right: 60, top: 500, ...glass, borderRadius: 26, padding: "12px 0 6px", opacity: fadeIn(f, 2, 8), borderColor: `${col}88` }}>
+      {/* r12: the motion trace sits BESIDE the phone (top band), never over it */}
+      <div style={{ position: "absolute", left: 60, right: 60, top: 330, ...glass, borderRadius: 26, padding: "12px 0 6px", opacity: fadeIn(f, 2, 8), borderColor: `${col}88`, transform: "scale(0.92)", transformOrigin: "50% 0%" }}>
         <div style={{ marginLeft: 28, fontFamily: OF.caption, fontWeight: 900, fontSize: 30, letterSpacing: 2, color: col }}>MOTION · ON-DEVICE</div>
         <svg width="960" height="160"><polyline points={pts} fill="none" stroke={col} strokeWidth={6} strokeLinejoin="round" strokeLinecap="round" /></svg>
       </div>
@@ -336,14 +337,18 @@ export const HallwayScene: React.FC = () => {
         <Hallway pulse={0.7} />
         <pointLight position={[0.2, 1.9, -1.4]} color="#9fd8ff" intensity={3} distance={3} decay={1.6} />
         <pointLight position={[-0.4, 1.6, 1.6]} color="#ffe2cc" intensity={1.6} distance={3.5} decay={1.6} />
-        <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 0.75, worry: 0.25 } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
-          clips={[{ anim: "woozy", start: 0, speed: 0.8 }, { anim: "stumbleCatch", start: stumble, fade: 4 }, { anim: "sitSlump", start: sit, fade: 14 }]} />
+        <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 1, worry: 0.2, brow: -0.1, mouth: 0.08 } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
+          clips={[{ anim: "woozy", start: 0, speed: 0.8 }, { anim: "stumbleCatch", start: stumble, fade: 4 }, { anim: "sitRest", start: sit, fade: 14 }]} />
         <CameraRig rig={(fr) => {
           const d = lerp(4.0, 2.6, prog(fr, 0, noAns + 10, "inOut"));
           const low = prog(fr, sit, still + 20, "inOut");
           // r11: once she sits, a dignified MEDIUM SIDE shot at her seated eye level (head, shoulders, hands and phone on
           // her lap, face partly visible); never a high angle down over her legs
-          return { pos: [lerp(-0.6, -1.25, low), lerp(1.45, 1.0, low), lerp(d, 1.55, low)], look: [lerp(0.15, 0.5, low), lerp(1.15, 0.82, low), lerp(0.0, 0.05, low)], fov: lerp(42, 36, low) };
+          // r12: the old side camera sat at x = -1.25, OUTSIDE the hallway wall (x = -1), so "still." rendered black. Now a
+          // readable 3/4 FRONT shot from inside the hall, just under her eye line: her face (eyes closed) is the subject,
+          // with a slow push across the 45 s so the beat never reads as a held frame
+          const push = prog(fr, still, noAns + 20, "linear");
+          return { pos: [lerp(-0.6, lerp(-0.45, -0.36, push), low), lerp(1.45, lerp(0.9, 0.92, push), low), lerp(d, lerp(1.45, 1.22, push), low)], look: [lerp(0.15, 0.46, low), lerp(1.15, 0.92, low), lerp(0.0, 0.1, low)], fov: lerp(42, lerp(41, 37, push), low) };
         }} handheld={0.012} shakes={[[stumble + 2, 0.02], [noAns, 0.035]]} />
       </Scene3D>
       <Grade wash="#ef4fa0" washOpacity={0.08} vignette={0.75} />
@@ -358,7 +363,7 @@ export const HallwayScene: React.FC = () => {
       )}
       <Stamp text="NO ANSWER" at={noAns} y={0.62} size={92} from={1.5} damping={12} shake={14} rotate={-8} />
       {/* r7: a red vignette pulse, not a flat full-frame fill */}
-      <AbsoluteFill style={{ pointerEvents: "none", boxShadow: `inset 0 0 ${380 * Math.max(0, 1 - Math.abs(f - noAns - 2) / 10)}px ${C.danger}` }} />
+      <AbsoluteFill style={{ pointerEvents: "none", boxShadow: `inset 0 0 ${200 * Math.max(0, 1 - Math.abs(f - noAns - 2) / 7)}px ${C.danger}` }} />
     </AbsoluteFill>
   );
 };
@@ -400,7 +405,9 @@ export const Roommate: React.FC = () => {
   const tap = W(16, "I'm") - F0;
   const run = W(16, "way.") - F0 + 2;
   const reach = run + 24;
-  const rz = 3.4 - Math.max(0, f - run) * RUN_SPEED;
+  // r12: a brisk, upright hurry (fast walk) instead of a run whose first frames read as a fighting crouch
+  const HURRY = WALK_SPEED * 1.7;
+  const rz = 3.4 - Math.max(0, f - run) * HURRY;
   const blur = interpolate(f, [page, page + 8], [0, 12], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const pageIn = interpolate(f, [page, page + 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const alert = lockTex({ time: "11:32", title: "Maya may need help", body: "No answer to a check-in · tap for her live location", tint: "#ef6a5c", alert: true });
@@ -429,12 +436,12 @@ export const Roommate: React.FC = () => {
         <>
           <Scene3D fog={{ color: "#1d1430", near: 4, far: 16 }} background="#1d1430">
             <Hallway pulse={0.7} />
-            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitSlump", start: 0, offset: 60 }]} />
-            <Character look={ROOMMATE_HD} position={[-0.2, 0, rz]} rotationY={Math.PI} seed={6} clips={[{ anim: "run", start: run - 6 }]} face={{ worry: 0.8, brow: 0.6, mouth: 0.25 }} act={0} />
+            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitRest", start: -60 }]} />
+            <Character look={ROOMMATE_HD} position={[-0.2, 0, rz]} rotationY={Math.PI} seed={6} clips={[{ anim: "walk", start: run - 10, speed: 1.7 }]} face={{ worry: 0.8, brow: 0.6, mouth: 0.15 }} act={0} faceFill={0.5} />
             <pointLight position={[-0.2, 2.0, rz - 1.0]} color="#ffd8b8" intensity={2.4} distance={3} decay={1.6} />
             {/* r7: cut in on the action, a front tracking medium shot (waist up) that backs away ahead of her run */}
             <CameraRig rig={(fr) => {
-              const zz = 3.4 - Math.max(0, fr - run) * RUN_SPEED;
+              const zz = 3.4 - Math.max(0, fr - run) * HURRY;
               return { pos: [-0.05, 1.42, zz - 1.55], look: [-0.2, 1.3, zz], fov: 42 };
             }} handheld={0.025} />
           </Scene3D>
@@ -444,7 +451,7 @@ export const Roommate: React.FC = () => {
         <>
           <Scene3D fog={{ color: "#1d1430", near: 4, far: 16 }} background="#1d1430">
             <Hallway pulse={0.5} />
-            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitSlump", start: 0, offset: 60 }]} />
+            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitRest", start: -60 }]} />
             <Character look={ROOMMATE_HD} position={[-0.32, 0, 0.5]} rotationY={Math.PI / 2 - 0.55} seed={6} clips={[{ anim: "kneel", start: reach - 22 }]} faceFill={0.5} face={{ worry: 0.7, brow: 0.5 }} />
             <pointLight position={[-0.6, 1.8, 1.6]} color="#ffd8b8" intensity={2.2} distance={4} decay={1.6} />
             <pointLight position={[0.3, 1.8, -1.2]} color="#9fd8ff" intensity={2.4} distance={3} decay={1.6} />

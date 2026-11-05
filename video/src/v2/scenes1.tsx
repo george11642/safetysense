@@ -121,17 +121,22 @@ export const ColdOpen: React.FC = () => {
       {(f < hookEnd || f >= cutB) && <CallingSticker f={f} pulseFrom={f < hookEnd ? 0 : her} />}
       <Flash at={0} dur={5} color="#ffffff" max={0.2} />
       <Flash at={her} dur={6} color={C.calm} max={0.22} />
+      {/* r12: compliance tag: a dramatization with fictional characters, not a real campus incident */}
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 150, textAlign: "center", opacity: 0.8 * fadeIn(f, 2, 6) * (1 - fadeIn(f, 100, 10)), fontFamily: OF.caption, fontWeight: 800, fontSize: 30, letterSpacing: 3, color: C.ink, textShadow: "0 2px 8px rgba(0,0,0,.9)" }}>DRAMATIZATION · FICTIONAL CHARACTERS</div>
     </AbsoluteFill>
   );
 };
 
 /** r7: the cold-open payoff reads without the VO: a big "CALLING FOR HELP" sticker with a live pulse under the phone. */
 const CallingSticker: React.FC<{ f: number; pulseFrom: number }> = ({ f, pulseFrom }) => {
-  const k = Math.min(1, Math.max(0, (f - pulseFrom) / 5));
+  // r12: a hard stamp (opaque from its first frame, scale overshoot only): the 5-frame fade double-exposed the pill
+  if (f < pulseFrom) return null;
+  const t = f - pulseFrom;
+  const k = t < 2 ? 1.12 : t < 4 ? 0.97 : 1;
   const dots = ".".repeat(1 + (Math.floor(f / 8) % 3));
   const beat = 0.5 + 0.5 * Math.sin(f / 3);
   return (
-    <div style={{ position: "absolute", left: 0, right: 0, top: 1080, display: "flex", justifyContent: "center", opacity: k, transform: `rotate(-3deg) scale(${0.85 + 0.15 * k})` }}>
+    <div style={{ position: "absolute", left: 0, right: 0, top: 1080, display: "flex", justifyContent: "center", transform: `rotate(-3deg) scale(${k})` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "16px 36px", borderRadius: 999, background: C.calm, border: "6px solid #120f1e", boxShadow: `0 10px 0 #120f1e, 0 0 ${30 + 30 * beat}px ${C.calm}` }}>
         <span style={{ width: 30, height: 30, borderRadius: 99, background: "#120f1e", boxShadow: `0 0 0 ${6 + 8 * beat}px rgba(18,15,30,.25)` }} />
         <span style={{ fontFamily: OF.sticker, fontSize: 70, color: "#120f1e", letterSpacing: 1, minWidth: 560 }}>CALLING FOR HELP{dots}</span>
@@ -193,7 +198,7 @@ export const Arm: React.FC = () => {
             }} handheld={0.01} />
           </Scene3D>
           <Grade />
-          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="Audio stays on this phone" y={0.845} size={46} />
+          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="Audio stays on this phone while guarding" y={0.845} size={42} />
           <InfoPill at={W(3, "Nothing") - F0} icon="🔒" text="No audio saved unless something's wrong" y={0.845} size={42} />
         </>
       )}
@@ -300,13 +305,18 @@ export const Detect: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: C.bgDeep }}>
       {/* r10: Maya stays readable behind the detection card (light blur, not a 14 px smear) */}
-      <div style={{ position: "absolute", inset: 0, filter: "blur(4px) brightness(0.62) saturate(0.85)" }}>
+      {/* r12: her face stays sharp and clear BELOW the detection card (framed low: head + chest in the middle band),
+          with live alarm acting (wide eyes, brows up) while the phone "hears" her */}
+      <div style={{ position: "absolute", inset: 0, filter: "brightness(0.8) saturate(0.9)" }}>
         <Scene3D fog={{ color: P.fogNight, near: 5, far: 34 }}>
           <Freeze frame={20}>
             <CampusHD dim={0.35} />
-            <Character look={MAYA} clips={[{ anim: "startle", start: 0 }]} position={[0.1, Y, 0]} />
           </Freeze>
-          <CameraRig rig={pushIn(0, 120, [0.1, 1.3, 0], [0.3, 0.15, 1], 3.2, 2.6, 36)} handheld={0.01} />
+          <Character look={MAYA} clips={[{ anim: "startle", start: -20 }]} position={[0.1, Y, 0]} faceFill={0.5} seed={1}
+            face={{ eyesWide: 0.9, worry: 1, brow: 0.8, mouth: f >= scream - 2 && f < scream + 20 ? 0.6 : 0.2, smile: -0.4 }} />
+          <pointLight position={[0.7, Y + 1.9, 1.5]} color="#ffe2cc" intensity={1.8} distance={3.2} decay={1.6} />
+          <pointLight position={[-0.4, Y + 2.0, -1.0]} color="#b8d0ff" intensity={2.6} distance={3} decay={1.6} />
+          <CameraRig rig={(fr) => { const c = pushIn(0, 120, [0.1, 1.86, 0], [0.3, 0.05, 1], 2.9, 2.3, 34)(fr); return c; }} handheld={0.01} />
         </Scene3D>
       </div>
       <svg width="1080" height="1920" style={{ position: "absolute", opacity: 0.18 }}>
@@ -443,7 +453,8 @@ export const FreezeScene: React.FC = () => {
       {/* r10: time is passing while she can't move: the frame closes in (vignette + darkening) until help starts */}
       <AbsoluteFill style={{ pointerEvents: "none", background: "radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 35%, rgba(4,3,10,.85) 100%)", opacity: 0.25 + 0.6 * prog(f, 0, back) * (1 - prog(f, back, back + 10)) }} />
       <Grade vignette={0.65} />
-      <InfoPill at={W(7, "freezes.") - F0} out={sIn - 8} icon="❄" text="FREEZE RESPONSE" color="#8fd3ff" y={0.845} size={44} />
+      {/* r12: a real sticker (the small pill faded before it could be read) */}
+      <StickerTitle text="FREEZE" at={W(7, "freezes.") - F0} out={sIn - 4} sub="AN INVOLUNTARY RESPONSE" size={120} y={0.22} rotate={-5} color="#8fd3ff" />
       <StatCard at={W(7, "of") - F0 - 2} out={W(7, "freezing.") - F0 + 2} top={1410} />
       <Flash at={back} dur={10} color={C.calm} max={0.25} />
     </AbsoluteFill>
@@ -501,7 +512,8 @@ export const Contacts: React.FC = () => {
               face={{ eyesWide: 0.6 * prog(f, c2 + 4, c2 + 10), worry: 0.8, brow: 0.5 }} />
             <ContactLights at={BED_SEAT} />
             {/* r7: framed lower, so her face sits well below the HUD band */}
-            <CameraRig rig={(fr) => { const c = mcu([BED_SEAT[0] + 0.05, 1.2, BED_SEAT[2] + 0.1], 0.4, 2.3, 2.0, c2, c3)(fr); return { ...c, look: [c.look[0], c.look[1] + 0.08, c.look[2]] as [number, number, number] }; }} handheld={0.004} />
+            {/* r12: camera BELOW her eye line looking up, so her fringe never covers her eyes while she looks down at the phone */}
+            <CameraRig rig={(fr) => { const c = mcu([BED_SEAT[0] + 0.05, 1.2, BED_SEAT[2] + 0.1], 0.15, 2.4, 2.1, c2, c3)(fr); return { ...c, pos: [c.pos[0], c.pos[1] - 0.22, c.pos[2]] as [number, number, number], look: [c.look[0], c.look[1] + 0.02, c.look[2]] as [number, number, number] }; }} handheld={0.004} />
           </Scene3D>
         )}
         {shot === 2 && (
@@ -607,8 +619,8 @@ const TopDownMap: React.FC<{ start: number; end: number }> = ({ start, end }) =>
           {/* streets with lane lines */}
           {STREETS_V.map((x) => <g key={`v${x}`}><rect x={x - 30} y={-600} width={60} height={3120} fill="#3a4362" /><line x1={x} y1={-600} x2={x} y2={2520} stroke="#8a93b4" strokeWidth={3} strokeDasharray="22 22" /></g>)}
           {STREETS_H.map((y) => <g key={`h${y}`}><rect x={-600} y={y - 30} width={2280} height={60} fill="#3a4362" /><line x1={-600} y1={y} x2={1680} y2={y} stroke="#8a93b4" strokeWidth={3} strokeDasharray="22 22" /></g>)}
-          <text x={180} y={968} fontFamily={OF.caption} fontWeight={900} fontSize={30} fill="#aab3d6" letterSpacing={4}>CENTRAL AVE</text>
-          <text x={700} y={600} fontFamily={OF.caption} fontWeight={900} fontSize={30} fill="#aab3d6" letterSpacing={4}>YALE BLVD</text>
+          <text x={180} y={968} fontFamily={OF.caption} fontWeight={900} fontSize={30} fill="#aab3d6" letterSpacing={4}>MAIN ST</text>
+          <text x={700} y={600} fontFamily={OF.caption} fontWeight={900} fontSize={30} fill="#aab3d6" letterSpacing={4}>OAK AVE</text>
           <text x={430} y={810} textAnchor="middle" fontFamily={OF.caption} fontWeight={900} fontSize={28} fill="#7fd6bf" letterSpacing={3}>CAMPUS</text>
           {/* route line, drawn on */}
           <polyline points={ROUTE.map((p) => p.join(",")).join(" ")} fill="none" stroke="#8fd3ff" strokeOpacity={0.25} strokeWidth={26} strokeLinejoin="round" strokeLinecap="round" />
@@ -728,7 +740,18 @@ export const Relief: React.FC = () => {
         <Character look={MAYA} clips={[{ anim: "lockUp", start: -20 }, { anim: "relief", start: 4, fade: 14 }]} position={[0.15, Y, 0.45]} rotationY={lerp(-0.25, -0.75, prog(f, 2, 18, "inOut"))} faceFill={0.6} seed={1}
           face={{ smile: 0.35 * prog(f, 10, 26), worry: lerp(0.9, 0.35, prog(f, 6, 22)), eyesWide: lerp(0.5, 0, prog(f, 6, 18)) }} />
         <pointLight position={[0.9, 2.0, 2.4]} color="#ffe2cc" intensity={2.2} distance={4} decay={1.6} />
-        <CameraRig rig={dolly(0, 36, [1.4, 1.62, 4.4], [0.75, 1.55, 2.25], [[-0.5, 1.05, -0.2], [0.05, 1.42, 0.45]], 42)} handheld={0.005} />
+        {/* r12: the light bar SWEEPS red / blue across her (alternating, sinusoidal) so the arrival lights the scene */}
+        {(() => {
+          const sw = 0.5 + 0.5 * Math.sin(f / 2.2);
+          return (
+            <>
+              <pointLight position={[-0.9, 1.7, -0.6]} color="#ff2d4a" intensity={7 * sw} distance={3.2} decay={1.5} />
+              <pointLight position={[-0.9, 1.7, -0.2]} color="#3a6bff" intensity={7 * (1 - sw)} distance={3.2} decay={1.5} />
+            </>
+          );
+        })()}
+        {/* r12: ends on a medium two-shot that keeps the whole POLICE door lettering in frame (it cropped to "OLICE") */}
+        <CameraRig rig={dolly(0, 36, [1.6, 1.6, 4.8], [1.15, 1.5, 3.4], [[-0.6, 1.0, -0.4], [-0.25, 1.25, 0.1]], 42)} handheld={0.005} />
       </Scene3D>
       <Grade vignette={0.55} />
       <InfoPill at={2} icon="✓" text="HELP REACHED HER" color={C.calm} y={0.845} size={48} />

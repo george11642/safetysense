@@ -310,14 +310,46 @@ const RearStreaks: React.FC = () => {
   );
 };
 
+/** r12: the shell around her in the back-seat shots: headliner, rear window frame with C-pillars and the parcel shelf,
+ *  door-card edges and a grab handle, so the cabin reads as a car (it read as a grey box), plus a rim on the driver. */
+const RearCabin: React.FC = () => {
+  const trim = "#1a1826", dark = "#100f18";
+  return (
+    <group>
+      <mesh position={[MAYA_SEAT[0], 1.68, -0.6]}><boxGeometry args={[1.6, 0.04, 1.6]} /><meshStandardMaterial color="#2a2838" roughness={0.95} /></mesh>
+      {/* rear window frame */}
+      <mesh position={[MAYA_SEAT[0], 1.14, -1.42]} rotation={[-0.2, 0, 0]}><boxGeometry args={[1.5, 0.05, 0.42]} /><meshStandardMaterial color={dark} roughness={0.8} /></mesh>
+      <mesh position={[MAYA_SEAT[0], 1.62, -1.32]}><boxGeometry args={[1.5, 0.09, 0.08]} /><meshStandardMaterial color={trim} roughness={0.85} /></mesh>
+      {[1, -1].map((sd) => (
+        <mesh key={sd} position={[MAYA_SEAT[0] + sd * 0.56, 1.38, -1.3]} rotation={[0.45, 0, sd * -0.28]}><boxGeometry args={[0.2, 0.62, 0.08]} /><meshStandardMaterial color={trim} roughness={0.85} /></mesh>
+      ))}
+      {/* rear glass: faint tint + a sheen streak */}
+      <mesh position={[MAYA_SEAT[0], 1.38, -1.4]} rotation={[0.45, 0, 0]}><planeGeometry args={[1.0, 0.5]} /><meshBasicMaterial color="#6a7ab8" transparent opacity={0.06} depthWrite={false} /></mesh>
+      {/* door cards + window sills on both sides, a grab handle above her right window */}
+      {[1, -1].map((sd) => (
+        <group key={`d${sd}`} position={[MAYA_SEAT[0] + sd * 0.7, 0, -0.65]}>
+          <mesh position={[0, 0.72, 0]}><boxGeometry args={[0.06, 0.6, 0.9]} /><meshStandardMaterial color={trim} roughness={0.9} /></mesh>
+          <mesh position={[-sd * 0.03, 1.04, 0]}><boxGeometry args={[0.08, 0.04, 0.9]} /><meshStandardMaterial color="#2d2a3c" roughness={0.6} /></mesh>
+          <mesh position={[-sd * 0.02, 1.58, 0.05]}><boxGeometry args={[0.03, 0.025, 0.2]} /><meshStandardMaterial color="#2d2a3c" roughness={0.6} /></mesh>
+        </group>
+      ))}
+      {/* rim on the driver (back of head + shoulder) from the windshield, so he reads as a person, not a silhouette */}
+      <pointLight position={[SEATS.driver[0] + 0.05, 1.42, SEATS.driver[2] + 0.55]} color="#ffd9b0" intensity={1.6} distance={1.1} decay={1.8} />
+    </group>
+  );
+};
+
 /** Back seat of the rideshare: Maya rear right, the driver seen from behind. */
 const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eyes?: number; worry?: number; sweep?: number; dome?: number; mayaClips?: { anim: "sit" | "phoneUp"; start: number; mask?: "armR" }[] }> = ({ speed = 0.4, tension = 0, phone, eyes = 0.15, worry = 0, sweep = 0.6, dome = 0.35, mayaClips }) => (
   <>
     <CarInterior speed={speed} tension={tension} sweep={sweep} dome={dome} passengerSeat={false} plush detail />
     <RearCity speed={speed} />
     {/* r9: her own seat belt (shoulder strap + buckle), so she is sitting IN a car */}
-    <mesh position={[MAYA_SEAT[0] - 0.02, 0.98, MAYA_SEAT[2] + 0.13]} rotation={[0.12, 0, -0.62]}><boxGeometry args={[0.05, 0.6, 0.008]} /><meshStandardMaterial color="#141320" roughness={0.75} /></mesh>
-    <mesh position={[MAYA_SEAT[0] + 0.15, 0.7, MAYA_SEAT[2] + 0.17]}><boxGeometry args={[0.05, 0.03, 0.02]} /><meshStandardMaterial color="#b9bccc" metalness={0.8} roughness={0.25} /></mesh>
+    {/* r12: the belt runs from her right shoulder across the chest to the left hip (it sat across her neck as a black slab),
+        in a mid-grey woven strap that catches the light, with a chrome buckle */}
+    <mesh position={[MAYA_SEAT[0] + 0.03, 0.95, MAYA_SEAT[2] + 0.15]} rotation={[0.1, 0, 0.75]}><boxGeometry args={[0.04, 0.56, 0.006]} /><meshStandardMaterial color="#3a3c52" roughness={0.75} /></mesh>
+    <mesh position={[MAYA_SEAT[0] + 0.2, 0.71, MAYA_SEAT[2] + 0.16]}><boxGeometry args={[0.05, 0.035, 0.022]} /><meshStandardMaterial color="#c9ccd8" metalness={0.8} roughness={0.25} /></mesh>
+    <RearCabin />
     <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} position={SEATS.driver} seed={2} faceFill={0.25} rim={{ color: "#ffc890", strength: 0.6 }} />
     <Character look={MAYA} clips={mayaClips ?? [{ anim: "sit", start: 0 }]} position={MAYA_SEAT} holdR="phone" phoneScreen={phone} phoneGlow={0.45} seed={1} faceFill={0.3} act={0.6} ikOffR={[0.02, -0.06, 0.03]} face={worry > 0 ? { worry, brow: 0.5 * worry, smile: 0.1 - 0.4 * worry, eyesWide: 0.3 * worry } : undefined} />
     <RearMirrorHD eyes={eyes} />
@@ -390,11 +422,13 @@ export const Ride: React.FC = () => {
       {/* r9: one overlay at a time: the phone card explains "Ride Guard is on"; the route map only appears for the turn */}
       {/* r8: on "the wrong way" the route map blows up to full frame: the teal planned route vs the red turn the car takes */}
       {zk > 0 && (
-        <AbsoluteFill style={{ background: `rgba(10,9,20,${0.8 * zk})` }}>
-          <div style={{ position: "absolute", left: 540 - 165, top: 790 - 180, width: 330, height: 360, transformOrigin: "50% 50%", transform: `scale(${lerp(0.4, 2.2, zk)}) rotate(${lerp(-6, 0, zk)}deg)`, opacity: Math.min(1, zk * 2) }}>
+        // r12: the route card sits in the upper-LEFT corner (like the phone card before it), so her reaction to the wrong
+        // turn stays readable centre-frame; the stamp lands beside the card, above her head
+        <AbsoluteFill>
+          <div style={{ position: "absolute", left: 40, top: 430, width: 330, height: 360, transformOrigin: "0% 0%", transform: `scale(${lerp(0.5, 1.15, zk)}) rotate(${lerp(-6, -2, zk)}deg)`, opacity: Math.min(1, zk * 2) }}>
             <RouteMap at={phoneAt + 4} offAt={wrong} style={{ left: 0, top: 0 }} />
           </div>
-          <Stamp text="OFF ROUTE" at={wrong + 14} y={0.665} size={96} color={C.warn} sub="RIDE GUARD NOTICED" from={1.8} damping={10} shake={8} rotate={-4} />
+          <Stamp text="OFF ROUTE" at={wrong + 14} x={0.7} y={0.3} size={76} color={C.warn} sub="RIDE GUARD NOTICED" from={1.8} damping={10} shake={8} rotate={4} />
         </AbsoluteFill>
       )}
     </AbsoluteFill>
@@ -494,8 +528,13 @@ export const Duress: React.FC = () => {
   const disappear = W(21, "disappears,") - F0;
   const isnt = W(21, "It") - F0;
   const dispatch = W(21, "Dispatch") - F0;
-  const taps = [types, types + 8, types + 16, types + 25];
+  // r12 (product accuracy): the check-in screen is the real one (I'm okay / I need help). She taps "I'm okay", which opens
+  // the PIN sheet; the duress PIN entered there closes the check-in and silently escalates
+  const okTap = 3;
+  const sheetAt = types + 4;
+  const taps = [sheetAt + 4, sheetAt + 11, sheetAt + 18, sheetAt + 26];
   const filled = taps.filter((t) => f >= t + 1).length;
+  const checkin = f < sheetAt;
   // r10 privacy: no tap ripple and ONE fixed thumb spot between keys, so the PIN can't be read from tap positions;
   // only the dots count up
   const tap = 0;
@@ -505,7 +544,7 @@ export const Duress: React.FC = () => {
   // r8: the pad sits lower in frame, so the caption band above it never touches the "You okay?" header
   const camPov = { f: 0, pos: [-0.13, 1.27, -0.55] as [number, number, number], look: [-0.075, 1.075, -0.2] as [number, number, number], fov: 46 };
   const povPhone = (
-    <PhoneInHand position={[-0.09, 1.09, -0.32]} toward={[-0.12, 1.24, -0.48]} screen={calm ? sv("guard-ride") : pinpadTex(filled)} tap={calm ? 0 : tap} thumbAt={calm ? undefined : thumbAt} roll={-0.08} noHand />
+    <PhoneInHand position={[-0.09, 1.09, -0.32]} toward={[-0.12, 1.24, -0.48]} screen={calm ? sv("guard-ride") : checkin ? sv("checkin-ride") : pinpadTex(filled)} tap={calm ? 0 : checkin ? prog(f, okTap, okTap + 3) * (1 - prog(f, okTap + 4, okTap + 7)) : tap} thumbAt={calm ? undefined : checkin ? [0.5, 0.578] : thumbAt} roll={-0.08} noHand />
   );
   const glitch = f >= isnt && f < isnt + 6;
   return (
@@ -567,12 +606,12 @@ export const Duress: React.FC = () => {
           </div>
           {/* r10: a deliberate divider band (dark, with thin rules) between the two panels; the word captions sit in it,
               outside both pictures */}
-          <div style={{ position: "absolute", left: 0, right: 0, top: 900, height: 130, background: "#0b0a12", borderTop: `4px solid ${C.ink}55`, borderBottom: `4px solid ${C.danger}`, boxShadow: `0 0 40px ${C.danger}44`, transform: `translateX(${glitch ? (f % 2 ? 24 : -24) : 0}px)` }} />
+          <div style={{ position: "absolute", left: 0, right: 0, top: 900, height: 130, background: "#0b0a12", borderTop: `4px solid ${C.ink}55`, borderBottom: `4px solid ${C.danger}`, boxShadow: `0 0 40px ${C.danger}44`, transform: "none" }} />
           <Grade vignette={0.45} />
         </>
       )}
-      {glitch && <GlitchBars at={isnt} dur={6} />}
-      <Flash at={isnt} dur={6} color={C.danger} max={0.4} />
+      {/* r12: a clean hard cut + short red flash into the split (the glitch bars read as horizontal ghosting) */}
+      <Flash at={isnt} dur={4} color={C.danger} max={0.3} />
       {f >= isnt + 6 && <SimCard at={isnt + 6} top={1740} />}
     </AbsoluteFill>
   );

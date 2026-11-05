@@ -365,9 +365,9 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
       <AbsoluteFill style={{ perspective: 1400, perspectiveOrigin: "50% 44%" }}>
         <AbsoluteFill style={{
           transformOrigin: "50% 44%",
-          transform: `translate(${shake * Math.sin(f * 7.3) * 14}px, ${shake * Math.cos(f * 5.1) * 10}px) rotateX(${interpolate(f, [0, 5, 9], [38, -6, 0], { extrapolateRight: "clamp" }) + 3 * Math.sin(f / 9)}deg) rotateY(${(variant % 2 ? -1 : 1) * (interpolate(f, [0, 6, 10], [-30, 5, 0], { extrapolateRight: "clamp" }) + 4 * Math.sin(f / 11))}deg) scale(${interpolate(f, [0, 2, 4, 7, 10], [0.7, 1.24, 0.93, 1.04, 1], { extrapolateRight: "clamp" })}, ${interpolate(f, [0, 2, 4, 7, 10], [1.3, 0.82, 1.08, 0.98, 1], { extrapolateRight: "clamp" })})`,
+          transform: `translate(${shake * Math.sin(f * 7.3) * 14}px, ${shake * Math.cos(f * 5.1) * 10}px) rotateX(${interpolate(f, [0, 5, 9], [38, -6, 0], { extrapolateRight: "clamp" }) + 3 * Math.sin(f / 9)}deg) rotateY(${(variant % 2 ? -1 : 1) * (interpolate(f, [0, 6, 10], [-12, 4, 0], { extrapolateRight: "clamp" }) + 4 * Math.sin(f / 11))}deg) scale(${interpolate(f, [0, 2, 4, 7, 10], [0.86, 1.06, 0.97, 1.02, 1], { extrapolateRight: "clamp" })}, ${interpolate(f, [0, 2, 4, 7, 10], [0.9, 0.86, 1.06, 0.98, 1], { extrapolateRight: "clamp" })})`,
         }}>
-          <StickerTitle text={text} at={at} color={color} size={190} y={0.44} rotate={variant % 2 ? 4 : -4} sub={sub} />
+          <StickerTitle text={text} at={at - 3} color={color} size={text.length > 8 ? 160 : 175} y={0.44} rotate={variant % 2 ? 4 : -4} sub={sub} />
         </AbsoluteFill>
       </AbsoluteFill>
     </AbsoluteFill>

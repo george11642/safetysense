@@ -110,7 +110,8 @@ export const ReelAudio: React.FC = () => {
     [W(19, "turns") + 14, sfx("sticker_pop"), 0.3],
     [W(20, "You") - 4, sfx("phone_buzz"), 0.28],
     // duress
-    [W(21, "types"), sfx("keypad_pin"), 0.5],
+    [S.duress + 3, sfx("ui_tap"), 0.4], // r12: she taps "I'm okay" (opens the PIN sheet)
+    [W(21, "types") + 8, sfx("keypad_pin"), 0.5],
     [W(21, "disappears,") - 2, sfx("whoosh_soft"), 0.22],
     [W(21, "It") - 3, sfx("glitch"), 0.24],
     [W(21, "It") - 2, sfx("impact_hit"), 0.42], // r11: a real sting on the "It isn't." reveal (full level)
@@ -119,6 +120,7 @@ export const ReelAudio: React.FC = () => {
     // close
     [S.montage + 2, sfx("whoosh_soft"), 0.3],
     [W(22, "text-to-911."), sfx("sticker_pop"), 0.35],
+    [W(22, "text-to-911.") + 2, sfx("thud"), 0.42], // r12: the bigger stamp lands with a thud
     [W(22, "When"), sfx("whoosh_soft"), 0.25],
     [W(22, "When") + 4, sfx("impact_hit"), 0.5],
     [W(22, "When") - 34, sfx("riser"), 0.34, 38], // r7: a real swell into the "CALLS SHE HAD TO MAKE 0" payoff
@@ -126,6 +128,7 @@ export const ReelAudio: React.FC = () => {
     // r9: each polaroid lands with its own small hit
     ...[0, 1, 2, 3].map((i) => [S.montage + 6 + i * 7, sfx("sticker_pop"), 0.16] as Hit),
     [W(25, "fault.") + 16, sfx("notify_ping"), 0.16],
+    [W(25, "not") - 1, sfx("chime"), 0.26], // r12: a soft swell hit on "it's not your fault"
     [S.logo, sfx("notify_ping"), 0.25],
   ];
 

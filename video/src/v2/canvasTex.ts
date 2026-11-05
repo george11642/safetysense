@@ -187,10 +187,11 @@ export const pinpadTex = (filled: number) =>
     const bg = g.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, "#1d1a30"); bg.addColorStop(1, "#0d0c16");
     g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.fillStyle = "#f2c14e"; g.font = `800 34px ${FONT}`; g.textAlign = "center";
-    g.fillText("You okay?", W / 2, 190);
-    g.fillStyle = "#f1eff8"; g.font = `700 30px ${FONT}`;
-    g.fillText("Enter your PIN", W / 2, 250);
+    // r12: mirrors the app's PINEntrySheet (title + message + 4 dots + keypad), opened from the check-in's "I'm okay"
+    g.fillStyle = "#f1eff8"; g.font = `800 38px ${FONT}`; g.textAlign = "center";
+    g.fillText("Confirm you're okay", W / 2, 190);
+    g.fillStyle = "#a9a6c0"; g.font = `600 27px ${FONT}`;
+    g.fillText("Enter your safety PIN.", W / 2, 245);
     for (let i = 0; i < 4; i++) {
       const x = W / 2 - 96 + i * 64;
       g.beginPath(); g.arc(x, 320, 16, 0, Math.PI * 2);
@@ -205,6 +206,4 @@ export const pinpadTex = (filled: number) =>
       g.fillStyle = "rgba(255,255,255,.1)"; g.fill();
       g.fillStyle = "#f1eff8"; g.font = `600 56px ${FONT}`; g.fillText(k, cx, cy + 20);
     });
-    g.fillStyle = "#a9a6c0"; g.font = `600 22px ${FONT}`;
-    g.fillText("Same pad for both PINs", W / 2, 1100);
   });

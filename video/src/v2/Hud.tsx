@@ -55,7 +55,7 @@ const OFF: Pill = { label: "GUARD OFF", sub: "Not started", color: C.muted, icon
 const L = (sub: string): Pill => ({ label: "LISTENING", sub, color: C.calm, icon: "ear" });
 const PILL: [number, Pill][] = [
   [0, OFF],
-  [T.armOn, L("Walk Home · mic on")],
+  [W(3, "tap:") + 2, L("Walk Home · mic on")], // r12: flips on the tap itself (the app screen shows Guard running)
   // r7: the HUD follows the VO's cause -> effect: distress heard on "get off me", contacts alerted on "She doesn't have to"
   [T.getOff, { label: "DISTRESS", sub: "Scream + “get off me”", color: C.danger, icon: "ear" }],
   [T.notHave, { label: "ALERTED", sub: "3 contacts · live map", color: C.accent, icon: "people" }],
@@ -75,7 +75,7 @@ const PILL: [number, Pill][] = [
   [T.isnt, { label: "DISPATCH", sub: "Silent · duress PIN", color: C.danger, icon: "siren" }],
 ];
 const CLOCK: [number, string][] = [
-  [0, "12:06 AM"], [S.arm, "12:04 AM"], [S.walk, "12:05 AM"], [B(6), "12:06 AM"], [T.contactsRing - 10, "+0:08"], [T.party, "FRI 10:48 PM"], [T.t1102, "FRI 11:02 PM"], [T.t1120, "FRI 11:20 PM"],
+  [0, "12:06 AM"], [S.arm, "12:04 AM"], [S.walk, "12:05 AM"], [B(6), "12:06 AM"], [T.contactsRing - 10, "12:06 AM"], [T.party, "FRI 10:48 PM"], [T.t1102, "FRI 11:02 PM"], [T.t1120, "FRI 11:20 PM"],
   [T.t1131, "FRI 11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "SUN 1:12 AM"], [T.alarm, "SUN 1:13 AM"], [T.ride, "WED 1:40 AM"],
 ];
 /** RISK meter (game-like bar, like the references' BAC / REMEMBERED meters): [frame, value 0..100]; eased between keys. */
@@ -152,13 +152,14 @@ export const ReelHud: React.FC = () => {
   let clockChanged = lastChange(frame, CLOCK.map((c) => c[0]));
   let ff = false;
   if (frame >= T.ninety && frame < T.party) {
-    const secs = Math.round(interpolate(frame, [T.ninety, T.ninety + 40], [8, 98], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+    // r12: the chip counts the 90 s the VO names (since the alert), so it lands on +1:30, never +1:38
+    const secs = Math.round(interpolate(frame, [T.ninety, T.ninety + 40], [0, 90], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
     clock = `+${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
     ff = frame < T.ninety + 40;
     if (ff) clockChanged = frame - 3;
     // r11: the relief beat fast-forwards to a plausible police arrival (+7:12), never "police at +1:38"
     if (frame >= T.relief) {
-      const r = Math.round(interpolate(frame, [T.relief, T.relief + 16], [98, 432], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+      const r = Math.round(interpolate(frame, [T.relief, T.relief + 16], [90, 424], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
       clock = `+${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
       ff = frame < T.relief + 16;
       if (ff) clockChanged = frame - 3;
@@ -190,10 +191,9 @@ export const ReelHud: React.FC = () => {
   const gl = frame >= T.isnt && frame < T.isnt + 8 ? (frame % 2 ? 10 : -8) : 0;
   const sinceClock = frame - lastChange(frame, CLOCK.map((c) => c[0]));
   const clockVis = ff || isPlus || pinChip ? 1 : interpolate(sinceClock, [0, 6, CLOCK_HOLD, CLOCK_HOLD + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const callsVis = Math.max(
-    interpolate(frame - T.hudIn, [0, 4, 70, 80], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-    interpolate(frame - esc, [-2, 2, CALLS_HOLD, CALLS_HOLD + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-  );
+  // r12: the CALLS SHE MADE 0 badge is sticky again (it popped on/off between shots); it punches at each escalation
+  const callsVis = interpolate(frame - T.hudIn, [0, 4], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  void CALLS_HOLD;
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none", opacity: gone }}>

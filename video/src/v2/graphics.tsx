@@ -98,17 +98,18 @@ export const DetectionPanel: React.FC<{ screamAt: number; wordsAt: number; words
   };
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
-      <div style={{ position: "absolute", left: 90, right: 90, top: 590, bottom: 690, borderRadius: 70, border: `4px solid ${C.calm}66`, boxShadow: `0 0 60px ${C.calm}33, inset 0 0 80px ${C.calm}18`, transform: `scale(${0.85 + 0.15 * k})`, opacity: k, padding: "60px 46px", display: "flex", flexDirection: "column", gap: 26 }}>
+      {/* r12: a compact card anchored in the top band (y 400-880), clear of her face (framed lower) and the captions */}
+      <div style={{ position: "absolute", left: 70, right: 70, top: 400, borderRadius: 50, border: `4px solid ${C.calm}66`, background: "rgba(14,13,24,.55)", boxShadow: `0 0 60px ${C.calm}33, inset 0 0 80px ${C.calm}18`, transform: `scale(${0.85 + 0.15 * k})`, transformOrigin: "50% 0%", opacity: k, padding: "26px 34px", display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "center" }}>
           <LockIcon size={38} />
           <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 30, color: C.calm, letterSpacing: 3 }}>LISTENING ON THIS PHONE ONLY</span>
         </div>
-        <div style={{ height: 230, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <div style={{ height: 150, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           {Array.from({ length: bars }).map((_, i) => {
             const t = frame - Math.abs(i - bars / 2) * 0.6;
             const a = env(t) * (0.35 + 0.65 * Math.abs(noise1(t / 3 + i * 0.7, i)));
             const hot = env(t) > 0.55;
-            return <div key={i} style={{ width: 11, height: 12 + 210 * Math.min(1, a), borderRadius: 6, background: hot ? (frame >= wordsAt - 2 ? C.warn : C.danger) : C.calm, boxShadow: hot ? `0 0 14px ${C.danger}` : "none", opacity: 0.9 }} />;
+            return <div key={i} style={{ width: 11, height: 10 + 136 * Math.min(1, a), borderRadius: 6, background: hot ? (frame >= wordsAt - 2 ? C.warn : C.danger) : C.calm, boxShadow: hot ? `0 0 14px ${C.danger}` : "none", opacity: 0.9 }} />;
           })}
         </div>
         {chip(screamAt, "🔊", "Scream detected", "Sound classifier · on-device", C.danger)}
@@ -127,7 +128,7 @@ export const StatCard: React.FC<{ at: number; out: number; top?: number }> = ({ 
   const n = 70; // shown exactly (no count-up: never display a wrong number)
   // r9: ONE big number card (the captions step aside while it is up): 70% + FROZE, one plain line, one readable source
   return (
-    <div style={{ position: "absolute", left: 60, right: 60, top, ...glass, borderRadius: 40, padding: "28px 40px 30px", opacity: o * k, transform: `translateY(${(1 - k) * 60}px) rotate(${-1.5 * (1 - k)}deg)`, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, borderColor: `${C.warn}99`, textAlign: "center" }}>
+    <div style={{ position: "absolute", left: 60, right: 60, top, ...glass, borderRadius: 40, padding: "28px 40px 30px", opacity: o * k, transform: `translateY(${(1 - k) * 60}px) rotate(${-1.5 * (1 - k)}deg) scale(${1 + 0.05 * Math.min(1, Math.max(0, (frame - at) / (out - at)))})`, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, borderColor: `${C.warn}99`, textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 24 }}>
         <span style={{ fontFamily: OF.sticker, fontSize: 210, color: C.warn, lineHeight: 0.88, textShadow: `0 0 50px ${C.warn}66` }}>{n}%</span>
         <span style={{ fontFamily: OF.sticker, fontSize: 78, color: C.ink, lineHeight: 0.95, textAlign: "left" }}>REPORTED<br />FREEZING</span>

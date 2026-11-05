@@ -73,16 +73,15 @@ export const Montage: React.FC = () => {
         const inK = spring({ frame: f - land + 10, fps: 30, config: { damping: 7, stiffness: 170, mass: 0.8 } });
         const squash = 1 + 0.08 * Math.max(0, Math.sin(Math.min(1, Math.max(0, (f - land) / 8)) * Math.PI)) * (f >= land ? 1 : 0);
         const tx = 140 + i * 267, ty = 1215;
-        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(1.1, 0.8, te); // r10: another +30% at phone size; tuck back to the row on "When"
+        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(1.18, 0.8, te); // r12: bigger cards, one label each (the small "0 calls · ..." lines were too much text at once) // r10: another +30% at phone size; tuck back to the row on "When"
         return (
-          <div key={p.label} style={{ position: "absolute", left: x - 170 + (i % 2 ? 1 : -1) * (1 - inK) * 760, top: y - 205, transform: `rotate(${p.r * (1 - 0.5 * te) + (1 - inK) * (i % 2 ? -35 : 35)}deg) scale(${sc * squash}, ${sc / squash})`, background: "#f6f4fb", padding: "14px 14px 86px", borderRadius: 6, boxShadow: "0 20px 50px rgba(0,0,0,.6)" }}>
+          <div key={p.label} style={{ position: "absolute", left: x - 170 + (i % 2 ? 1 : -1) * (1 - inK) * 760, top: y - 205, transform: `rotate(${p.r * (1 - 0.5 * te) + (1 - inK) * (i % 2 ? -35 : 35)}deg) scale(${sc * squash}, ${sc / squash})`, background: "#f6f4fb", padding: "14px 14px 70px", borderRadius: 6, boxShadow: "0 20px 50px rgba(0,0,0,.6)" }}>
             <Img src={staticFile(p.src)} style={{ width: 312, height: 312, objectFit: "cover", display: "block", filter: f >= nm && f < when ? "grayscale(0.6)" : "none" }} />
-            <div style={{ position: "absolute", bottom: 44, left: 0, right: 0, textAlign: "center", fontFamily: OF.sticker, fontSize: 36, color: "#14131f" }}>{p.label}</div>
-            <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 25, color: i === 3 ? "#b4741e" : "#2c8a78" }}>{p.how}</div>
+            <div style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontFamily: OF.sticker, fontSize: 44, color: "#14131f" }}>{p.label}</div>
           </div>
         );
       })}
-      <Stamp text="NO TEXT-TO-911" at={nm} out={when + 4} y={0.5} size={100} sub="NEW MEXICO · STILL LISTED, NOV 2026" />
+      <Stamp text="NO TEXT-TO-911" at={nm} out={when + 4} y={0.5} size={106} sub="NEW MEXICO · STILL LISTED, NOV 2026" from={2.6} damping={9} shake={18} />
       {f >= when + 4 && (
         <div style={{ position: "absolute", left: 0, right: 0, top: 470, display: "flex", flexDirection: "column", alignItems: "center", transform: `scale(${heroK})`, opacity: Math.min(1, heroK * 1.5) }}>
           <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 54, color: C.ink, letterSpacing: 3 }}>CALLS SHE HAD TO MAKE</div>
@@ -106,6 +105,9 @@ const ComfortPlate: React.FC<{ g0: number; blur?: number; dim?: number; inset?: 
   // r10: the end plate is alive: the roommate leans in and rests a hand on Maya's shoulder on "And if something happened
   // to you", Maya's head tips toward her; the camera keeps a slow push with a lateral parallax drift to the last frame
   const touch = touchAt === undefined ? 0 : prog(f, touchAt, touchAt + 22, "inOut");
+  // r12: after the hand lands, they look at each other and both smile (the end hold keeps changing to the last frame)
+  const look2 = touchAt === undefined ? 0 : prog(f, touchAt + 90, touchAt + 106, "inOut");
+  const late = touchAt === undefined ? 0 : prog(f, touchAt + 150, touchAt + 176, "inOut");
   const A = a0 ?? S.end, Z = S.total;
   return (
     <div style={{ position: "absolute", inset: 0, filter: blur || dim ? `blur(${blur}px) brightness(${1 - dim})` : "none" }}>
@@ -114,11 +116,11 @@ const ComfortPlate: React.FC<{ g0: number; blur?: number; dim?: number; inset?: 
         <ambientLight color="#ffe2c4" intensity={0.9} />
         <directionalLight position={[1.5, 2.5, 3]} color="#ffd8b0" intensity={1.4} />
         <MorningWindow />
-        <Character look={MAYA} position={mayaSeat} rotationY={0.18} clips={[{ anim: "sit", start: -A }, { anim: "relief", start: -A, mask: "head" }]} frameOffset={g0 - A} seed={1} faceFill={0.4} act={0.6} face={{ smile: 0.45, worry: 0.15 }} />
+        <Character look={MAYA} position={mayaSeat} rotationY={0.18} clips={[{ anim: "sit", start: -A }, { anim: "relief", start: -A, mask: "head" }]} frameOffset={g0 - A} seed={1} faceFill={0.4} act={0.6} face={{ smile: 0.3 + 0.4 * late, worry: 0.2 * (1 - late), eyeX: 0.55 * look2, brow: 0.15 * late }} />
         {/* r7: no blanket blob: her arms and hands stay visible, her head tips toward her roommate */}
         <Character look={ROOMMATE_HD} position={roomSeat} rotationY={-0.3 - 0.3 * touch} grip={0.2}
           clips={touchAt === undefined ? [{ anim: "sit", start: -A }] : [{ anim: "sit", start: -A }, { anim: "hug", start: touchAt, mask: "armR", fade: 18 }]}
-          ikOffR={[-0.58, 0.06, -0.28]} frameOffset={g0 - A} seed={6} faceFill={0.4} act={0.7} face={{ smile: 0.5 - 0.15 * touch, worry: 0.1 + 0.25 * touch }} />
+          ikOffR={[-0.58, 0.06, -0.28]} frameOffset={g0 - A} seed={6} faceFill={0.4} act={0.7} face={{ smile: 0.35 + 0.35 * late, worry: 0.3 * touch * (1 - late), eyeX: -0.4 * look2 }} />
         <CameraRig rig={inset ? pushIn(0, Z - A, [-0.72, 1.0, -0.35], [0.2, 0.05, 1], 3.0, 2.5, 30, "linear") : (fr) => {
           // r11: a continuous push (never settles into a hold) with a lateral parallax arc; the frame lifts as it pushes so
           // their heads stay well clear of the tagline
@@ -217,7 +219,7 @@ export const EndScene: React.FC = () => {
         </div>
         <div style={{ width: "100%", ...el(4) }}>{rainn(true)}</div>
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 1850, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 24, color: "#b9b5cc", opacity: 0.85 }}>3D characters: Quaternius (CC0 / CC-BY 3.0, via poly.pizza)</div>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 1850, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 22, color: "#b9b5cc", opacity: 0.85 }}>Dramatization, fictional characters · 3D: “Suit” by Quaternius (CC-BY 3.0, poly.pizza) + Quaternius CC0 packs</div>
       <Grade vignette={0.4} grain={0.04} />
     </AbsoluteFill>
   );
@@ -240,7 +242,9 @@ const SafeWalk: React.FC<{ full?: boolean }> = ({ full = false }) => {
       <Character look={MAYA} clips={[{ anim: "walk", start: 0, speed: 0.75 }]} position={[0.1, 0.12, z]} faceFill={0.55} face={{ smile: 0.55, worry: 0 }} act={0.4} />
       <ListenRings center={[0.1, 0.12, z]} start={0} every={26} life={56} maxR={2.6} y={0.13} />
       <pointLight position={[0.6, 2.2, z + 1.8]} color="#ffe2cc" intensity={2.4} distance={4} decay={1.5} />
-      <CameraRig rig={(fr) => { const zz = -2 + fr * 0.035; return full ? { pos: [0.6, 1.5, zz + lerp(4.2, 3.4, Math.min(1, fr / 90))], look: [0.1, 1.05, zz], fov: 40 } : { pos: [0.55, 1.45, zz + lerp(3.4, 2.9, Math.min(1, fr / 200))], look: [0.1, 1.2, zz], fov: 34 }; }} handheld={0.004} />
+      {/* r12: the full-frame shot is a moving arc (camera swings from her side to the front as she walks home, lamps
+          sliding past in parallax) that ends close on her smile, never a small static figure centred on a dark set */}
+      <CameraRig rig={(fr) => { const zz = -2 + fr * 0.035; if (full) { const k = prog(fr, 0, 70, "inOut"); const a = lerp(1.05, 0.35, k); const d = lerp(3.2, 2.2, k); return { pos: [0.1 + Math.sin(a) * d, lerp(1.25, 1.5, k), zz + Math.cos(a) * d], look: [0.1, lerp(1.1, 1.42, k), zz + 0.1], fov: lerp(40, 34, k) }; } return { pos: [0.55, 1.45, zz + lerp(3.4, 2.9, Math.min(1, fr / 200))], look: [0.1, 1.2, zz], fov: 34 }; }} handheld={0.004} />
     </Scene3D>
   );
 };
@@ -281,7 +285,7 @@ export const Close: React.FC = () => {
     <AbsoluteFill style={{ background: C.bgDeep }}>
       {!cut && <AbsoluteFill><SafeWalk full /></AbsoluteFill>}
       {cut && <AbsoluteFill><ComfortPlate g0={F0 + plateAt} a0={F0 + plateAt} touchAt={ifAt - plateAt - 4} /></AbsoluteFill>}
-      <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(13,11,22,.82) 0%, rgba(13,11,22,.15) 30%, rgba(13,11,22,0) 44%, rgba(13,11,22,0) 58%, rgba(13,11,22,.9) 64.5%, rgba(13,11,22,.96) 100%)" }} />
+      <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(13,11,22,.82) 0%, rgba(13,11,22,.15) 26%, rgba(13,11,22,0) 36%, rgba(13,11,22,0) 60%, rgba(13,11,22,.55) 66%, rgba(13,11,22,.92) 74%, rgba(13,11,22,.96) 100%)" }} />
       <Drift />
       <div style={{ position: "absolute", top: 180, left: 0, right: 0, display: "flex", justifyContent: "center", opacity: fadeIn(f, 0, 6) }}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 24, overflow: "hidden", padding: "0 10px" }}>
@@ -326,7 +330,7 @@ export const Close: React.FC = () => {
       <div style={{ position: "absolute", top: 1620, left: 70, right: 70, boxSizing: "border-box", padding: "16px 26px", borderRadius: 30, background: "rgba(8,26,24,.92)", border: `6px solid ${C.calm}`, fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.ink, textAlign: "center", lineHeight: 1.12, boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${16 + 14 * Math.sin(f / 11)}px ${C.calm}66`, opacity: fadeIn(f, rainnAt, 8) }}>
         Support 24/7 · RAINN<br /><span style={{ color: C.calm, fontSize: 78 }}>1-800-656-4673</span>
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 1850, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 24, color: "#b9b5cc", opacity: 0.85 }}>3D characters: Quaternius (CC0 / CC-BY 3.0, via poly.pizza)</div>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 1850, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 22, color: "#b9b5cc", opacity: 0.85 }}>Dramatization, fictional characters · 3D: “Suit” by Quaternius (CC-BY 3.0, poly.pizza) + Quaternius CC0 packs</div>
       <Grade vignette={0.4} grain={0.04} />
     </AbsoluteFill>
   );

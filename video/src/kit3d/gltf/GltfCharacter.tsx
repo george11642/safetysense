@@ -94,8 +94,8 @@ const smoothGeo = (g: THREE.BufferGeometry) => {
 // rim (Fresnel) term so silhouettes separate from dark night sets
 type Rim = { color: string; strength: number };
 const matCache = new Map<string, THREE.MeshStandardMaterial>();
-const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Rim | null, opts: { dark?: boolean; skin?: boolean; hair?: boolean; toon?: boolean } = {}) => {
-  const key = `${base.uuid}|${color}|${rim?.color}|${rim?.strength}|${opts.dark}|${opts.skin}|${opts.hair}|${opts.toon}`;
+const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Rim | null, opts: { dark?: boolean; skin?: boolean; hair?: boolean; toon?: boolean; lock?: string; lockAmt?: number } = {}) => {
+  const key = `${base.uuid}|${color}|${rim?.color}|${rim?.strength}|${opts.dark}|${opts.skin}|${opts.hair}|${opts.toon}|${opts.lock}|${opts.lockAmt}`;
   let m = matCache.get(key);
   if (m) return m;
   m = new THREE.MeshStandardMaterial({
@@ -119,12 +119,18 @@ const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Ri
     }
   }
   const rimU = rim && rim.strength > 0 ? (() => { const col = new THREE.Color(rim.color); return { value: new THREE.Vector4(col.r, col.g, col.b, rim.strength * (opts.hair ? 0.4 : 1)) }; })() : null;
-  if (rimU || skinLit) {
+  // v2 r12 (opt-in, cast.skinTone / cast.hairTone): TONE LOCK. Colored scene lights (purple party wash, warm sodium lamps,
+  // teal dash glow) shifted the same skin from pale cream to deep tan between shots, so one character read as several
+  // people. The locked material keeps its shading (light/shadow ratio) but pulls hue + brightness toward one fixed tone.
+  const lockC = opts.lock ? new THREE.Color(opts.lock) : null; // THREE.Color parses sRGB hex into linear working space
+  const lockU = { value: new THREE.Vector4(lockC?.r ?? 0, lockC?.g ?? 0, lockC?.b ?? 0, lockC ? (opts.lockAmt ?? 0.8) : 0) };
+  if (rimU || skinLit || lockC) {
     const skinU = { value: new THREE.Vector3(1.0, 0.42, 0.32) };
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uRim = rimU ?? { value: new THREE.Vector4(0, 0, 0, 0) };
       sh.uniforms.uSss = skinU;
-      sh.fragmentShader = "uniform vec4 uRim;\nuniform vec3 uSss;\n" + sh.fragmentShader.replace(
+      sh.uniforms.uLock = lockU;
+      sh.fragmentShader = "uniform vec4 uRim;\nuniform vec3 uSss;\nuniform vec4 uLock;\n" + sh.fragmentShader.replace(
         "#include <opaque_fragment>",
         `#include <opaque_fragment>
         {
@@ -135,10 +141,16 @@ const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Ri
           // shadowed skin goes warm instead of grey; grazing edges pick up a soft red bleed
           gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * uSss * 1.35, 0.22 * (1.0 - smoothstep(0.05, 0.5, lum)));
           gl_FragColor.rgb += diffuseColor.rgb * uSss * ${opts.toon ? "0.16" : "0.07"} * pow(1.0 - ndv, 1.6);` : ""}
+          ${lockC ? `
+          {
+            float ll = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
+            float shade = 0.8 + 0.32 * smoothstep(0.0, 0.42, ll);
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, uLock.rgb * shade + uRim.rgb * uRim.a * 0.6 * pow(1.0 - ndv, 3.2), uLock.a);
+          }` : ""}
         }`,
       );
     };
-    m.customProgramCacheKey = () => (skinLit ? (opts.toon ? "gltfRimSkinToon" : "gltfRimSkin") : "gltfRim");
+    m.customProgramCacheKey = () => (skinLit ? (opts.toon ? "gltfRimSkinToon" : "gltfRimSkin") : "gltfRim") + (lockC ? "Lock" : "");
   }
   matCache.set(key, m);
   return m;
@@ -155,6 +167,7 @@ const BASE: Record<AnimName, Base> = {
   laugh: { clip: "Idle_Talking_Loop", ref: "talk" },
   sit: { clip: "Idle", ref: "idle", speed: 0.4 },
   sitSlump: { clip: "Idle", ref: "idle", speed: 0.4 },
+  sitRest: { clip: "Idle", ref: "idle", speed: 0.4 },
   drive: { clip: "Idle", ref: "idle", speed: 0.4 },
   kneel: { clip: "Fixing_Kneeling", ref: "kneel" },
   wave: { clip: "Idle", ref: "idle" },
@@ -242,7 +255,8 @@ const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number,
       const hair = n.startsWith("Hair");
       const dark = !!cast.darkFace && skin && parentName.includes("Head");
       m.userData.srcMat = n;
-      return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark, toon });
+      const lock = dark ? undefined : skin ? cast.skinTone : hair ? cast.hairTone : undefined;
+      return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark, toon, lock, lockAmt: skin ? 0.85 : 0.6 });
     });
     m.material = Array.isArray(m.material) ? out : out[0];
     m.castShadow = true;
@@ -436,6 +450,7 @@ const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number; toon?: boolean; ey
   const smile = clamp(p.smile ?? 0, -1, 1);
   // resting upper lid covers the top ~22% of the eye; wide eyes pull it up, blinks close it
   const close = clamp(0.22 - 0.22 * wide + 0.78 * blink + 0.1 * Math.max(0, -smile), 0, 1);
+  const grin = clamp((p as { grin?: number }).grin ?? 0, 0, 1);
   return (
     <group scale={s}>
       {data.eyes.map((e, i) => {
@@ -454,6 +469,8 @@ const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number; toon?: boolean; ey
                 </group>
               </group>
             )}
+            {/* v3 fix r3 (opt-in pose key `grin`, unused by v2): happy-eye crescent, the lower lid rises with a real smile */}
+            {grin > 0 && <mesh geometry={SPH} material={data.skinMat} position={[0, -hh + grin * 0.3 * hh, 0.0035]} scale={[e.hw * 1.22, grin * 0.3 * hh + 0.0008, 0.011]} />}
             {/* upper lid: skin-colored shell sliding down from the top of the eye */}
             <mesh geometry={SPH} material={data.skinMat} position={[0, hh - h / 2, 0.0035]} scale={[e.hw * 1.22, h / 2 + 0.0008, 0.011]} />
             {/* lash line rides the lid edge */}
@@ -475,6 +492,12 @@ const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number; toon?: boolean; ey
       {/* nose: bridge + tip, half sunk into the face so it reads as form, not a stuck-on ball */}
       <mesh geometry={SPH} material={data.skinMat} position={[data.nose.x, data.nose.y + 0.012, data.nose.z - 0.004]} scale={[0.0065, 0.017, 0.008]} />
       <mesh geometry={SPH} material={data.skinMat} position={[data.nose.x, data.nose.y, data.nose.z - 0.0005]} scale={[0.009, 0.0072, 0.0085]} />
+      {/* v3 fix r3 (opt-in `grin`): an upturned smile line with lifted corners over the lips */}
+      {grin > 0 && (
+        <mesh material={data.lashMat} position={[0, data.mouth.y + 0.0125, data.mouth.z + 0.0015]} rotation={[0, 0, -Math.PI / 2 - Math.PI * 0.35]} scale={[1.05, 0.6 + 0.3 * grin, 1]}>
+          <torusGeometry args={[0.0165, 0.0016, 6, 24, Math.PI * 0.7]} />
+        </mesh>
+      )}
       {/* lips: upper + lower, part with `mouth`, widen with a smile */}
       <mesh geometry={SPH} material={data.lipMat} position={[0, data.mouth.y + 0.0035 + 0.003 * mouth + 0.0015 * smile, data.mouth.z - 0.002]} scale={[0.017 * (1 + 0.18 * smile), 0.0032, 0.005]} />
       <mesh geometry={SPH} material={data.lipMat} position={[0, data.mouth.y - 0.0025 - 0.005 * mouth, data.mouth.z - 0.0025]} scale={[0.015 * (1 + 0.12 * smile), 0.0042, 0.0055]} />
@@ -748,6 +771,10 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
     });
     if (!m) return null;
     const c = (m as THREE.MeshStandardMaterial).clone();
+    // r12: keep the source's shader hooks (tone lock + rim) so the bob shell matches the model's own hair in every shot
+    const src = m as THREE.MeshStandardMaterial;
+    c.onBeforeCompile = src.onBeforeCompile;
+    c.customProgramCacheKey = src.customProgramCacheKey;
     c.side = THREE.DoubleSide;
     c.color.multiplyScalar(1.18);
     c.emissive = c.color.clone().multiplyScalar(0.1);
@@ -805,23 +832,29 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
             </group>
           )}
           {extras.has("policeCap") && (
-            // v3 fix r2: seated ON the head (was floating ~2.5 cm above it) and 12% wider so the brim + band hide the hair
-            <group position={[0, 0.185, 0.008]} rotation={[-0.1, 0, 0]} scale={1.12}>
-              <mesh castShadow={castShadow}>
-                <cylinderGeometry args={[0.122, 0.112, 0.075, 24]} />
-                <meshStandardMaterial color="#141b33" roughness={0.6} />
+            // v3 fix r3 (policeCap is v3-only): a real peaked patrol cap. The crown is taller and flares wider than the
+            // hair volume (the old 7.5 cm puck let the crown hair poke through its top), a domed top, a band at the
+            // hairline and a brim angled down over the brow.
+            <group position={[0, 0.2, 0.004]} rotation={[-0.08, 0, 0]}>
+              <mesh castShadow={castShadow} position={[0, 0.01, 0]}>
+                <cylinderGeometry args={[0.15, 0.124, 0.11, 32]} />
+                <meshStandardMaterial color="#18213d" roughness={0.55} />
               </mesh>
-              <mesh position={[0, -0.035, 0.08]} rotation={[0.35, 0, 0]} scale={[1, 0.18, 0.7]}>
-                <sphereGeometry args={[0.1, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                <meshStandardMaterial color="#0d1122" roughness={0.4} />
+              <mesh position={[0, 0.064, 0]} scale={[1, 0.16, 1]}>
+                <sphereGeometry args={[0.15, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                <meshStandardMaterial color="#1b2544" roughness={0.5} />
               </mesh>
-              <mesh position={[0, 0.0, 0.112]}>
-                <circleGeometry args={[0.022, 12]} />
-                <meshStandardMaterial color="#e8c35a" metalness={0.7} roughness={0.3} />
+              <mesh position={[0, -0.033, 0]}>
+                <cylinderGeometry args={[0.127, 0.126, 0.034, 32]} />
+                <meshStandardMaterial color="#0b0f1d" roughness={0.45} />
               </mesh>
-              <mesh position={[0, -0.03, 0]}>
-                <cylinderGeometry args={[0.114, 0.114, 0.018, 24]} />
-                <meshStandardMaterial color="#0d1122" roughness={0.5} />
+              <mesh position={[0, -0.05, 0.105]} rotation={[0.42, 0, 0]} scale={[1, 0.16, 0.62]}>
+                <sphereGeometry args={[0.11, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                <meshStandardMaterial color="#080b16" roughness={0.3} />
+              </mesh>
+              <mesh position={[0, 0.0, 0.142]} rotation={[-0.2, 0, 0]}>
+                <circleGeometry args={[0.022, 6]} />
+                <meshStandardMaterial color="#e8c35a" metalness={0.7} roughness={0.3} side={THREE.DoubleSide} />
               </mesh>
             </group>
           )}
@@ -834,7 +867,8 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
           {extras.has("headset") && (
             // r9: sized to this rig's head (skull ~0.2 m wide, ears ~0.105 m out at eye height); the band hugs the crown,
             // the cups sit on the ears and the mic boom runs to the mouth
-            <group position={[0, 0.1, 0.025]}>
+            // r12: band + cups sit OUTSIDE the hair volume (the cups were sunk into the bob, which read as a helmet)
+            <group position={[0, 0.1, 0.018]} scale={[1.2, 1.06, 1.05]}>
               <mesh rotation={[0, 0, 0]} scale={[1, 1.05, 1]}>
                 <torusGeometry args={[0.11, 0.008, 8, 28, Math.PI]} />
                 <meshStandardMaterial color="#20202c" roughness={0.35} metalness={0.3} />

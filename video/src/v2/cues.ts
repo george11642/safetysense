@@ -84,5 +84,5 @@ export const S = {
   end: B(25) - 4,
   // r9: the end hold is trimmed to ~2.4 s after "fault." (the old 3.6 s static hold read as a freeze)
   // r11: end hold ~3.2 s after "fault." (slow push on the two-shot, then the supplement line settles back in)
-  total: WE(25, "fault.") + 96,
+  total: WE(25, "fault.") + 105, // r12: ~3.5 s end hold after "fault." (script)
 } as const;

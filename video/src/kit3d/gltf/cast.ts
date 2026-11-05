@@ -28,7 +28,8 @@ export type Recolor = Record<string, string>;
 
 export type Extra = "ponytail" | "policeCap" | "badge" | "headset" | "hood" | "bun" | "bobShell";
 
-export type CastDef = { model: ModelKey; colors: Recolor; extras?: Extra[]; hair?: string; darkFace?: boolean };
+/** skinTone / hairTone (r12, opt-in): lock the rendered skin / hair to one tone under any scene lighting (see charMat). */
+export type CastDef = { model: ModelKey; colors: Recolor; extras?: Extra[]; hair?: string; darkFace?: boolean; skinTone?: string; hairTone?: string };
 
 /** Extra fields a Look may carry to pick a cast member explicitly. */
 export type LookCast = Look & { cast?: CastKey };
@@ -48,6 +49,24 @@ export const CAST = {
     extras: ["bobShell"],
     hair: "#4a2c1c",
   },
+  /** r12 (v2 only; v3's Ava keeps maya2): maya2 with a tone lock: the same warm light-tan skin and chestnut bob in every
+   *  shot, whatever the scene light (party purple, sodium lamps and teal dash glow made her read as different people). */
+  maya3: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#1d8f91", "Suit_Legs/Black": "#2c3658", White: "#ef7b9b", Hair_Blond: "#4a2c1c", Hair_Brown: "#2e1b12", "Suit_Feet/Black": "#eeeaf4" },
+    extras: ["bobShell"],
+    hair: "#4a2c1c",
+    skinTone: "#e2a587",
+    hairTone: "#5a3424",
+  },
+  /** r12 (v2): roommate on the SuitFemale rig (the CasualFemale hair cards hung over her eyes): blonde, ponytail. */
+  roommate2: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#f0b55a", "Suit_Legs/Black": "#4b3f6b", White: "#fff1d6", Hair_Blond: "#d9b26a", Hair_Brown: "#b8904a", "Suit_Feet/Black": "#e9e3f2" },
+    hair: "#d2aa62",
+    skinTone: "#f0c2a2",
+    hairTone: "#d8b066",
+  },
   /** Roommate: blonde, mustard top. */
   roommate: { model: "casualF", colors: { White: "#f0b55a", Orange: "#4b3f6b", Grey: "#e9e3f2" } },
   /** Party friend: red hair, green dress. */
@@ -61,18 +80,22 @@ export const CAST = {
     model: "suitF",
     colors: { "Suit_Body/Black": "#6a4c9c", "Suit_Legs/Black": "#33294a", White: "#e2c98a", Hair_Blond: "#7a4a2e", Hair_Brown: "#3a2218", "Suit_Feet/Black": "#2a2232" },
     hair: "#7a4a2e",
+    skinTone: "#e8b597",
+    hairTone: "#7a4a2e",
   },
   /** r9 (v2): dispatcher with side-swept hair (eyes clear of the fringe), a bun and a fitted headset. */
   dispatcher2: {
     model: "suitF",
-    colors: { "Suit_Body/Black": "#2b3f6a", "Suit_Legs/Black": "#1d2238", White: "#c9d4ea", Hair_Blond: "#1e1616", Hair_Brown: "#140e0e", "Suit_Feet/Black": "#1f1a24" },
+    colors: { "Suit_Body/Black": "#2b3f6a", "Suit_Legs/Black": "#1d2238", White: "#c9d4ea", Hair_Blond: "#3a2620", Hair_Brown: "#24160f", "Suit_Feet/Black": "#1f1a24" },
     extras: ["headset", "bun"],
-    hair: "#1e1616",
+    hair: "#3a2620",
+    skinTone: "#b98263",
+    hairTone: "#3a2620",
   },
   /** r9 (v2): the rideshare driver as a neutral rim-lit silhouette (seen only from behind; no face). */
   driverSil: { model: "casualM", colors: { LightBrown: "#1c1b26", LightBlue: "#16151e", Red_Dark: "#16151e", Skin: "#1a1820", Skin_Darker: "#141219", Hair: "#0d0c12", Eyebrows: "#0d0c12" }, darkFace: true },
   /** Brother: green tee. */
-  brother: { model: "casualM", colors: { LightBrown: "#3f6a5a", LightBlue: "#2a3346" } },
+  brother: { model: "casualM", colors: { LightBrown: "#3f6a5a", LightBlue: "#2a3346" }, skinTone: "#d99c7c" },
   /** Party guy. */
   guy: { model: "hoodieM", colors: {} },
   /** Driver: dark clothes. */

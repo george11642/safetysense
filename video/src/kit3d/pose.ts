@@ -242,6 +242,14 @@ const sitSlump: AnimFn = (t, s) => {
   const p = mix(idle(t, s), sitPose(sl), down);
   return { ...p, spineBend: p.spineBend + 0.015 * b, blink: Math.max(p.blink, blinkAt(t, s)), neckTilt: 0.12 * sl * Math.sin(t / 40) };
 };
+/** Additive (v2 r12): seated and gone still, head resting tipped to one side (face stays readable, no chin-on-chest). */
+const sitRest: AnimFn = (t, s) => {
+  const down = r(t, 0, 22);
+  const sl = r(t, 14, 40);
+  const b = breath(t);
+  const p = mix(idle(t, s), sitPose(0.45 * sl), down);
+  return { ...p, spineBend: p.spineBend + 0.012 * b, neckNod: 0.12 * sl, neckTilt: 0.3 * sl + 0.01 * Math.sin(t / 30), neckTurn: 0.12 * sl, blink: Math.max(p.blink, blinkAt(t, s)) };
+};
 /** Upright sit (passenger / desk). */
 const sit: AnimFn = (t, s) => {
   const p = sitPose(0);
@@ -409,7 +417,7 @@ const stumbleCatch: AnimFn = (t, s) => {
 export const ANIMS = {
   stumbleCatch,
   idle, walk, run, lookBack, startle, phoneUp, phoneRing, phoneCall, drink, woozy, stumble,
-  sitSlump, sit, collapse, lieSide, hug, wave, kneel, drive, talk, freeze, relief, laugh, lockUp, flinchBack, jolt,
+  sitSlump, sitRest, sit, collapse, lieSide, hug, wave, kneel, drive, talk, freeze, relief, laugh, lockUp, flinchBack, jolt,
 } satisfies Record<string, AnimFn>;
 export type AnimName = keyof typeof ANIMS;
 
