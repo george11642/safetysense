@@ -20,18 +20,20 @@ export const fadeOut = (frame: number, at: number, dur = 8) => interpolate(frame
 export const fadeIn = (frame: number, at: number, dur = 8) => interpolate(frame, [at, at + dur], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
 /** Bold rotated stamp ("NO ANSWER", "NO SAFETY PIN"). */
-export const Stamp: React.FC<{ text: string; at: number; out?: number; color?: string; x?: number; y?: number; size?: number; rotate?: number; sub?: string }> = ({
-  text, at, out, color = C.danger, x = 0.5, y = 0.5, size = 96, rotate = -6, sub,
+export const Stamp: React.FC<{ text: string; at: number; out?: number; color?: string; x?: number; y?: number; size?: number; rotate?: number; sub?: string; from?: number; damping?: number; shake?: number }> = ({
+  text, at, out, color = C.danger, x = 0.5, y = 0.5, size = 96, rotate = -6, sub, from = 2.2, damping = 8, shake = 0,
 }) => {
   const frame = useCurrentFrame();
-  const k = useSpring(at, { damping: 8, stiffness: 320, mass: 0.5 });
+  const k = useSpring(at, { damping, stiffness: 320, mass: 0.5 });
+  const sk = frame - at >= 2 && frame - at < 12 ? shake * Math.exp(-(frame - at - 2) / 3) : 0;
+  const jx = Math.sin((frame - at) * 2.9) * sk, jy = Math.cos((frame - at) * 3.7) * sk;
   if (frame < at || (out !== undefined && frame > out + 8)) return null;
   const o = out !== undefined ? fadeOut(frame, out) : 1;
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div
         style={{
-          position: "absolute", left: `${x * 100}%`, top: `${y * 100}%`, transform: `translate(-50%,-50%) rotate(${rotate}deg) scale(${(2.2 - 1.2 * k) * o})`, opacity: Math.min(1, k * 2) * o,
+          position: "absolute", left: `${x * 100}%`, top: `${y * 100}%`, transform: `translate(calc(-50% + ${jx}px),calc(-50% + ${jy}px)) rotate(${rotate}deg) scale(${(from - (from - 1) * k) * o})`, opacity: Math.min(1, k * 2) * o,
           border: `${size * 0.08}px solid ${color}`, borderRadius: size * 0.18, padding: `${size * 0.08}px ${size * 0.28}px`, background: "rgba(13,12,22,.78)",
           boxShadow: `0 0 ${size * 0.5}px ${color}66`, textAlign: "center",
         }}
@@ -127,8 +129,9 @@ export const StatCard: React.FC<{ at: number; out: number; top?: number }> = ({ 
     <div style={{ position: "absolute", left: 70, right: 70, top, ...glass, borderRadius: 34, padding: "26px 36px", opacity: o * k, transform: `translateY(${(1 - k) * 60}px) rotate(${-1.5 * (1 - k)}deg)`, display: "flex", alignItems: "center", gap: 28, borderColor: `${C.warn}88` }}>
       <div style={{ fontFamily: OF.sticker, fontSize: 150, color: C.warn, lineHeight: 0.9, textShadow: `0 0 40px ${C.warn}66` }}>{n}%</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 34, color: C.ink, lineHeight: 1.12 }}>of 298 women reported significant tonic immobility</span>
-        <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 22, color: C.muted }}>Freezing is involuntary. Möller et al., 2017</span>
+        <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 36, color: C.ink, lineHeight: 1.12 }}>of 298 women reported significant tonic immobility</span>
+        <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 31, color: C.warn }}>Möller et al., 2017</span>
+        <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 28, color: C.muted }}>Freezing is involuntary.</span>
       </div>
     </div>
   );
@@ -160,10 +163,10 @@ export const MiniMap: React.FC<{ at: number; w?: number; h?: number; label?: str
 };
 
 /** Name tag sticker for a split-screen panel. */
-export const NameTag: React.FC<{ at: number; text: string; color?: string; style?: React.CSSProperties }> = ({ at, text, color = C.accent, style }) => {
+export const NameTag: React.FC<{ at: number; text: string; color?: string; style?: React.CSSProperties; size?: number }> = ({ at, text, color = C.accent, style, size = 64 }) => {
   const k = useSpring(at, { damping: 8, stiffness: 280, mass: 0.5 });
   return (
-    <div style={{ position: "absolute", fontFamily: OF.sticker, fontSize: 64, color, WebkitTextStroke: "10px #fff", paintOrder: "stroke fill", textShadow: "0 6px 0 #120f1e", transform: `scale(${k}) rotate(-4deg)`, transformOrigin: "left center", ...style }}>{text}</div>
+    <div style={{ position: "absolute", fontFamily: OF.sticker, fontSize: size, color, WebkitTextStroke: `${size * 0.16}px #fff`, paintOrder: "stroke fill", textShadow: "0 6px 0 #120f1e", transform: `scale(${k}) rotate(-4deg)`, transformOrigin: "left center", ...style }}>{text}</div>
   );
 };
 
@@ -355,8 +358,10 @@ export const RouteMap: React.FC<{ at: number; offAt: number; style?: React.CSSPr
   );
 };
 
-/** New Mexico outline (simplified; bootheel at the bottom-left). viewBox 0 0 100 110. */
-export const NM_PATH = "M 6 2 L 94 2 L 94 98 L 38 98 L 38 104 L 20 104 L 20 98 L 6 98 Z";
+/** New Mexico state outline from its real border coordinates (equirectangular, cos 34° x-scale): straight north/east
+ *  borders, the El Paso jog and the bootheel. viewBox 0 0 100 110. Albuquerque sits at (40.9, 37.6). */
+export const NM_PATH = "M 6.0 4.0 L 93.9 4.0 L 93.3 12.8 L 93.0 91.5 L 41.3 91.5 L 42.6 95.3 L 18.2 95.3 L 18.2 103.2 L 6.0 103.2 Z";
+export const NM_ABQ: [number, number] = [40.9, 37.6];
 
 /** SafetySense app icon + wordmark. */
 export const Wordmark: React.FC<{ size?: number; at?: number }> = ({ size = 1, at = 0 }) => {
@@ -379,7 +384,7 @@ export const WordReveal: React.FC<{ words: { w: string; at: number; hi?: boolean
       {words.map((x, i) => {
         const p = spring({ frame: frame - x.at, fps: 30, config: { damping: 12, stiffness: 240, mass: 0.5 } });
         return (
-          <span key={i} style={{ display: "inline-block", fontFamily: font, fontWeight: weight, fontSize: size, color: x.hi ? hiColor : color, opacity: frame >= x.at ? Math.max(0.14, Math.min(1, p * 1.4)) : 0.14, transform: `translateY(${(1 - p) * 14}px)` }}>{x.w}</span>
+          <span key={i} style={{ display: "inline-block", fontFamily: font, fontWeight: weight, fontSize: size, color: x.hi ? hiColor : color, opacity: frame >= x.at ? Math.min(1, p * 1.4) : 0, transform: `translateY(${(1 - p) * 14}px)` }}>{x.w}</span>
         );
       })}
     </div>

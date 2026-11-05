@@ -2,79 +2,79 @@
  {
   "id": "v3_01",
   "file": "vo/v3/v3_01.mp3",
-  "durationSec": 5.34,
-  "text": "Maya is walking home. Someone comes up behind her. She can't reach her phone.",
-  "spoken": "Maya is walking home. Someone comes up behind her. She can't reach her phone.",
+  "durationSec": 5.334,
+  "text": "Ava is walking home. Someone comes up behind her. She can't reach her phone.",
+  "spoken": "Ava is walking home. Someone comes up behind her. She can't reach her phone.",
   "words": [
    {
-    "word": "Maya",
-    "start": 0.24,
-    "end": 0.56
+    "word": "Ava",
+    "start": 0.16,
+    "end": 0.48
    },
    {
     "word": "is",
-    "start": 0.64,
-    "end": 0.8
+    "start": 0.56,
+    "end": 0.72
    },
    {
     "word": "walking",
-    "start": 0.88,
-    "end": 1.2
+    "start": 0.8,
+    "end": 1.12
    },
    {
     "word": "home.",
-    "start": 1.28,
-    "end": 1.68
+    "start": 1.2,
+    "end": 1.76
    },
    {
     "word": "Someone",
-    "start": 2.134,
-    "end": 2.454
+    "start": 2.133,
+    "end": 2.453
    },
    {
     "word": "comes",
-    "start": 2.574,
-    "end": 2.694
+    "start": 2.573,
+    "end": 2.693
    },
    {
     "word": "up",
-    "start": 2.774,
-    "end": 2.854
+    "start": 2.773,
+    "end": 2.853
    },
    {
     "word": "behind",
-    "start": 2.934,
-    "end": 3.174
+    "start": 2.933,
+    "end": 3.173
    },
    {
     "word": "her.",
-    "start": 3.254,
-    "end": 3.494
+    "start": 3.253,
+    "end": 3.493
    },
    {
     "word": "She",
-    "start": 3.91,
-    "end": 4.07
+    "start": 3.909,
+    "end": 4.069
    },
    {
     "word": "can't",
-    "start": 4.15,
-    "end": 4.31
+    "start": 4.149,
+    "end": 4.309
    },
    {
     "word": "reach",
-    "start": 4.39,
-    "end": 4.55
+    "start": 4.389,
+    "end": 4.549
    },
    {
     "word": "her",
-    "start": 4.63,
-    "end": 4.71
+    "start": 4.629,
+    "end": 4.709
    },
    {
     "word": "phone.",
-    "start": 4.79,
-    "end": 5.34
+    "start": 4.789,
+    "end": 5.334
    }
   ]
  },
@@ -125,9 +125,9 @@
  {
   "id": "v3_03",
   "file": "vo/v3/v3_03.mp3",
-  "durationSec": 11.071,
-  "text": "Most safety apps wait for you to press a button. But freezing is a normal, involuntary response. In one study, 70% of women seen after a sexual assault reported it.",
-  "spoken": "Most safety apps wait for you to press a button. But freezing is a normal, involuntary response. In one study, seventy percent of women seen after a sexual assault reported it.",
+  "durationSec": 12.411,
+  "text": "Most safety apps wait for you to press a button. But freezing is a normal, involuntary response. In one study, 70% of women seen after a sexual assault reported freezing.",
+  "spoken": "Most safety apps wait for you to press a button. But freezing is a normal, involuntary response. In one study, seventy percent of women seen after a sexual assault reported freezing.",
   "words": [
    {
     "word": "Most",
@@ -216,68 +216,68 @@
    },
    {
     "word": "In",
-    "start": 6.598,
-    "end": 6.651
+    "start": 7.034,
+    "end": 7.194
    },
    {
     "word": "one",
-    "start": 6.731,
-    "end": 6.891
+    "start": 7.274,
+    "end": 7.434
    },
    {
     "word": "study,",
-    "start": 6.971,
-    "end": 7.571
+    "start": 7.594,
+    "end": 8.194
    },
    {
     "word": "70%",
-    "start": 7.611,
-    "end": 8.331
+    "start": 8.234,
+    "end": 8.954
    },
    {
     "word": "of",
-    "start": 8.411,
-    "end": 8.491
+    "start": 9.034,
+    "end": 9.114
    },
    {
     "word": "women",
-    "start": 8.651,
-    "end": 8.811
+    "start": 9.314,
+    "end": 9.514
    },
    {
     "word": "seen",
-    "start": 8.891,
-    "end": 9.051
+    "start": 9.594,
+    "end": 9.754
    },
    {
     "word": "after",
-    "start": 9.131,
-    "end": 9.291
+    "start": 9.834,
+    "end": 10.074
    },
    {
     "word": "a",
-    "start": 9.451,
-    "end": 9.491
+    "start": 10.114,
+    "end": 10.154
    },
    {
     "word": "sexual",
-    "start": 9.531,
-    "end": 9.851
+    "start": 10.234,
+    "end": 10.554
    },
    {
     "word": "assault",
-    "start": 9.971,
-    "end": 10.331
+    "start": 10.634,
+    "end": 11.274
    },
    {
     "word": "reported",
-    "start": 10.571,
-    "end": 10.811
+    "start": 11.514,
+    "end": 11.754
    },
    {
-    "word": "it.",
-    "start": 11.091,
-    "end": 11.071
+    "word": "freezing.",
+    "start": 11.874,
+    "end": 12.411
    }
   ]
  },
@@ -1047,9 +1047,9 @@
  {
   "id": "v3_11",
   "file": "vo/v3/v3_11.mp3",
-  "durationSec": 10.673,
-  "text": "Still no safety PIN after 90 seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. In this demo, dispatch is simulated.",
-  "spoken": "Still no safety PIN after ninety seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. In this demo, dispatch is simulated.",
+  "durationSec": 10.354,
+  "text": "Still no answer after 90 seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. In this demo, dispatch is simulated.",
+  "spoken": "Still no answer after ninety seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. In this demo, dispatch is simulated.",
   "words": [
    {
     "word": "Still",
@@ -1062,134 +1062,129 @@
     "end": 0.56
    },
    {
-    "word": "safety",
+    "word": "answer",
     "start": 0.64,
-    "end": 0.96
-   },
-   {
-    "word": "PIN",
-    "start": 1.04,
-    "end": 1.2
+    "end": 0.88
    },
    {
     "word": "after",
+    "start": 0.96,
+    "end": 1.2
+   },
+   {
+    "word": "90",
     "start": 1.28,
     "end": 1.52
    },
    {
-    "word": "90",
-    "start": 1.56,
-    "end": 1.76
-   },
-   {
     "word": "seconds?",
-    "start": 1.84,
-    "end": 2.918
+    "start": 1.6,
+    "end": 2.38
    },
    {
     "word": "Professional",
-    "start": 3.132,
-    "end": 3.345
+    "start": 2.827,
+    "end": 3.04
    },
    {
     "word": "dispatch",
-    "start": 3.425,
-    "end": 3.905
+    "start": 3.12,
+    "end": 3.6
    },
    {
     "word": "calls",
-    "start": 4.065,
-    "end": 4.225
+    "start": 3.76,
+    "end": 3.92
    },
    {
     "word": "you.",
-    "start": 4.505,
-    "end": 4.801
+    "start": 4.2,
+    "end": 4.496
    },
    {
     "word": "If",
-    "start": 4.841,
-    "end": 4.881
+    "start": 4.536,
+    "end": 4.576
    },
    {
     "word": "you",
-    "start": 4.961,
-    "end": 5.041
+    "start": 4.656,
+    "end": 4.736
    },
    {
     "word": "can't",
-    "start": 5.121,
-    "end": 5.281
+    "start": 4.816,
+    "end": 4.976
    },
    {
     "word": "answer,",
-    "start": 5.361,
-    "end": 5.961
+    "start": 5.056,
+    "end": 5.656
    },
    {
     "word": "they",
-    "start": 6.001,
-    "end": 6.161
+    "start": 5.696,
+    "end": 5.856
    },
    {
     "word": "send",
-    "start": 6.241,
-    "end": 6.481
+    "start": 5.936,
+    "end": 6.176
    },
    {
     "word": "police",
-    "start": 6.601,
-    "end": 6.881
+    "start": 6.296,
+    "end": 6.576
    },
    {
     "word": "to",
-    "start": 6.921,
-    "end": 6.961
+    "start": 6.616,
+    "end": 6.656
    },
    {
     "word": "your",
-    "start": 7.041,
-    "end": 7.121
+    "start": 6.736,
+    "end": 6.816
    },
    {
     "word": "live",
-    "start": 7.201,
-    "end": 7.361
+    "start": 6.896,
+    "end": 7.056
    },
    {
     "word": "location.",
-    "start": 7.881,
-    "end": 8.332
+    "start": 7.576,
+    "end": 8.02
    },
    {
     "word": "In",
-    "start": 8.403,
-    "end": 8.483
+    "start": 8.091,
+    "end": 8.171
    },
    {
     "word": "this",
-    "start": 8.563,
-    "end": 8.723
+    "start": 8.251,
+    "end": 8.411
    },
    {
     "word": "demo,",
-    "start": 9.003,
-    "end": 9.323
+    "start": 8.691,
+    "end": 9.011
    },
    {
     "word": "dispatch",
-    "start": 9.363,
-    "end": 9.763
+    "start": 9.051,
+    "end": 9.451
    },
    {
     "word": "is",
-    "start": 9.843,
-    "end": 9.923
+    "start": 9.531,
+    "end": 9.611
    },
    {
     "word": "simulated.",
-    "start": 10.003,
-    "end": 10.673
+    "start": 9.691,
+    "end": 10.354
    }
   ]
  },
@@ -1483,9 +1478,9 @@
  {
   "id": "v3_15",
   "file": "vo/v3/v3_15.mp3",
-  "durationSec": 9.655,
-  "text": "It only listens when you turn it on. Audio stays on your phone. Nothing is saved unless an alert fires, and evidence is encrypted, behind Face ID.",
-  "spoken": "It only listens when you turn it on. Audio stays on your phone. Nothing is saved unless an alert fires, and evidence is encrypted, behind Face ID.",
+  "durationSec": 11.0,
+  "text": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
+  "spoken": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
   "words": [
    {
     "word": "It",
@@ -1528,106 +1523,116 @@
     "end": 2.331
    },
    {
-    "word": "Audio",
-    "start": 2.371,
-    "end": 2.771
-   },
-   {
-    "word": "stays",
-    "start": 2.851,
+    "word": "While",
+    "start": 2.771,
     "end": 3.011
    },
    {
-    "word": "on",
+    "word": "guarding,",
     "start": 3.091,
-    "end": 3.171
+    "end": 3.731
+   },
+   {
+    "word": "audio",
+    "start": 3.811,
+    "end": 4.131
+   },
+   {
+    "word": "stays",
+    "start": 4.211,
+    "end": 4.451
+   },
+   {
+    "word": "on",
+    "start": 4.531,
+    "end": 4.611
    },
    {
     "word": "your",
-    "start": 3.251,
-    "end": 3.331
+    "start": 4.691,
+    "end": 4.771
    },
    {
     "word": "phone.",
-    "start": 3.731,
-    "end": 4.175
+    "start": 4.931,
+    "end": 5.507
    },
    {
     "word": "Nothing",
-    "start": 4.255,
-    "end": 4.575
+    "start": 5.667,
+    "end": 5.987
    },
    {
     "word": "is",
-    "start": 4.655,
-    "end": 4.735
+    "start": 6.067,
+    "end": 6.147
    },
    {
     "word": "saved",
-    "start": 4.815,
-    "end": 5.135
+    "start": 6.227,
+    "end": 6.547
    },
    {
     "word": "unless",
-    "start": 5.295,
-    "end": 5.455
+    "start": 6.707,
+    "end": 6.867
    },
    {
     "word": "an",
-    "start": 5.495,
-    "end": 5.535
+    "start": 6.907,
+    "end": 6.947
    },
    {
     "word": "alert",
-    "start": 5.615,
-    "end": 5.935
+    "start": 7.107,
+    "end": 7.267
    },
    {
-    "word": "fires,",
-    "start": 6.295,
-    "end": 6.735
+    "word": "fires.",
+    "start": 7.347,
+    "end": 8.21
    },
    {
-    "word": "and",
-    "start": 6.815,
-    "end": 6.895
+    "word": "Then",
+    "start": 8.25,
+    "end": 8.57
    },
    {
     "word": "evidence",
-    "start": 6.975,
-    "end": 7.295
+    "start": 8.65,
+    "end": 8.97
    },
    {
     "word": "is",
-    "start": 7.375,
-    "end": 7.455
+    "start": 9.05,
+    "end": 9.13
    },
    {
-    "word": "encrypted,",
-    "start": 7.895,
-    "end": 8.415
+    "word": "encrypted",
+    "start": 9.21,
+    "end": 9.85
    },
    {
-    "word": "behind",
-    "start": 8.495,
-    "end": 8.815
+    "word": "before",
+    "start": 10.01,
+    "end": 10.17
    },
    {
-    "word": "Face",
-    "start": 8.935,
-    "end": 9.055
+    "word": "it's",
+    "start": 10.21,
+    "end": 10.33
    },
    {
-    "word": "ID.",
-    "start": 9.215,
-    "end": 9.655
+    "word": "uploaded.",
+    "start": 10.77,
+    "end": 11.0
    }
   ]
  },
  {
   "id": "v3_16",
   "file": "vo/v3/v3_16.mp3",
-  "durationSec": 11.571,
+  "durationSec": 12.321,
   "text": "On the phone, Apple's sound and speech models feed a rules-based risk engine. In the cloud, Supabase watches heartbeats, Twilio calls your people, and Noonlight handles dispatch.",
   "spoken": "On the phone, Apple's sound and speech models feed a rules-based risk engine. In the cloud, Supabase watches heartbeats, Twilio calls your people, and Noonlight handles dispatch.",
   "words": [
@@ -1698,187 +1703,187 @@
    },
    {
     "word": "In",
-    "start": 5.101,
-    "end": 5.181
+    "start": 5.851,
+    "end": 5.931
    },
    {
     "word": "the",
-    "start": 5.221,
-    "end": 5.261
+    "start": 5.971,
+    "end": 6.011
    },
    {
     "word": "cloud,",
-    "start": 5.341,
-    "end": 6.061
+    "start": 6.091,
+    "end": 6.811
    },
    {
     "word": "Supabase",
-    "start": 6.141,
-    "end": 6.701
+    "start": 6.891,
+    "end": 7.451
    },
    {
     "word": "watches",
-    "start": 6.781,
-    "end": 7.101
+    "start": 7.531,
+    "end": 7.851
    },
    {
     "word": "heartbeats,",
-    "start": 7.221,
-    "end": 8.021
+    "start": 7.971,
+    "end": 8.771
    },
    {
     "word": "Twilio",
-    "start": 8.061,
-    "end": 8.541
+    "start": 8.811,
+    "end": 9.291
    },
    {
     "word": "calls",
-    "start": 8.661,
-    "end": 8.781
+    "start": 9.411,
+    "end": 9.531
    },
    {
     "word": "your",
-    "start": 8.861,
-    "end": 8.941
+    "start": 9.611,
+    "end": 9.691
    },
    {
     "word": "people,",
-    "start": 9.301,
-    "end": 9.701
+    "start": 10.051,
+    "end": 10.451
    },
    {
     "word": "and",
-    "start": 9.741,
-    "end": 9.901
+    "start": 10.491,
+    "end": 10.651
    },
    {
     "word": "Noonlight",
-    "start": 9.981,
-    "end": 10.461
+    "start": 10.731,
+    "end": 11.211
    },
    {
     "word": "handles",
-    "start": 10.661,
-    "end": 10.861
+    "start": 11.411,
+    "end": 11.611
    },
    {
     "word": "dispatch.",
-    "start": 11.421,
-    "end": 11.571
+    "start": 12.171,
+    "end": 12.321
    }
   ]
  },
  {
   "id": "v3_17",
   "file": "vo/v3/v3_17.mp3",
-  "durationSec": 9.358,
+  "durationSec": 9.48,
   "text": "SafetySense was built by George Teifel, an electrical engineering senior at UNM, and Mary Teifel, a mechanical engineering freshman at CNM.",
-  "spoken": "SafetySense was built by George Teifel, an electrical engineering senior at UNM, and Mary Teifel, a mechanical engineering freshman at CNM.",
+  "spoken": "SafetySense was built by George Tie-full, an electrical engineering senior at UNM, and Mary Tie-full, a mechanical engineering freshman at CNM.",
   "words": [
    {
     "word": "SafetySense",
     "start": 0.0,
-    "end": 0.72
+    "end": 0.8
    },
    {
     "word": "was",
-    "start": 0.84,
-    "end": 0.96
+    "start": 0.92,
+    "end": 1.04
    },
    {
     "word": "built",
-    "start": 1.08,
-    "end": 1.2
+    "start": 1.16,
+    "end": 1.28
    },
    {
     "word": "by",
-    "start": 1.28,
-    "end": 1.36
+    "start": 1.36,
+    "end": 1.44
    },
    {
     "word": "George",
-    "start": 1.44,
-    "end": 1.76
+    "start": 1.52,
+    "end": 1.84
    },
    {
     "word": "Teifel,",
-    "start": 1.84,
-    "end": 2.578
+    "start": 1.88,
+    "end": 2.68
    },
    {
     "word": "an",
-    "start": 2.618,
-    "end": 2.698
+    "start": 2.72,
+    "end": 2.8
    },
    {
     "word": "electrical",
-    "start": 2.778,
-    "end": 3.258
+    "start": 2.96,
+    "end": 3.36
    },
    {
     "word": "engineering",
-    "start": 3.338,
-    "end": 3.898
+    "start": 3.44,
+    "end": 4.0
    },
    {
     "word": "senior",
-    "start": 3.978,
-    "end": 4.298
+    "start": 4.08,
+    "end": 4.4
    },
    {
     "word": "at",
-    "start": 4.378,
-    "end": 4.458
+    "start": 4.48,
+    "end": 4.56
    },
    {
     "word": "UNM,",
-    "start": 4.538,
-    "end": 5.378
+    "start": 4.64,
+    "end": 5.48
    },
    {
     "word": "and",
-    "start": 5.418,
-    "end": 5.578
+    "start": 5.52,
+    "end": 5.68
    },
    {
     "word": "Mary",
-    "start": 5.738,
-    "end": 5.898
+    "start": 5.84,
+    "end": 6.0
    },
    {
     "word": "Teifel,",
-    "start": 5.978,
-    "end": 6.658
+    "start": 6.04,
+    "end": 6.76
    },
    {
     "word": "a",
-    "start": 6.698,
-    "end": 6.738
+    "start": 6.8,
+    "end": 6.84
    },
    {
     "word": "mechanical",
-    "start": 6.778,
-    "end": 7.338
+    "start": 6.88,
+    "end": 7.44
    },
    {
     "word": "engineering",
-    "start": 7.618,
-    "end": 7.898
+    "start": 7.52,
+    "end": 8.0
    },
    {
     "word": "freshman",
-    "start": 8.058,
-    "end": 8.458
+    "start": 8.16,
+    "end": 8.56
    },
    {
     "word": "at",
-    "start": 8.538,
-    "end": 8.698
+    "start": 8.64,
+    "end": 8.8
    },
    {
     "word": "CNM.",
-    "start": 8.778,
-    "end": 9.358
+    "start": 8.88,
+    "end": 9.48
    }
   ]
  },

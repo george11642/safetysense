@@ -8,6 +8,24 @@ import { Glow, LightPool, SkyDome, Stars } from "../fx";
 import { Building, Streetlight } from "./common";
 import { hash, V3 } from "../math";
 import { P } from "../palette";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+
+/** Additive (v3 r3): soft cushion geometry + woven-fabric color for the plush cabin. */
+const rb = (w: number, h: number, d: number, r: number) => new RoundedBoxGeometry(w, h, d, 4, r);
+const FABRIC = "#4a4560";
+const PlushSeat: React.FC<{ position: V3; width?: number }> = ({ position, width = 0.55 }) => {
+  const m = React.useMemo(() => new THREE.MeshStandardMaterial({ color: FABRIC, roughness: 0.95 }), []);
+  const stitch = React.useMemo(() => new THREE.MeshStandardMaterial({ color: "#5a5474", roughness: 0.9 }), []);
+  const g = React.useMemo(() => ({ cush: rb(width, 0.17, 0.55, 0.06), back: rb(width, 0.8, 0.17, 0.07), head: rb(0.3, 0.2, 0.14, 0.06), panel: rb(width * 0.6, 0.62, 0.02, 0.01) }), [width]);
+  return (
+    <group position={position}>
+      <mesh geometry={g.cush} material={m} position={[0, 0.38, 0.12]} castShadow receiveShadow />
+      <mesh geometry={g.back} material={m} position={[0, 0.82, -0.18]} rotation={[-0.18, 0, 0]} castShadow receiveShadow />
+      <mesh geometry={g.panel} material={stitch} position={[0, 0.82, -0.085]} rotation={[-0.18, 0, 0]} />
+      {width < 1 && <mesh geometry={g.head} material={m} position={[0, 1.3, -0.24]} rotation={[-0.18, 0, 0]} castShadow />}
+    </group>
+  );
+};
 
 /** Root positions for <Character anim="sit"/"drive"> (seat cushion top ~0.45 above car floor). */
 export const SEATS = { driver: [0.38, 0.05, 0.25] as V3, passenger: [-0.38, 0.05, 0.25] as V3, rearLeft: [0.4, 0.05, -0.75] as V3, rearRight: [-0.4, 0.05, -0.75] as V3, rearMiddle: [-0.14, 0.05, -0.75] as V3 };
@@ -38,10 +56,18 @@ export type CarInteriorProps = {
   turnSignal?: boolean;
   /** Pulsing danger tint outside (for tense beats) 0..1 */
   tension?: number;
+  /** Additive: scale of the passing-streetlight sweep (1 = default). */
+  sweep?: number;
+  /** Additive: cabin dome light level (default 0.6). */
+  dome?: number;
+  /** Additive (v3 r3): rounded fabric seats, window reflections, brighter dash glow. */
+  plush?: boolean;
+  /** Additive (v2 r3): render the front passenger seat (default true). Off gives a clean shot of the back seat from the front. */
+  passengerSeat?: boolean;
 };
 
 /** Interior: cabin shell, seats, wheel, dash, and city lights streaming past the windows. */
-export const CarInterior: React.FC<CarInteriorProps> = ({ speed = 0.35, dashColor = "#5cc7b2", turnSignal = false, tension = 0 }) => {
+export const CarInterior: React.FC<CarInteriorProps> = ({ speed = 0.35, dashColor = "#5cc7b2", turnSignal = false, tension = 0, sweep = 1, dome = 0.6, plush = false, passengerSeat = true }) => {
   const frame = useCurrentFrame();
   const shell = flatMat("#1b1a28", { rough: 0.8, side: THREE.DoubleSide });
   const trim = flatMat("#2a2838", { rough: 0.6 });
@@ -49,14 +75,14 @@ export const CarInterior: React.FC<CarInteriorProps> = ({ speed = 0.35, dashColo
   const period = 40;
   const ph = ((frame * speed * 3) % period) / period;
   const sweepZ = 3 - ph * 7;
-  const sweepI = Math.max(0, 1 - Math.abs(sweepZ) / 2.5);
+  const sweepI = Math.max(0, 1 - Math.abs(sweepZ) / 2.5) * sweep;
   const blink = turnSignal && Math.floor(frame / 12) % 2 === 0;
   return (
     <group>
       <SkyDome stops={[[0, "#07061a"], [0.5, "#1a1640"], [0.66, "#4a2f5e"], [1, "#0d0c16"]]} />
       <hemisphereLight args={["#6a6ab0", "#1a1020", 0.45]} />
       <pointLight position={[0, 0.95, 0.85]} color={dashColor} intensity={1.6} distance={2.5} decay={1.5} />
-      <pointLight position={[0, 1.35, -0.3]} color="#ffd9b8" intensity={0.6} distance={2.5} decay={1.5} />
+      <pointLight position={[0, 1.35, -0.3]} color="#ffd9b8" intensity={dome} distance={2.5} decay={1.5} />
       <pointLight position={[1.4, 1.3, sweepZ]} color={P.lampWarm} intensity={14 * sweepI} distance={4} decay={1.5} />
       <pointLight position={[-1.4, 1.3, sweepZ - 1]} color={P.lampWarm} intensity={10 * sweepI} distance={4} decay={1.5} />
       {tension > 0 && <pointLight position={[0, 1.2, -1]} color={P.danger} intensity={2 * tension} distance={3} />}
@@ -111,17 +137,33 @@ export const CarInterior: React.FC<CarInteriorProps> = ({ speed = 0.35, dashColo
           <boxGeometry args={[0.3, 0.03, 0.02]} />
         </mesh>
       </group>
+      {plush ? (
+        <>
+          <PlushSeat position={[0.38, 0, 0.2]} />
+          <PlushSeat position={[-0.38, 0, 0.2]} />
+          <PlushSeat position={[0, 0, -0.85]} width={1.5} />
+          {/* window reflections + a soft dash wash on the ceiling */}
+          {[0.77, -0.77].map((x) => (
+            <mesh key={x} position={[x, 1.15, -0.9]} rotation={[0, x > 0 ? -Math.PI / 2 : Math.PI / 2, 0]}>
+              <planeGeometry args={[1.1, 0.45]} />
+              <meshBasicMaterial color="#9fb2ff" transparent opacity={0.06 + 0.1 * sweepI} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+            </mesh>
+          ))}
+          <pointLight position={[0, 1.05, 0.7]} color={dashColor} intensity={1.2} distance={2.2} decay={1.4} />
+        </>
+      ) : (<>
       <Seat position={[0.38, 0, 0.2]} />
-      <Seat position={[-0.38, 0, 0.2]} />
+      {passengerSeat && <Seat position={[-0.38, 0, 0.2]} />}
+      </>)}
       {/* rear bench */}
-      <group position={[0, 0, -0.85]}>
+      {!plush && <group position={[0, 0, -0.85]}>
         <mesh material={flatMat(P.carSeat)} position={[0, 0.38, 0.12]} receiveShadow castShadow>
           <boxGeometry args={[1.5, 0.16, 0.55]} />
         </mesh>
         <mesh material={flatMat(P.carSeat)} position={[0, 0.8, -0.22]} rotation={[-0.18, 0, 0]} receiveShadow>
           <boxGeometry args={[1.5, 0.8, 0.16]} />
         </mesh>
-      </group>
+      </group>}
       <CityStream speed={speed} />
     </group>
   );

@@ -331,9 +331,38 @@ const talk: AnimFn = (t, s) => {
   return pose({ ...idle(t, s), mouth: clamp(m, 0, 0.7), shLfwd: 0.3 + 0.1 * Math.sin(t / 9), elL: 0.9, shLtwist: 0.4, smile: 0.4, brow: 0.2 * Math.sin(t / 11) });
 };
 
+/** Additive (v2 r3): tonic immobility. Rigid, arms pulled in tight to the sides, shoulders up, chin tucked, eyes wide,
+ *  barely breathing; only a fine tremble moves. Holds. */
+const freeze: AnimFn = (t, s) => {
+  const a = r(t, 0, 6);
+  const tr = 0.006 * Math.sin(t * 1.9 + s) + 0.004 * Math.sin(t * 3.3);
+  return pose({
+    rootZ: -0.03 * a, hipDrop: 0.01 * a, knL: 0.04, knR: 0.04, hipLout: 0.02, hipRout: 0.02,
+    spineBend: -0.02 * a, chestBend: 0.06 * a,
+    shrugL: 0.065 * a + tr, shrugR: 0.065 * a - tr,
+    shLfwd: 0.04 * a, shRfwd: 0.04 * a, shLout: 0.1 - 0.13 * a, shRout: 0.1 - 0.13 * a,
+    elL: 0.12 - 0.04 * a, elR: 0.12 - 0.04 * a, wrL: -0.2 * a, wrR: -0.2 * a,
+    neckNod: 0.08 * a, neckTurn: tr * 2, neckTilt: 0.02,
+    eyesWide: 0.45 * a, brow: 0.7 * a, worry: 1.0 * a, mouth: 0.18 * a, smile: -0.45 * a, blink: 0, eyeX: 0.15 * a,
+  });
+};
+
+/** Additive (v2 r3): relief. Shoulders drop, a soft closed-mouth smile, brows relax, slow blinks. Loops. */
+const relief: AnimFn = (t, s) => {
+  const b = idle(t, s);
+  return pose({ ...b, shrugL: -0.02, shrugR: -0.02, smile: 0.75, worry: 0.3, brow: -0.1, eyeY: -0.25, neckTilt: 0.08, neckNod: 0.1, blink: Math.max(b.blink, 0.25) });
+};
+
+/** Additive (v2 r3): laughing with a friend (head back, big smile, shoulders bouncing). Loops. */
+const laugh: AnimFn = (t, s) => {
+  const b = talk(t, s);
+  const bounce = Math.max(0, Math.sin(t / 2.1));
+  return pose({ ...b, smile: 0.95, mouth: 0.35 + 0.3 * bounce, neckNod: -0.18, neckTilt: 0.1, shrugL: 0.02 * bounce, shrugR: 0.02 * bounce, chestBend: -0.04 * bounce, blink: 0.55 });
+};
+
 export const ANIMS = {
   idle, walk, run, lookBack, startle, phoneUp, phoneRing, phoneCall, drink, woozy, stumble,
-  sitSlump, sit, collapse, lieSide, hug, wave, kneel, drive, talk,
+  sitSlump, sit, collapse, lieSide, hug, wave, kneel, drive, talk, freeze, relief, laugh,
 } satisfies Record<string, AnimFn>;
 export type AnimName = keyof typeof ANIMS;
 

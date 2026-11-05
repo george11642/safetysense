@@ -199,6 +199,23 @@ def build(v):
             subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-"]
                            + (["-af", f"atempo={tempo}"] if tempo != 1.0 else []) + [tmp.name],
                            input=y.astype(np.float32).tobytes(), check=True)
+            # optional dramatic pauses inserted after given words (e.g. {"still.": 0.6}); shifts later words + chars
+            for pw, psec in (l.get("pauseAfter") or {}).items():
+                hit = next((w for w in words if w["word"] == pw), None)
+                if not hit:
+                    sys.exit(f"pauseAfter: no word {pw!r} in {l['id']}")
+                nxt = [w for w in words if w["start"] > hit["end"] - 1e-6 and w is not hit]
+                cut = (hit["end"] + nxt[0]["start"]) / 2 if nxt else hit["end"]
+                z = decode(tmp.name)
+                k = int(cut * SR)
+                z = np.concatenate([z[:k], np.zeros(int(psec * SR), dtype=np.float32), z[k:]])
+                subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-", tmp.name],
+                               input=z.astype(np.float32).tobytes(), check=True)
+                for w in words:
+                    if w["start"] >= cut:
+                        w["start"] = round(w["start"] + psec, 3); w["end"] = round(w["end"] + psec, 3)
+                a["character_start_times_seconds"] = [round(t + psec, 3) if t >= cut else t for t in a["character_start_times_seconds"]]
+                a["character_end_times_seconds"] = [round(t + psec, 3) if t >= cut else t for t in a["character_end_times_seconds"]]
             loudnorm(tmp.name, dst)
         d = round(dur(dst), 3)
         total += d

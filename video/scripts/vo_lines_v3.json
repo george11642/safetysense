@@ -1,9 +1,9 @@
 [
  {
   "id": "v3_01",
-  "text": "Maya is walking home. Someone comes up behind her. She can't reach her phone.",
-  "take": "t1",
-  "tts": "[tense] Maya is walking home. Someone comes up behind her. She can't reach her phone."
+  "text": "Ava is walking home. Someone comes up behind her. She can't reach her phone.",
+  "take": "r1 splice",
+  "tts": "[tense] Ava is walking home. Someone comes up behind her. She can't reach her phone."
  },
  {
   "id": "v3_02",
@@ -11,9 +11,9 @@
  },
  {
   "id": "v3_03",
-  "text": "Most safety apps wait for you to press a button. But freezing is a normal, involuntary response. In one study, 70% of women seen after a sexual assault reported it.",
-  "tts": "Most safety apps wait for you to press a button. [gently] But freezing is a normal, involuntary response. In one study, seventy percent of women seen after a sexual assault reported it.",
-  "take": "t1"
+  "text": "Most safety apps wait for you to press a button. But freezing is a normal, involuntary response. In one study, 70% of women seen after a sexual assault reported freezing.",
+  "tts": "Most safety apps wait for you to press a button. [gently] But freezing is a normal, involuntary response. In one study, seventy percent of women seen after a sexual assault reported freezing.",
+  "take": "r1 splice"
  },
  {
   "id": "v3_04",
@@ -48,9 +48,9 @@
  },
  {
   "id": "v3_11",
-  "text": "Still no safety PIN after 90 seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. In this demo, dispatch is simulated.",
-  "tts": "Still no safety PIN after ninety seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. [matter-of-fact] In this demo, dispatch is simulated.",
-  "take": "t1"
+  "text": "Still no answer after 90 seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. In this demo, dispatch is simulated.",
+  "tts": "Still no answer after ninety seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. [matter-of-fact] In this demo, dispatch is simulated.",
+  "take": "r1 splice"
  },
  {
   "id": "v3_12",
@@ -66,16 +66,22 @@
  },
  {
   "id": "v3_15",
-  "text": "It only listens when you turn it on. Audio stays on your phone. Nothing is saved unless an alert fires, and evidence is encrypted, behind Face ID."
+  "text": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
+  "tts": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
+  "take": "r1 splice"
  },
  {
   "id": "v3_16",
   "text": "On the phone, Apple's sound and speech models feed a rules-based risk engine. In the cloud, Supabase watches heartbeats, Twilio calls your people, and Noonlight handles dispatch.",
-  "take": "t0"
+  "take": "t0",
+  "pauseAfter": {
+   "engine.": 0.75
+  }
  },
  {
   "id": "v3_17",
-  "text": "SafetySense was built by George Teifel, an electrical engineering senior at UNM, and Mary Teifel, a mechanical engineering freshman at CNM."
+  "text": "SafetySense was built by George Teifel, an electrical engineering senior at UNM, and Mary Teifel, a mechanical engineering freshman at CNM.",
+  "tts": "SafetySense was built by George Tie-full, an electrical engineering senior at UNM, and Mary Tie-full, a mechanical engineering freshman at CNM."
  },
  {
   "id": "v3_18",

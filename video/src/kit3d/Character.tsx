@@ -3,7 +3,10 @@
 import React, { useMemo } from "react";
 import * as THREE from "three";
 import { useCurrentFrame } from "remotion";
-import { flatMat, glowMat } from "./materials";
+import { flatMat, glowMat, MatOpts } from "./materials";
+
+/** Smooth-shaded material (soft stylized look; replaces the old faceted shading on characters). */
+const sm = (c: string, o: MatOpts = {}) => flatMat(c, { rough: 0.6, ...o, flat: false });
 import { Clip, evalClips, Pose } from "./pose";
 import { P } from "./palette";
 import { Phone, Cup } from "./props";
@@ -55,6 +58,10 @@ export type CharacterProps = {
   /** Phone screen glow 0..1 (lights her face). */
   phoneGlow?: number;
   castShadow?: boolean;
+  /** Soft warm fill light parented to the face (keeps close-up faces clean). 0 = off. */
+  faceFill?: number;
+  /** Additive (v2 r3): override face channels on top of the animated pose (expression acting). */
+  face?: Partial<Record<"eyesWide" | "worry" | "brow" | "smile" | "mouth" | "blink" | "eyeX" | "eyeY", number>>;
 };
 
 // ---- presets ---------------------------------------------------------------
@@ -79,11 +86,11 @@ const BASE: Look = { skin: P.skin[1], hair: P.hair.brown, hairStyle: "short", to
 
 // ---- geometry (shared) -----------------------------------------------------
 const G = {
-  head: new THREE.IcosahedronGeometry(1, 2),
-  ball: new THREE.IcosahedronGeometry(1, 1),
-  ballSm: new THREE.IcosahedronGeometry(1, 0),
-  sphereSmooth: new THREE.SphereGeometry(1, 16, 12),
-  capsule: new THREE.CapsuleGeometry(1, 1, 2, 7),
+  head: new THREE.SphereGeometry(1, 40, 30),
+  ball: new THREE.SphereGeometry(1, 24, 18),
+  ballSm: new THREE.SphereGeometry(1, 14, 10),
+  sphereSmooth: new THREE.SphereGeometry(1, 24, 16),
+  capsule: new THREE.CapsuleGeometry(1, 1, 6, 16),
   box: new THREE.BoxGeometry(1, 1, 1),
   // lathe-profiled torso pieces (faceted but with a real silhouette); x = radius, y = height
   chestF: lathe([[0.118, 0], [0.13, 0.06], [0.142, 0.14], [0.145, 0.2], [0.13, 0.245], [0.085, 0.272], [0.04, 0.28]]),
@@ -93,15 +100,15 @@ const G = {
   pelvisF: lathe([[0.06, -0.1], [0.13, -0.085], [0.152, -0.02], [0.142, 0.06]]),
   pelvisM: lathe([[0.06, -0.1], [0.125, -0.085], [0.14, -0.02], [0.133, 0.06]]),
   jacketChest: lathe([[0.132, -0.24], [0.13, -0.12], [0.126, 0], [0.142, 0.07], [0.157, 0.15], [0.16, 0.21], [0.143, 0.255], [0.09, 0.285], [0.06, 0.3]], 0.55),
-  collar: new THREE.TorusGeometry(0.052, 0.014, 5, 12),
-  cyl: new THREE.CylinderGeometry(1, 1, 1, 10),
-  hairCap: new THREE.SphereGeometry(1, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.56),
-  hood: new THREE.SphereGeometry(1, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.8),
-  cone: new THREE.ConeGeometry(1, 1, 7),
+  collar: new THREE.TorusGeometry(0.052, 0.014, 8, 28),
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 24),
+  hairCap: new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.56),
+  hood: new THREE.SphereGeometry(1, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.8),
+  cone: new THREE.ConeGeometry(1, 1, 18),
 };
 
 function lathe(pts: [number, number][], gap = 0) {
-  const g = new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), 12, gap, Math.PI * 2 - gap * 2);
+  const g = new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), 32, gap, Math.PI * 2 - gap * 2);
   return g;
 }
 
@@ -112,7 +119,7 @@ const mouthGeo = (() => {
     let g = m.get(q);
     if (!g) {
       const c = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, -q * 1.1, 0.15), new THREE.Vector3(1, 0, 0));
-      g = new THREE.TubeGeometry(c, 10, 0.17, 5, false);
+      g = new THREE.TubeGeometry(c, 16, 0.17, 8, false);
       m.set(q, g);
     }
     return g;
@@ -138,7 +145,7 @@ const capGeo = (r: number, len: number) => {
   const k = `${r}|${len}`;
   let g = capCache.get(k);
   if (!g) {
-    g = new THREE.CapsuleGeometry(r, Math.max(0.001, len - r * 1.2), 2, 7);
+    g = new THREE.CapsuleGeometry(r, Math.max(0.001, len - r * 1.2), 6, 16);
     capCache.set(k, g);
   }
   return g;
@@ -148,7 +155,7 @@ const taperGeo = (r1: number, r2: number, len: number) => {
   const k = `${r1}|${r2}|${len}`;
   let g = taperCache.get(k);
   if (!g) {
-    g = new THREE.CylinderGeometry(r1, r2, len, 9, 2);
+    g = new THREE.CylinderGeometry(r1, r2, len, 18, 2);
     // slight belly in the middle ring = organic, less "pipe"
     const pos = g.attributes.position;
     for (let i = 0; i < pos.count; i++) {
@@ -174,29 +181,31 @@ const Limb: React.FC<{ len: number; r: number; r2?: number; mat: THREE.Material;
 
 export const Character: React.FC<CharacterProps> = ({
   look: lookIn, clips, pose: poseIn, frameOffset = 0, seed = 0, position = [0, 0, 0], rotationY = 0,
-  holdR = "none", holdL = "none", phoneScreen, phoneGlow = 0, castShadow = true,
+  holdR = "none", holdL = "none", phoneScreen, phoneGlow = 0, castShadow = true, faceFill = 0.35, face,
 }) => {
   const frame = useCurrentFrame() + frameOffset;
   const look: Look = { ...BASE, ...lookIn };
   const pz = useMemo(() => (poseIn ? null : clips ?? [{ anim: "idle", start: 0 }]), [poseIn, clips]) as Clip[] | null;
-  const p = poseIn ?? evalClips(pz!, frame, seed);
+  const p0 = poseIn ?? evalClips(pz!, frame, seed);
+  const p = face ? { ...p0, ...face } : p0;
   // lagged pose for secondary motion (ponytail / hood drape)
   const lag = poseIn ?? evalClips(pz!, frame - 4, seed);
 
   const f = look.build !== "m";
   const shoulderX = f ? 0.17 : 0.2;
   const hipX = f ? 0.095 : 0.09;
-  const skin = flatMat(look.skin!);
-  const skinDark = flatMat(new THREE.Color(look.skin!).multiplyScalar(0.82).getStyle());
-  const top = flatMat(look.top!);
-  const jacket = look.jacket ? flatMat(look.jacket) : null;
+  const skin = sm(look.skin!, { rough: 0.55, emissive: look.skin!, emissiveIntensity: 0.14 });
+  const skinDark = sm(new THREE.Color(look.skin!).multiplyScalar(0.82).getStyle());
+  const top = sm(look.top!);
+  const jacket = look.jacket ? sm(look.jacket) : null;
   const sleeve = jacket ?? (look.sleeves === "long" ? top : skin);
-  const bottom = flatMat(look.bottom!);
-  const shoes = flatMat(look.shoes!, { rough: 0.6 });
-  const hair = flatMat(look.hair!, { rough: 0.9 });
-  const dark = flatMat("#1a1622", { rough: 0.5 });
-  const white = flatMat("#fbf8ff", { rough: 0.35 });
-  const lip = flatMat("#8a3b4b", { rough: 0.6 });
+  const bottom = sm(look.bottom!);
+  const shoes = sm(look.shoes!, { rough: 0.6 });
+  const hair = sm(look.hair!, { rough: 0.9 });
+  const hairHi = sm(new THREE.Color(look.hair!).multiplyScalar(1.35).getStyle(), { rough: 0.75 });
+  const dark = sm("#1a1622", { rough: 0.5 });
+  const white = sm("#fbf8ff", { rough: 0.35 });
+  const lip = sm("#8a3b4b", { rough: 0.6 });
   const hood = !!look.hood;
 
   // limb sign helpers: L is the character's left (+X side)
@@ -208,7 +217,7 @@ export const Character: React.FC<CharacterProps> = ({
           <M geo={G.cyl} mat={bottom} p={[0, -D.shin + 0.035, 0]} s={[0.056, 0.03, 0.056]} />
         <group position={[0, -D.shin, 0]} rotation={[-an, 0, 0]}>
           <M geo={G.ball} mat={shoes} p={[0, -0.02, 0.045]} s={[0.058, 0.05, 0.12]} />
-          <M geo={G.box} mat={flatMat(look.police || look.hood ? "#0b0a10" : "#f4f1fa", { rough: 0.5 })} p={[0, -0.052, 0.045]} s={[0.1, 0.022, 0.23]} />
+          <M geo={G.ball} mat={sm(look.police || look.hood ? "#0b0a10" : "#f4f1fa", { rough: 0.5 })} p={[0, -0.05, 0.045]} s={[0.052, 0.016, 0.12]} />
         </group>
       </group>
     </group>
@@ -243,8 +252,11 @@ export const Character: React.FC<CharacterProps> = ({
         <Limb mat={look.sleeves === "long" || jacket ? sleeve : skin} len={D.fore} r={0.044} r2={0.034} endBall={false} />
         {(look.sleeves === "long" || jacket) && <M geo={G.cyl} mat={sleeve} p={[0, -D.fore + 0.02, 0]} s={[0.037, 0.03, 0.037]} />}
         <group position={[0, -D.fore, 0]} rotation={[-wr, 0, 0]}>
-          <M geo={G.ball} mat={skin} p={[0, -0.045, 0.005]} s={[0.04, 0.055, 0.03]} />
-          <M geo={G.ball} mat={skin} p={[side * -0.028, -0.03, 0.02]} s={[0.016, 0.03, 0.016]} r={[0.3, 0, side * 0.5]} />
+          <M geo={G.ball} mat={skin} p={[0, -0.042, 0.005]} s={[0.038, 0.048, 0.026]} />
+          <M geo={G.ball} mat={skin} p={[side * -0.03, -0.03, 0.018]} s={[0.014, 0.028, 0.014]} r={[0.3, 0, side * 0.5]} />
+          {[-0.026, -0.009, 0.008, 0.025].map((x, i) => (
+            <M key={i} geo={G.capsule} mat={skin} p={[x * side, -0.093 + Math.abs(x) * 0.25, 0.012]} s={[0.0085, i === 1 || i === 2 ? 0.0105 : 0.008, 0.0085]} r={[0.28, 0, 0]} shadow={false} />
+          ))}
         </group>
       </group>
     </group>
@@ -284,7 +296,8 @@ export const Character: React.FC<CharacterProps> = ({
   const R = D.headR;
 
   const eye = (side: 1 | -1) => (
-    <group position={[side * 0.056, 0.012, R * 0.86]} scale={[1, eyeOpen, 1]}>
+    // eyes follow the head's curvature (rotated + tucked in) so their whites never poke out of the silhouette
+    <group position={[side * 0.054, 0.012, R * 0.835]} rotation={[0, side * 0.36, 0]} scale={[1, eyeOpen, 1]}>
       <M geo={G.sphereSmooth} mat={white} s={[0.03, 0.034, 0.016]} shadow={false} />
       <M geo={G.sphereSmooth} mat={dark} p={[eyeX, eyeY - 0.002, 0.012]} s={[0.019, 0.022, 0.008]} shadow={false} />
       <mesh geometry={G.sphereSmooth} material={glowMat("#ffffff")} position={[eyeX + 0.007, eyeY + 0.008, 0.019]} scale={0.0055} />
@@ -302,13 +315,15 @@ export const Character: React.FC<CharacterProps> = ({
     if (hood) return null;
     const st = look.hairStyle;
     if (st === "none") return null;
-    const capS: V3 = st === "buzz" ? [R * 1.02, R * 1.04, R * 1.04] : [R * 1.08, R * 1.14, R * 1.1];
+    const capS: V3 = st === "buzz" ? [R * 1.0, R * 1.04, R * 1.02] : [R * 1.03, R * 1.14, R * 1.09];
     return (
       <group>
         <M geo={G.hairCap} mat={hair} p={[0, 0.012, -0.008]} s={capS} r={[-0.25, 0, 0]} />
+        {/* back-of-head hair shell (hidden inside the face at the front), so the skull never reads bald from behind */}
+        <M geo={G.head} mat={hair} p={[0, -0.005, -0.03]} s={st === "buzz" ? [R * 0.95, R * 0.99, R * 0.9] : [R * 0.97, R * 0.99, R * 0.93]} />
         {st !== "buzz" && (
           // side-swept fringe
-          <M geo={G.ball} mat={hair} p={[-0.045, 0.095, 0.1]} s={[0.1, 0.045, 0.06]} r={[0.5, 0.2, 0.35]} />
+          <M geo={G.ball} mat={hair} p={[-0.045, 0.095 + ponyLift * 0.01, 0.1]} s={[0.1, 0.045, 0.06]} r={[0.5 - ponyLift * 0.15, 0.2, 0.35 + ponySwing * 0.08]} />
         )}
         {st === "long" && (
           <>
@@ -324,13 +339,13 @@ export const Character: React.FC<CharacterProps> = ({
             return <M key={i} geo={G.ballSm} mat={hair} p={[Math.cos(a) * R * 0.95, 0.06 + 0.05 * Math.sin(a * 2), Math.sin(a) * R * 0.85 - 0.03]} s={0.07} />;
           })}
         {st === "ponytail" && (
-          <group position={[0, 0.07, -R * 0.98]} rotation={[0.35 + ponyLift * 0.5, 0, 0]}>
-            <M geo={G.cyl} mat={flatMat(P.accent)} s={[0.025, 0.02, 0.025]} r={[Math.PI / 2, 0, 0]} />
+          <group position={[0, 0.085, -R * 1.0]} rotation={[0.3 + ponyLift * 0.5, 0, 0]} scale={1.22}>
+            <M geo={G.cyl} mat={sm(P.accent, { emissive: P.accent, emissiveIntensity: 0.25 })} s={[0.032, 0.026, 0.032]} r={[Math.PI / 2, 0, 0]} />
             <group rotation={[0.25 - ponyLift * 0.3, ponySwing * 0.6, ponySwing * 0.9]}>
-              <M geo={G.ball} mat={hair} p={[0, -0.07, -0.02]} s={[0.045, 0.085, 0.045]} r={[0.2, 0, 0]} />
+              <M geo={G.ball} mat={hairHi} p={[0, -0.07, -0.02]} s={[0.045, 0.085, 0.045]} r={[0.2, 0, 0]} />
               <group position={[0, -0.14, -0.03]} rotation={[0.15, 0, ponySwing * 0.7]}>
-                <M geo={G.ball} mat={hair} p={[0, -0.06, 0]} s={[0.035, 0.08, 0.035]} />
-                <M geo={G.cone} mat={hair} p={[0, -0.15, 0]} s={[0.028, 0.08, 0.028]} r={[Math.PI, 0, 0]} />
+                <M geo={G.ball} mat={hairHi} p={[0, -0.06, 0]} s={[0.035, 0.08, 0.035]} />
+                <M geo={G.cone} mat={hairHi} p={[0, -0.15, 0]} s={[0.028, 0.08, 0.028]} r={[Math.PI, 0, 0]} />
               </group>
             </group>
           </group>
@@ -352,30 +367,30 @@ export const Character: React.FC<CharacterProps> = ({
           {leg(-1, p.hipRfwd, -p.hipRout, p.knR, p.anR)}
           {/* pelvis */}
           <M geo={f ? G.pelvisF : G.pelvisM} mat={bottom} p={[0, 0.03, 0]} s={[1, 1, 0.72]} />
-          {look.police && <M geo={G.cyl} mat={flatMat("#111018", { rough: 0.4 })} p={[0, 0.06, 0]} s={[f ? 0.17 : 0.162, 0.05, 0.12]} />}
+          {look.police && <M geo={G.cyl} mat={sm("#111018", { rough: 0.4 })} p={[0, 0.06, 0]} s={[f ? 0.17 : 0.162, 0.05, 0.12]} />}
           {/* spine */}
           <group position={[0, 0.06, 0]} rotation={[p.spineBend, p.spineTwist, -p.spineSide]}>
             <M geo={f ? G.abdomenF : G.abdomenM} mat={top} p={[0, -0.01, 0]} s={[1, 1, 0.7]} />
             {/* chest */}
             <group position={[0, D.abdomen, 0]} rotation={[p.chestBend, p.chestTwist, -p.chestSide]}>
               <M geo={f ? G.chestF : G.chestM} mat={top} s={[f ? 1.08 : 1.18, 1, 0.72]} />
-              {!jacket && !look.police && <M geo={G.collar} mat={flatMat(new THREE.Color(look.top!).multiplyScalar(0.8).getStyle())} p={[0, D.chest - 0.01, 0.004]} r={[Math.PI / 2 - 0.15, 0, 0]} s={[1, 0.85, 1]} />}
+              {!jacket && !look.police && <M geo={G.collar} mat={sm(new THREE.Color(look.top!).multiplyScalar(0.8).getStyle())} p={[0, D.chest - 0.01, 0.004]} r={[Math.PI / 2 - 0.15, 0, 0]} s={[1, 0.85, 1]} />}
               {jacket && (
-                <mesh geometry={G.jacketChest} material={flatMat(look.jacket!, { side: THREE.DoubleSide })} scale={[f ? 1.1 : 1.2, 1, 0.78]} castShadow />
+                <mesh geometry={G.jacketChest} material={sm(look.jacket!, { side: THREE.DoubleSide })} scale={[f ? 1.1 : 1.2, 1, 0.78]} rotation={[Math.max(-0.08, Math.min(0.08, -ponyLift * 0.12)), Math.max(-0.1, Math.min(0.1, ponySwing * 0.18)), 0]} castShadow />
               )}
               {look.hood && (
                 // hoodie front pocket + drawstrings
                 <>
-                  <M geo={G.box} mat={flatMat("#232236")} p={[0, 0.02, 0.1]} s={[0.18, 0.09, 0.03]} />
-                  <M geo={G.box} mat={flatMat("#3a3850")} p={[0.03, 0.18, 0.115]} s={[0.008, 0.1, 0.008]} />
-                  <M geo={G.box} mat={flatMat("#3a3850")} p={[-0.03, 0.18, 0.115]} s={[0.008, 0.1, 0.008]} />
+                  <M geo={G.box} mat={sm("#232236")} p={[0, 0.02, 0.1]} s={[0.18, 0.09, 0.03]} />
+                  <M geo={G.box} mat={sm("#3a3850")} p={[0.03, 0.18, 0.115]} s={[0.008, 0.1, 0.008]} />
+                  <M geo={G.box} mat={sm("#3a3850")} p={[-0.03, 0.18, 0.115]} s={[0.008, 0.1, 0.008]} />
                 </>
               )}
               {look.police && (
                 <>
-                  <M geo={G.box} mat={flatMat("#f0c45a", { metal: 0.6, rough: 0.3, emissive: "#3a2a08" })} p={[0.08, 0.16, 0.115]} s={[0.04, 0.05, 0.01]} />
-                  <M geo={G.box} mat={flatMat("#2b3a63")} p={[0, 0.12, 0.105]} s={[0.22, 0.22, 0.03]} />
-                  <M geo={G.box} mat={flatMat("#111018")} p={[-0.11, 0.19, 0.09]} s={[0.035, 0.06, 0.03]} />
+                  <M geo={G.box} mat={sm("#f0c45a", { metal: 0.6, rough: 0.3, emissive: "#3a2a08" })} p={[0.08, 0.16, 0.115]} s={[0.04, 0.05, 0.01]} />
+                  <M geo={G.box} mat={sm("#2b3a63")} p={[0, 0.12, 0.105]} s={[0.22, 0.22, 0.03]} />
+                  <M geo={G.box} mat={sm("#111018")} p={[-0.11, 0.19, 0.09]} s={[0.035, 0.06, 0.03]} />
                 </>
               )}
               {/* arms */}
@@ -385,9 +400,10 @@ export const Character: React.FC<CharacterProps> = ({
               {heldNode(-1, armR, holdR)}
               {/* neck + head */}
               <group position={[0, D.chest, 0]} rotation={[p.neckNod * 0.4, p.neckTurn * 0.3, -p.neckTilt * 0.3]}>
-                <M geo={capGeo(0.04, 0.12)} mat={hood ? flatMat("#0d0c14") : skinDark} p={[0, 0.03, 0]} />
+                <M geo={capGeo(0.04, 0.12)} mat={hood ? sm("#0d0c14") : skinDark} p={[0, 0.03, 0]} />
                 <group position={[0, D.neck, 0.0]} rotation={[p.neckNod * 0.6, p.neckTurn * 0.7, -p.neckTilt * 0.7]}>
                   <group position={[0, R * 1.08, 0.01]} scale={HEAD_SCALE}>
+                    {!hood && faceFill > 0 && <pointLight position={[0.05, 0.04, 0.5]} intensity={faceFill} distance={1.1} decay={2} color="#ffe9dc" />}
                     {/* head */}
                     {!hood && <M geo={G.head} mat={skin} s={[R * 0.93, R * 1.06, R * 0.97]} />}
                     {!hood && (
@@ -406,7 +422,7 @@ export const Character: React.FC<CharacterProps> = ({
                         {/* mouth: curve + opening */}
                         <mesh geometry={mouthGeo(p.smile)} material={lip} position={[0, -0.065 - 0.004 * p.mouth, R * 0.9]} scale={[0.026, 0.026, 0.02]} />
                         {p.mouth > 0.05 && (
-                          <M geo={G.sphereSmooth} mat={flatMat("#3a1520")} p={[0, -0.07 - 0.008 * p.mouth, R * 0.88]} s={[0.02, 0.004 + 0.022 * p.mouth, 0.01]} shadow={false} />
+                          <M geo={G.sphereSmooth} mat={sm("#3a1520")} p={[0, -0.07 - 0.008 * p.mouth, R * 0.88]} s={[0.02, 0.004 + 0.022 * p.mouth, 0.01]} shadow={false} />
                         )}
                         {look.blush && (
                           <>
@@ -421,17 +437,17 @@ export const Character: React.FC<CharacterProps> = ({
                       <>
                         <M geo={G.hood} mat={top} p={[0, 0.01, -0.02]} s={[R * 1.32, R * 1.4, R * 1.38]} r={[-0.55, 0, 0]} />
                         {/* face lost in shadow */}
-                        <M geo={G.sphereSmooth} mat={flatMat("#050409", { rough: 1 })} p={[0, -0.01, 0.06]} s={[R * 0.82, R * 0.95, R * 0.7]} shadow={false} />
+                        <M geo={G.sphereSmooth} mat={sm("#050409", { rough: 1 })} p={[0, -0.01, 0.06]} s={[R * 0.82, R * 0.95, R * 0.7]} shadow={false} />
                         <M geo={G.cone} mat={top} p={[0, -0.13, -0.08]} s={[0.17, 0.12, 0.13]} />
-                        <mesh geometry={G.collar} material={flatMat("#2c2a3e")} position={[0, -0.005, 0.12]} scale={[2.2, 2.5, 2.2]} rotation={[-0.12, 0, 0]} castShadow />
+                        <mesh geometry={G.collar} material={sm("#2c2a3e")} position={[0, -0.005, 0.12]} scale={[2.2, 2.5, 2.2]} rotation={[-0.12, 0, 0]} castShadow />
                       </>
                     )}
                     {look.police && (
                       <group position={[0, 0.11, -0.005]} rotation={[-0.08, 0, 0]}>
-                        <M geo={G.cyl} mat={flatMat("#18213b")} s={[R * 1.08, 0.07, R * 1.1]} />
-                        <M geo={G.cyl} mat={flatMat("#18213b")} p={[0, 0.05, 0]} s={[R * 1.2, 0.03, R * 1.25]} />
-                        <M geo={G.box} mat={flatMat("#0f0e15", { rough: 0.3 })} p={[0, -0.03, 0.15]} s={[0.24, 0.012, 0.11]} r={[0.25, 0, 0]} />
-                        <M geo={G.box} mat={flatMat("#f0c45a", { metal: 0.6, rough: 0.3, emissive: "#3a2a08" })} p={[0, 0.01, R * 1.1]} s={[0.035, 0.035, 0.01]} />
+                        <M geo={G.cyl} mat={sm("#18213b")} s={[R * 1.08, 0.07, R * 1.1]} />
+                        <M geo={G.cyl} mat={sm("#18213b")} p={[0, 0.05, 0]} s={[R * 1.2, 0.03, R * 1.25]} />
+                        <M geo={G.box} mat={sm("#0f0e15", { rough: 0.3 })} p={[0, -0.03, 0.15]} s={[0.24, 0.012, 0.11]} r={[0.25, 0, 0]} />
+                        <M geo={G.box} mat={sm("#f0c45a", { metal: 0.6, rough: 0.3, emissive: "#3a2a08" })} p={[0, 0.01, R * 1.1]} s={[0.035, 0.035, 0.01]} />
                       </group>
                     )}
                   </group>

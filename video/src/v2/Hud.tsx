@@ -1,19 +1,12 @@
-// The v2 reel's sticky game HUD (reference: "SHOTS 25 / BAC 0.20%", "AGE 22 / REMEMBERED 22").
-// Top-left: Guard status, risk meter + detected-signal chips, escalation ladder.
-// Top-right: the running gag TAPS 0 (taps Maya needed to get help; never moves off zero) + in-scene clock chip.
+// The v2 reel's sticky game HUD, cut down to three big elements like the references ("SHOTS 25 / BAC 0.20%"):
+//   left:  one state pill (what SafetySense is doing right now: listening / check-in / contacts alerted / dispatch)
+//   right: CALLS SHE MADE counter (never moves off 0; same metric as the end card) + the in-scene clock chip under it.
+// Everything sits in the top band y 200..470 (IG UI above 180). Stickers and cards stay below y 480.
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { GuardStatus, GuardState, RiskMeter, Counter } from "../kit3d/overlay/Hud";
 import { OF } from "../kit3d/overlay/fonts";
 import { C } from "../theme";
-import { B, BE, S, W, WE } from "./cues";
-
-// ---------------------------------------------------------------------------
-// state
-
-type Step = { f: number };
-type Sig = { key: string; icon: string; text: string; at: number; until: number; color?: string };
-type Rung = "off" | "on" | "done" | "skip" | "ok";
+import { B, BE, S, W } from "./cues";
 
 /** last value whose frame <= f */
 const pick = <T,>(f: number, keys: [number, T][]): T => {
@@ -21,7 +14,6 @@ const pick = <T,>(f: number, keys: [number, T][]): T => {
   for (const [k, val] of keys) if (f >= k) v = val;
   return v;
 };
-/** most recent change frame <= f */
 const lastChange = (f: number, frames: number[]) => {
   let v = -999;
   for (const k of frames) if (f >= k) v = k;
@@ -30,190 +22,113 @@ const lastChange = (f: number, frames: number[]) => {
 
 const T = {
   hudIn: W(1, "Her"),
+  pillIn: S.establish,
   armOn: W(3, "on."),
-  shadow: W(4, "Footsteps"),
-  scream: W(5, "screams."),
-  sigScream: W(6, "scream."),
-  sigWords: W(6, "get"),
   notHave: W(7, "She", 2),
   contactsRing: W(8, "ring."),
   ninety: B(9),
   dispatcher: W(9, "dispatcher"),
-  police: W(9, "police"),
   party: B(10),
-  nightOn: W(10, "on."),
   t1102: B(11),
   t1120: W(12, "11:20."),
-  tilt: W(12, "tilt."),
   t1131: B(14),
-  stumble: W(14, "stumbles."),
-  still: W(14, "still."),
   youOkay: W(14, "You"),
   noAnswer: W(15, "No"),
   onWay: W(16, "I'm"),
   phone: S.phone,
-  smash: W(17, "Smashes"),
-  off: W(17, "Switches"),
   dark: W(18, "dark,"),
   alarm: W(18, "raises"),
   ride: S.ride,
-  rideOn: W(19, "on."),
   wrong: W(19, "wrong"),
   rideOkay: W(20, "You"),
+  types: W(21, "types"),
   disappears: W(21, "disappears,"),
   isnt: W(21, "It"),
-  collapse: S.montage,
-  hudOff: S.logo,
+  hudOff: S.montage,
 };
 
-const MODE: [number, string][] = [[0, "Walk Home"], [S.establish, "Not started"], [T.armOn, "Walk Home"], [T.party, "Night Out"], [T.ride, "Ride"]];
-const STATE: [number, GuardState][] = [
-  [0, "on"], [S.establish, "off"], [T.armOn, "listening"], [T.notHave, "alert"],
-  [T.party, "listening"], [T.youOkay, "checkin"], [T.noAnswer, "alert"],
-  [T.phone, "listening"], [T.alarm, "alert"],
-  [T.ride, "listening"], [T.rideOkay, "checkin"], [T.disappears, "on"], [T.isnt, "alert"],
-];
-const RISK: [number, number][] = [
-  [0, 0.05], [S.establish, 0], [T.armOn, 0.04], [T.shadow, 0.04], [T.scream - 6, 0.14], [T.scream, 0.88], [T.party - 1, 0.88], [T.party, 0.03],
-  [T.t1120, 0.03], [T.tilt + 20, 0.16], [T.stumble, 0.2], [T.stumble + 10, 0.42], [T.still + 10, 0.62], [T.noAnswer, 0.72],
-  [T.phone - 1, 0.72], [T.phone, 0.03], [T.smash, 0.03], [T.smash + 6, 0.55], [T.alarm, 0.82],
-  [T.ride - 1, 0.82], [T.ride, 0.03], [T.wrong, 0.03], [T.wrong + 12, 0.52], [T.rideOkay, 0.6], [T.disappears, 0.6], [T.disappears + 10, 0.08], [T.isnt, 0.08], [T.isnt + 4, 0.9],
-];
-// ladder rungs [check-in, contacts, dispatch]
-const LADDER: [number, [Rung, Rung, Rung]][] = [
-  [0, ["off", "off", "off"]],
-  [T.notHave, ["skip", "on", "off"]],
-  [T.dispatcher, ["skip", "done", "on"]],
-  [T.party, ["off", "off", "off"]],
-  [T.youOkay, ["on", "off", "off"]],
-  [T.noAnswer, ["done", "on", "off"]],
-  [T.phone, ["off", "off", "off"]],
-  [T.alarm, ["skip", "on", "off"]],
-  [T.ride, ["off", "off", "off"]],
-  [T.rideOkay, ["on", "off", "off"]],
-  [T.disappears, ["ok", "off", "off"]],
-  [T.isnt, ["skip", "off", "on"]],
+type Pill = { label: string; sub: string; color: string; icon: "shield" | "ear" | "clock" | "people" | "siren" | "server" };
+const OFF: Pill = { label: "GUARD OFF", sub: "Not started", color: C.muted, icon: "shield" };
+const L = (sub: string): Pill => ({ label: "LISTENING", sub, color: C.calm, icon: "ear" });
+const PILL: [number, Pill][] = [
+  [0, OFF],
+  [T.armOn, L("Walk Home · mic on")],
+  [T.notHave, { label: "CONTACTS ALERTED", sub: "Walk Home · 3 of 3", color: C.accent, icon: "people" }],
+  [T.dispatcher, { label: "DISPATCH", sub: "Police to her location", color: C.danger, icon: "siren" }],
+  [T.party, L("Night Out")],
+  [T.youOkay, { label: "CHECK-IN", sub: "“You okay?” · 45 s", color: C.warn, icon: "clock" }],
+  [T.noAnswer, { label: "CONTACTS ALERTED", sub: "No answer in 45 s", color: C.accent, icon: "people" }],
+  [T.phone, L("Night Out · heartbeat 60 s")],
+  [T.dark, { label: "NO HEARTBEAT", sub: "Phone went dark", color: C.danger, icon: "server" }],
+  [T.alarm, { label: "CONTACTS ALERTED", sub: "Server raised the alarm", color: C.accent, icon: "server" }],
+  [T.ride, L("Ride · route on")],
+  [T.wrong, { label: "OFF ROUTE", sub: "Ride", color: C.warn, icon: "clock" }],
+  [T.rideOkay, { label: "CHECK-IN", sub: "“You okay?”", color: C.warn, icon: "clock" }],
+  [T.disappears, L("Ride")], // the duress PIN makes it look calm...
+  [T.isnt, { label: "DISPATCH · SILENT", sub: "Duress PIN", color: C.danger, icon: "siren" }],
 ];
 const CLOCK: [number, string][] = [
-  [0, "12:09 AM"], [S.establish, "12:04 AM"], [T.contactsRing - 10, "+0:08"], [T.ninety, "+0:08"], [T.party, "10:48 PM"], [T.t1102, "11:02 PM"], [T.t1120, "11:20 PM"],
+  [0, "12:04 AM"], [B(4), "12:05 AM"], [B(6), "12:06 AM"], [T.contactsRing - 10, "+0:08"], [T.party, "10:48 PM"], [T.t1102, "11:02 PM"], [T.t1120, "11:20 PM"],
   [T.t1131, "11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "1:12 AM"], [T.ride, "1:40 AM"],
 ];
-const SIGNALS: Sig[] = [
-  { key: "scream", icon: "🔊", text: "SCREAM", at: T.sigScream, until: T.party },
-  { key: "words", icon: "🗣", text: "“GET OFF ME”", at: T.sigWords, until: T.party },
-  { key: "stumble", icon: "〰", text: "STUMBLE", at: T.stumble, until: T.phone },
-  { key: "still", icon: "▁", text: "STILL", at: T.still, until: T.phone },
-  { key: "hb", icon: "♥", text: "HEARTBEAT 60s", at: T.phone + 8, until: T.off, color: C.calm },
-  { key: "nohb", icon: "♥", text: "NO HEARTBEAT", at: T.dark, until: T.ride, color: C.danger },
-  { key: "plate", icon: "🚗", text: "7ABC123", at: T.ride + 30, until: T.collapse, color: C.calm },
-  { key: "route", icon: "⤴", text: "OFF ROUTE", at: T.wrong, until: T.collapse },
+/** RISK meter (game-like bar, like the references' BAC / REMEMBERED meters): [frame, value 0..100]; eased between keys. */
+const RISK: [number, number][] = [
+  [0, 0], [T.armOn, 4], [B(4) + 10, 6], [W(5, "Someone"), 22], [W(5, "screams."), 88], [T.notHave, 92], [T.dispatcher, 96],
+  [T.party, 3], [T.t1120, 18], [W(14, "stumbles."), 40], [W(14, "still."), 62], [T.noAnswer, 82], [T.onWay, 70],
+  [T.phone, 5], [W(17, "Smashes"), 40], [T.dark, 86], [T.alarm, 90],
+  [T.ride, 4], [T.wrong, 46], [T.rideOkay, 60], [W(20, "cancel"), 72], [T.disappears, 12], [T.isnt, 97],
 ];
-const TAP_BUMPS = [T.hudIn + 2, T.notHave + 4, W(9, "police"), T.noAnswer + 4, T.onWay, T.alarm + 4, W(21, "Dispatch"), W(22, "calls")];
-
-// ---------------------------------------------------------------------------
-// pieces
+const riskAt = (f: number) => {
+  let v = 0;
+  for (let i = 0; i < RISK.length; i++) {
+    const [k, val] = RISK[i];
+    if (f < k) break;
+    const prev = i > 0 ? RISK[i - 1][1] : 0;
+    v = interpolate(f, [k, k + 10], [prev, val], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  }
+  return v;
+};
 
 const glass: React.CSSProperties = {
-  background: "linear-gradient(180deg, rgba(33,31,49,.86), rgba(20,19,31,.82))",
-  border: "1.5px solid rgba(241,239,248,.16)",
-  boxShadow: "0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08)",
+  background: "linear-gradient(180deg, rgba(30,28,46,.9), rgba(16,15,26,.88))",
+  border: "3px solid rgba(241,239,248,.16)",
+  boxShadow: "0 12px 34px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08)",
 };
 
-const RUNG_LABEL = ["Check-in", "Contacts", "Dispatch"];
-const RUNG_COL = [C.warn, C.accent, C.danger];
-
-const Ladder: React.FC<{ rungs: [Rung, Rung, Rung]; changedAt: number }> = ({ rungs, changedAt }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const pop = spring({ frame: frame - changedAt, fps, config: { damping: 9, stiffness: 240 } });
+const Icon: React.FC<{ kind: Pill["icon"]; color: string; size: number }> = ({ kind, color, size }) => {
+  const sw = 2.4;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      {rungs.map((r, i) => {
-        const col = RUNG_COL[i];
-        const lit = r === "on" || r === "done";
-        const glow = r === "on" ? 0.6 + 0.4 * Math.sin(frame / 4) : 0;
-        const label = r === "ok" ? "OK ✓" : RUNG_LABEL[i];
-        return (
-          <React.Fragment key={i}>
-            {i > 0 && <div style={{ width: 22, height: 4, borderRadius: 4, background: lit ? col : "rgba(241,239,248,.18)" }} />}
-            <div
-              style={{
-                ...glass, display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999,
-                borderColor: lit ? col : r === "ok" ? C.calm : "rgba(241,239,248,.14)",
-                background: lit ? `linear-gradient(180deg, ${col}, ${col}cc)` : r === "ok" ? `${C.calm}33` : glass.background,
-                transform: `scale(${lit ? 0.88 + 0.12 * pop + 0.04 * glow : 1})`, boxShadow: lit ? `0 0 ${16 + 22 * glow}px ${col}aa` : glass.boxShadow,
-                opacity: r === "skip" ? 0.55 : 1,
-              }}
-            >
-              <span style={{ width: 24, height: 24, borderRadius: 99, display: "grid", placeItems: "center", background: lit ? "rgba(13,12,22,.25)" : "rgba(241,239,248,.1)", fontFamily: OF.caption, fontWeight: 900, fontSize: 15, color: lit ? "#140f1e" : C.muted }}>
-                {r === "done" ? "✓" : r === "skip" ? "»" : i + 1}
-              </span>
-              <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 21, color: lit ? "#140f1e" : r === "ok" ? C.calm : C.ink, textDecoration: r === "skip" ? "line-through" : "none" }}>{label}</span>
-            </div>
-          </React.Fragment>
-        );
-      })}
-    </div>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+      {kind === "shield" && <path d="M12 2 L20 5.5 V12 C20 17 16.5 20.5 12 22 C7.5 20.5 4 17 4 12 V5.5 Z" />}
+      {kind === "ear" && (<><path d="M6 9 a6 6 0 0 1 12 0 c0 4 -4 4.5 -4 8 a3 3 0 0 1 -6 0" /><path d="M9 9.5 a3 3 0 0 1 6 0" /></>)}
+      {kind === "clock" && (<><circle cx="12" cy="12" r="9" /><path d="M12 7 V12 L15.5 14" /></>)}
+      {kind === "people" && (<><circle cx="9" cy="8" r="3.2" /><path d="M3 20 c0 -4 3 -6 6 -6 s6 2 6 6" /><circle cx="17" cy="9" r="2.6" /><path d="M16 14 c3 0 5 2 5 5" /></>)}
+      {kind === "siren" && (<><path d="M6 18 V12 a6 6 0 0 1 12 0 V18" /><path d="M4 21 H20" /><path d="M12 3 V1.5 M4.5 6 L3.3 4.8 M19.5 6 L20.7 4.8" /></>)}
+      {kind === "server" && (<><rect x="4" y="3" width="16" height="7" rx="2" /><rect x="4" y="14" width="16" height="7" rx="2" /><path d="M8 6.5 H8.01 M8 17.5 H8.01" /></>)}
+    </svg>
   );
 };
-
-const ClockChip: React.FC<{ text: string; changedAt: number; ff?: boolean }> = ({ text, changedAt, ff }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const k = spring({ frame: frame - changedAt, fps, config: { damping: 10, stiffness: 220 } });
-  const isPlus = text.startsWith("+");
-  const col = isPlus ? C.warn : C.calm;
-  return (
-    <div style={{ ...glass, display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 999, borderColor: `${col}88`, transform: `scale(${0.75 + 0.25 * k})` }}>
-      <span style={{ color: col, fontSize: 16, fontWeight: 900, fontFamily: OF.caption }}>{isPlus || ff ? "▶▶" : "◷"}</span>
-      <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 26, color: C.ink, fontVariantNumeric: "tabular-nums", letterSpacing: 0.5 }}>{text}</span>
-    </div>
-  );
-};
-
-const SignalChip: React.FC<{ s: Sig }> = ({ s }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const k = spring({ frame: frame - s.at, fps, config: { damping: 8, stiffness: 260, mass: 0.5 } });
-  const out = interpolate(frame, [s.until - 6, s.until], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const col = s.color ?? C.danger;
-  const hbPulse = s.key === "hb" ? 0.7 + 0.3 * Math.max(0, Math.sin(frame / 5)) : 1;
-  return (
-    <div style={{ ...glass, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 12, borderColor: `${col}aa`, background: `linear-gradient(180deg, ${col}40, rgba(20,19,31,.85))`, transform: `scale(${k * out})`, opacity: out * hbPulse, transformOrigin: "left center" }}>
-      <span style={{ fontSize: 20 }}>{s.icon}</span>
-      <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 20, color: C.ink, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{s.text}</span>
-      {s.key !== "hb" && s.key !== "plate" && <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 18, color: col }}>✓</span>}
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
 
 export const ReelHud: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  if (frame < T.hudIn || frame >= T.hudOff + 10) return null;
+  if (frame < T.hudIn || frame >= T.hudOff + 12) return null;
 
   const slam = spring({ frame: frame - T.hudIn, fps, config: { damping: 11, stiffness: 260, mass: 0.7 } });
-  // collapse to TAPS only for the close
-  const collapse = interpolate(frame, [T.collapse, T.collapse + 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const gone = interpolate(frame, [T.hudOff, T.hudOff + 10], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const pillK = spring({ frame: frame - T.pillIn, fps, config: { damping: 12, stiffness: 220 } });
+  const gone = interpolate(frame, [T.hudOff, T.hudOff + 12], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  const mode = pick(frame, MODE);
-  const state = pick(frame, STATE);
-  const rk = RISK.map((r) => r[0]);
-  const risk = interpolate(frame, rk, RISK.map((r) => r[1]), { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const rungs = pick(frame, LADDER);
-  const ladderChanged = lastChange(frame, LADDER.map((l) => l[0]));
-  const stateChanged = lastChange(frame, STATE.map((l) => l[0]));
-  const statePop = spring({ frame: frame - stateChanged, fps, config: { damping: 9, stiffness: 260 } });
+  const pill = pick(frame, PILL);
+  const pillChanged = lastChange(frame, PILL.map((p) => p[0]));
+  const pop = spring({ frame: frame - pillChanged, fps, config: { damping: 9, stiffness: 260 } });
+  const urgent = pill.color === C.danger || pill.color === C.accent;
+  const pulse = 0.5 + 0.5 * Math.sin(frame / (urgent ? 3 : 8));
 
-  // clock: fast-forward +0:08 -> +1:38 during "90 seconds"
   let clock = pick(frame, CLOCK);
   let clockChanged = lastChange(frame, CLOCK.map((c) => c[0]));
   let ff = false;
   if (frame >= T.ninety && frame < T.party) {
-    const secs = Math.round(interpolate(frame, [T.ninety, T.ninety + 40], [8, 90], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+    const secs = Math.round(interpolate(frame, [T.ninety, T.ninety + 40], [8, 98], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
     clock = `+${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
     ff = frame < T.ninety + 40;
     if (ff) clockChanged = frame - 3;
@@ -223,38 +138,57 @@ export const ReelHud: React.FC = () => {
     clock = `+0:${String(secs).padStart(2, "0")}`;
     ff = true;
   }
+  const isPlus = clock.startsWith("+");
+  const clockK = spring({ frame: frame - clockChanged, fps, config: { damping: 10, stiffness: 220 } });
 
-  const sigs = SIGNALS.filter((s) => frame >= s.at && frame < s.until + 1);
-  const hideSide = 1 - collapse;
-  // glitch on "It isn't"
+  // the running gag: calls she had to make. It never moves off 0 (the duress PIN gets its own chip, it is not a call).
+  const tapCol = C.accent;
+  const tapPop = 1;
+  const pinChip = frame >= T.types && frame < S.montage;
+  const risk = riskAt(frame);
+  const riskCol = risk < 35 ? C.calm : risk < 70 ? C.warn : C.danger;
+  const riskK = spring({ frame: frame - T.armOn, fps, config: { damping: 12, stiffness: 200 } });
   const gl = frame >= T.isnt && frame < T.isnt + 8 ? (frame % 2 ? 10 : -8) : 0;
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none", opacity: gone }}>
-      {/* left stack */}
-      <div style={{ position: "absolute", left: 36, top: 252, display: "flex", flexDirection: "column", gap: 12, opacity: hideSide * slam, transform: `translateX(${(1 - slam) * -120 - collapse * 80 + gl}px) scale(1.2)`, transformOrigin: "left top" }}>
-        <div style={{ transform: `scale(${0.9 + 0.1 * statePop})`, transformOrigin: "left center" }}>
-          <GuardStatus mode={mode} state={state} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <RiskMeter value={risk} width={330} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {sigs.slice(-2).map((s) => <SignalChip key={s.key} s={s} />)}
+      {/* state pill */}
+      {frame >= T.pillIn && (
+        <div style={{ position: "absolute", left: 40, top: 214, opacity: pillK, transform: `translateX(${(1 - pillK) * -140 + gl}px) scale(${0.92 + 0.08 * pop})`, transformOrigin: "left center" }}>
+          <div style={{ ...glass, display: "flex", alignItems: "center", gap: 20, padding: "18px 34px 18px 24px", borderRadius: 999, borderColor: `${pill.color}99`, boxShadow: `${glass.boxShadow}, 0 0 ${urgent ? 18 + 26 * pulse : 0}px ${pill.color}88` }}>
+            <div style={{ width: 74, height: 74, borderRadius: 99, display: "grid", placeItems: "center", background: `${pill.color}2e`, border: `3px solid ${pill.color}` }}>
+              <Icon kind={pill.icon} color={pill.color} size={44} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.0 }}>
+              <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 50, color: pill.color, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{pill.label}</span>
+              <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 38, color: C.ink, opacity: 0.92, marginTop: 4, whiteSpace: "nowrap" }}>{pill.sub}</span>
+            </div>
           </div>
+          {frame >= T.armOn && (
+            <div style={{ marginTop: 14, marginLeft: 8, display: "flex", alignItems: "center", gap: 14, opacity: riskK, transform: `translateX(${(1 - riskK) * -60}px)` }}>
+              <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 34, color: C.ink, letterSpacing: 2 }}>RISK</span>
+              <div style={{ ...glass, width: 330, height: 34, borderRadius: 99, padding: 4, borderColor: `${riskCol}88` }}>
+                <div style={{ width: `${Math.max(6, risk)}%`, height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${C.calm}, ${riskCol})`, boxShadow: `0 0 ${risk > 70 ? 18 + 14 * pulse : 8}px ${riskCol}` }} />
+              </div>
+              <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 34, color: riskCol, fontVariantNumeric: "tabular-nums", minWidth: 60 }}>{Math.round(risk)}</span>
+            </div>
+          )}
         </div>
-        <Ladder rungs={rungs} changedAt={ladderChanged} />
-      </div>
-      {/* right: TAPS 0 + clock */}
-      <div
-        style={{
-          position: "absolute", right: 36 + collapse * 0, top: 252 - collapse * 20, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10,
-          transform: `translateX(${(1 - slam) * 160 - collapse * (540 - 36 - 80)}px) scale(${1.2 + collapse * 0.45})`, transformOrigin: "right top", opacity: slam,
-        }}
-      >
-        <Counter label="TAPS" value={0} sub="to get help" bumpAt={TAP_BUMPS} />
-        <div style={{ opacity: hideSide }}>
-          <ClockChip text={clock} changedAt={clockChanged} ff={ff} />
+      )}
+      {/* TAPS + clock */}
+      <div style={{ position: "absolute", right: 40, top: 206, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12, opacity: slam, transform: `translateX(${(1 - slam) * 180}px)` }}>
+        <div style={{ ...glass, borderRadius: 30, padding: "8px 26px 10px", display: "flex", alignItems: "center", gap: 16, borderColor: `${tapCol}99` }}>
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.0, fontFamily: OF.caption, fontWeight: 900, fontSize: 34, color: C.ink, letterSpacing: 1.5, textAlign: "right" }}><span>CALLS</span><span>SHE MADE</span></span>
+          <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 104, lineHeight: 1, color: tapCol, transform: `scale(${1 + 0.35 * (1 - tapPop)})`, textShadow: `0 0 26px ${tapCol}aa`, fontVariantNumeric: "tabular-nums" }}>0</span>
         </div>
+        {pinChip ? (
+          <div style={{ ...glass, borderRadius: 999, padding: "8px 22px", borderColor: `${C.warn}aa`, fontFamily: OF.caption, fontWeight: 900, fontSize: 36, color: C.warn }}>🔒 DURESS PIN</div>
+        ) : (
+          <div style={{ ...glass, display: "inline-flex", alignItems: "center", gap: 10, padding: "8px 22px", borderRadius: 999, borderColor: `${isPlus ? C.warn : C.calm}99`, transform: `scale(${0.8 + 0.2 * clockK})`, transformOrigin: "right center" }}>
+            <span style={{ color: isPlus ? C.warn : C.calm, fontSize: 26, fontWeight: 900, fontFamily: OF.caption }}>{isPlus || ff ? "▶▶" : "◷"}</span>
+            <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 42, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{clock}</span>
+          </div>
+        )}
       </div>
     </AbsoluteFill>
   );

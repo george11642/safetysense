@@ -60,7 +60,7 @@ export const S = {
   walk: B(4),
   detect: B(6),
   freeze: B(7),
-  contacts: B(8),
+  contacts: B(8) - 18, // panels slam in on the hit in the 0.7 s pause before "Three phones ring"
   dispatch: B(9),
   party: B(10),
   cup: B(11),

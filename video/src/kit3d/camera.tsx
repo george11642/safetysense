@@ -71,10 +71,12 @@ export type CameraRigProps = {
   /** Impact shake: [[frame, strength], ...] decays over ~12 frames. */
   shakes?: [number, number][];
   frameOffset?: number;
+  /** Additive: near clipping plane (default 0.05). */
+  near?: number;
 };
 
 /** Drives the default R3F camera. Put it inside <ThreeCanvas>. */
-export const CameraRig: React.FC<CameraRigProps> = ({ rig, handheld = 0.012, shakes = [], frameOffset = 0 }) => {
+export const CameraRig: React.FC<CameraRigProps> = ({ rig, handheld = 0.012, shakes = [], frameOffset = 0, near = 0.05 }) => {
   const frame = useCurrentFrame() + frameOffset;
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const fn = typeof rig === "function" ? rig : keysToFn(rig);
@@ -96,7 +98,7 @@ export const CameraRig: React.FC<CameraRigProps> = ({ rig, handheld = 0.012, sha
     camera.up.set(Math.sin(st.roll ?? 0), Math.cos(st.roll ?? 0), 0);
     camera.lookAt(st.look[0] + hx * 0.4, st.look[1] + hy * 0.4, st.look[2]);
     camera.fov = st.fov ?? 35;
-    camera.near = 0.05;
+    camera.near = near;
     camera.far = 400;
     camera.updateProjectionMatrix();
   });

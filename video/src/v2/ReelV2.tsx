@@ -4,10 +4,10 @@
 import React from "react";
 import { AbsoluteFill, Sequence, getInputProps, useCurrentFrame } from "remotion";
 import { Captions } from "../kit3d/overlay/Captions";
-import { S, TIMELINE, W } from "./cues";
+import { S, TIMELINE, W, WE } from "./cues";
 import { ReelHud } from "./Hud";
 import { ReelAudio } from "./Audio";
-import { Arm, ColdOpen, Contacts, Detect, Dispatch, Establish, FreezeScene, Walk } from "./scenes1";
+import { Arm, ColdOpen, CONTACT_CAPTION_Y, Contacts, Detect, Dispatch, Establish, FreezeScene, Walk } from "./scenes1";
 import { CupScene, HallwayScene, Notice, Party, Roommate, Tilt } from "./scenes2";
 import { PhoneDark, Ride, Server, Cancel, Duress } from "./scenes3";
 import { EndScene, Logo, Montage } from "./scenes4";
@@ -37,19 +37,18 @@ const SCENES: [number, React.FC, string][] = [
   [S.end, EndScene, "25 end"],
 ];
 
-/** Caption placement per section (fraction of height). Default lower-middle like the references. */
-const captionY = (f: number) => {
-  if (f >= W(14, "You") - 4 && f < S.roommate) return 0.835;
-  if (f >= W(16, "She") - 2 && f < W(16, "way.") + 14) return 0.84;
-  if (f >= S.duress && f < S.montage) return 0.845;
-  if (f >= S.end) return 0.47;
-  return 0.665;
-};
+/** Captions live in ONE lower-middle band (like the references). Hidden on the logo lockup (the words are typed there)
+ *  and from just after the last line, so the end card never sits on a caption. */
+const CAPTION_Y = 0.66;
+const hideCaptions = (f: number) => (f >= S.logo && f < S.end) || f >= WE(25, "fault.") + 6;
+/** r3: the contacts triptych has its own caption band between panels; the drink-spike close-up puts the caption low,
+ *  on the plain counter front, so the hand and cup stay clear. */
+const captionY = (f: number) => (f >= S.contacts && f < S.dispatch ? CONTACT_CAPTION_Y : f >= W(11, "Someone") - 3 && f < S.tilt ? 0.84 : undefined);
 
 export const ReelV2: React.FC = () => {
   const frame = useCurrentFrame();
   const clean = Boolean((getInputProps() as { clean?: boolean }).clean); // clean plates (no HUD/captions) for the montage polaroids
-  const showCaptions = !clean && !(frame >= S.logo && frame < S.end);
+  const showCaptions = !clean;
   return (
     <AbsoluteFill style={{ background: "#000" }}>
       {SCENES.map(([from, Comp, name], i) => {
@@ -61,7 +60,7 @@ export const ReelV2: React.FC = () => {
         );
       })}
       {!clean && <ReelHud />}
-      {showCaptions && <Captions timeline={TIMELINE} y={captionY(frame)} fontSize={86} maxWords={3} tightPop />}
+      {showCaptions && <Captions timeline={TIMELINE} y={CAPTION_Y} fontSize={86} maxWords={3} tightPop clean hideAt={hideCaptions} yAt={captionY} />}
       <ReelAudio />
     </AbsoluteFill>
   );

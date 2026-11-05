@@ -8,6 +8,7 @@ import { StringLights } from "../kit3d/sets/Party";
 import { useImageTexture } from "../kit3d/textures";
 import { clamp, hash, V3 } from "../kit3d/math";
 import { P } from "../kit3d/palette";
+import { Phone } from "../kit3d/props";
 
 /** Party-house hallway along Z (x in [-0.95, 0.95]); a bench against the +X wall at z = 0; the party doorway glows at z = -7. */
 export const Hallway: React.FC<{ pulse?: number }> = ({ pulse = 1 }) => {
@@ -147,26 +148,39 @@ export const ListenRings: React.FC<{ center: V3; every?: number; life?: number; 
   );
 };
 
-/** Back-lit hand + sleeve reaching in along -X (fingers point -X). Origin at the fingertips. */
-export const ReachingHand: React.FC<{ position: V3; rotation?: V3; sleeve?: string; skin?: string }> = ({ position, rotation = [0, 0, 0], sleeve = "#1b1a28", skin = "#7a5240" }) => (
-  <group position={position} rotation={rotation}>
-    <mesh position={[0.62, 0.0, 0]} rotation={[0, 0, Math.PI / 2]} material={flatMat(sleeve)} castShadow>
-      <cylinderGeometry args={[0.06, 0.065, 0.8, 7]} />
-    </mesh>
-    <mesh position={[0.17, 0, 0]} rotation={[0, 0, Math.PI / 2]} material={flatMat(skin)} castShadow>
-      <cylinderGeometry args={[0.04, 0.045, 0.16, 6]} />
-    </mesh>
-    {/* palm (down) */}
-    <mesh position={[0.05, -0.005, 0]} scale={[0.1, 0.03, 0.085]} material={flatMat(skin)} castShadow>
-      <icosahedronGeometry args={[1, 0]} />
-    </mesh>
-    {[-0.03, -0.01, 0.01, 0.03].map((z, i) => (
-      <mesh key={z} position={[-0.05 - (i === 1 || i === 2 ? 0.01 : 0), -0.02, z * 1.4]} rotation={[0, 0, 0.5]} scale={[0.055, 0.014, 0.014]} material={flatMat(skin)} castShadow>
-        <icosahedronGeometry args={[1, 0]} />
+/** Back-lit hand + sleeve reaching in along -X (fingers point -X). Origin at the fingertips. Smooth-shaded. */
+export const ReachingHand: React.FC<{ position: V3; rotation?: V3; sleeve?: string; skin?: string; curl?: number }> = ({ position, rotation = [0, 0, 0], sleeve = "#1b1a28", skin = "#7a5240", curl = 0.35 }) => {
+  const sk = flatMat(skin, { flat: false, rough: 0.55 });
+  const sl = flatMat(sleeve, { flat: false, rough: 0.8 });
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh position={[0.66, 0.01, 0]} rotation={[0, 0, Math.PI / 2]} material={sl} castShadow>
+        <cylinderGeometry args={[0.062, 0.07, 0.8, 24]} />
       </mesh>
-    ))}
-  </group>
-);
+      <mesh position={[0.265, 0.01, 0]} rotation={[0, 0, Math.PI / 2]} material={sl}>
+        <torusGeometry args={[0.058, 0.012, 8, 24]} />
+      </mesh>
+      <mesh position={[0.18, 0.005, 0]} rotation={[0, 0, Math.PI / 2]} material={sk} castShadow>
+        <cylinderGeometry args={[0.036, 0.042, 0.17, 20]} />
+      </mesh>
+      {/* palm (down) */}
+      <mesh position={[0.05, -0.004, 0]} scale={[0.075, 0.026, 0.06]} material={sk} castShadow>
+        <sphereGeometry args={[1, 24, 16]} />
+      </mesh>
+      {/* thumb */}
+      <mesh position={[0.06, -0.012, 0.062]} rotation={[0.2, 0.7, 0.3]} scale={[0.04, 0.014, 0.014]} material={sk}>
+        <sphereGeometry args={[1, 16, 10]} />
+      </mesh>
+      {[-0.033, -0.011, 0.011, 0.033].map((z, i) => (
+        <group key={z} position={[-0.015, -0.008, z]} rotation={[0, 0, curl]}>
+          <mesh position={[-0.035 - (i === 1 || i === 2 ? 0.006 : 0), 0, 0]} rotation={[0, 0, Math.PI / 2]} material={sk} castShadow>
+            <capsuleGeometry args={[0.0105, 0.045 + (i === 1 || i === 2 ? 0.01 : 0), 4, 10]} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+};
 
 /** Server rack with blinking status LEDs. `alarm` 0..1 turns LEDs red and pulses a red light. */
 export const ServerRack: React.FC<{ position?: V3; alarm?: number; seed?: number }> = ({ position = [0, 0, 0], alarm = 0, seed = 0 }) => {
@@ -205,9 +219,10 @@ export const ServerRack: React.FC<{ position?: V3; alarm?: number; seed?: number
 };
 
 /** Dispatch console: desk + three monitors (one shows an app screenshot), with a seated operator spot at z = +0.75. */
-export const DispatchDesk: React.FC<{ screen: string; mapGlow?: number }> = ({ screen, mapGlow = 1 }) => {
+export const DispatchDesk: React.FC<{ screen: string; mapGlow?: number; screenTex?: THREE.Texture }> = ({ screen, mapGlow = 1, screenTex }) => {
   const frame = useCurrentFrame();
-  const tex = useImageTexture(screen);
+  const loaded = useImageTexture(screen);
+  const tex = screenTex ?? loaded;
   const blink = 0.5 + 0.5 * Math.sin(frame / 5);
   return (
     <group>
@@ -330,3 +345,78 @@ export const WetPatch: React.FC<{ position: V3; size?: number }> = ({ position, 
 );
 
 export const _unused = { clamp, NightLights };
+
+/** A phone held in a right hand (no body), screen facing `toward` (usually the camera). For POV inserts: we never put
+ *  the camera inside a character's head. Phone screen faces +Z before orientation. */
+export const PhoneInHand: React.FC<{ position: V3; toward: V3; screen?: string | THREE.Texture; glow?: number; flash?: number; skin?: string; sleeve?: string; roll?: number }> = ({
+  position, toward, screen, glow = 1, flash = 0, skin = P.skin[1], sleeve = "#2e2a48", roll = 0,
+}) => {
+  const q = useMemo(() => {
+    const m = new THREE.Matrix4().lookAt(new THREE.Vector3(...toward), new THREE.Vector3(...position), new THREE.Vector3(0, 1, 0));
+    const qq = new THREE.Quaternion().setFromRotationMatrix(m);
+    return qq.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, roll)));
+  }, [position[0], position[1], position[2], toward[0], toward[1], toward[2], roll]);
+  const sk = flatMat(skin, { flat: false, rough: 0.55, emissive: skin, emissiveIntensity: 0.12 });
+  const sl = flatMat(sleeve, { flat: false, rough: 0.8 });
+  return (
+    <group position={position} quaternion={q}>
+      <Phone screen={screen} glow={glow} flash={flash} />
+      {/* palm behind the lower half, thumb over the left edge, fingers wrapping the right edge */}
+      <mesh position={[0.012, -0.045, -0.03]} scale={[0.048, 0.06, 0.026]} material={sk}><sphereGeometry args={[1, 24, 16]} /></mesh>
+      <mesh position={[-0.046, -0.02, 0.004]} rotation={[0, 0, -0.5]} material={sk}><capsuleGeometry args={[0.011, 0.045, 4, 10]} /></mesh>
+      {[-0.02, -0.045, -0.07].map((y, i) => (
+        <mesh key={i} position={[0.045, y, -0.006]} rotation={[0, 0, 0.35]} material={sk}><capsuleGeometry args={[0.0095, 0.022, 4, 10]} /></mesh>
+      ))}
+      <mesh position={[0.02, -0.16, -0.08]} rotation={[0.75, 0, 0.1]} material={sl}><cylinderGeometry args={[0.04, 0.05, 0.2, 20]} /></mesh>
+    </group>
+  );
+};
+
+/** Additive (v2 r3): soft-edged long shadow of an (unseen) person, lying on the ground, head pointing +Z.
+ *  `head` is where the head of the shadow lies; the feet are `length` metres behind it (-Z). Soft canvas silhouette
+ *  (blurred), so it reads as a cast shadow, not a black cut-out. */
+let _softShadow: THREE.CanvasTexture | null = null;
+const softShadowTex = () => {
+  if (_softShadow) return _softShadow;
+  const W = 256, H = 768;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H); // alphaMap reads luminance: black = clear, white = shadow
+  g.filter = "blur(9px)";
+  g.fillStyle = "#fff";
+  // canvas top = feet (far), bottom = head (near Maya). Elongated perspective silhouette.
+  g.beginPath();
+  g.moveTo(W * 0.42, 30); g.lineTo(W * 0.36, H * 0.3); g.lineTo(W * 0.3, H * 0.52); // left leg -> hip
+  g.lineTo(W * 0.18, H * 0.6); g.lineTo(W * 0.12, H * 0.74); g.lineTo(W * 0.2, H * 0.76); // left arm
+  g.lineTo(W * 0.28, H * 0.66); g.lineTo(W * 0.3, H * 0.84); g.lineTo(W * 0.4, H * 0.87); // shoulder -> neck
+  g.lineTo(W * 0.6, H * 0.87); g.lineTo(W * 0.7, H * 0.84); g.lineTo(W * 0.72, H * 0.66);
+  g.lineTo(W * 0.8, H * 0.76); g.lineTo(W * 0.88, H * 0.74); g.lineTo(W * 0.82, H * 0.6); // right arm
+  g.lineTo(W * 0.7, H * 0.52); g.lineTo(W * 0.64, H * 0.3); g.lineTo(W * 0.58, 30); g.lineTo(W * 0.52, H * 0.28);
+  g.lineTo(W * 0.48, H * 0.28); g.closePath(); g.fill();
+  g.beginPath(); g.ellipse(W * 0.5, H * 0.92, W * 0.13, H * 0.055, 0, 0, Math.PI * 2); g.fill(); // head
+  _softShadow = new THREE.CanvasTexture(c);
+  return _softShadow;
+};
+export const SoftShadow: React.FC<{ head: V3; length: number; width?: number; opacity?: number }> = ({ head, length, width = 1.0, opacity = 0.7 }) => (
+  <mesh position={[head[0], head[1] + 0.02, head[2] - length / 2]} rotation={[-Math.PI / 2, 0, 0]} scale={[width, length, 1]} renderOrder={3}>
+    <planeGeometry args={[1, 1]} />
+    <meshBasicMaterial color="#03020a" alphaMap={softShadowTex()} transparent opacity={opacity} depthWrite={false} polygonOffset polygonOffsetFactor={-2} />
+  </mesh>
+);
+
+/** Point at arc-length fraction `t` along a 2D polyline, plus its heading (radians, 0 = +Z). */
+export const alongPath = (pts: [number, number][], t: number): [number, number, number] => {
+  const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
+  const total = seg.reduce((a, b) => a + b, 0);
+  let d = Math.max(0, Math.min(1, t)) * total;
+  for (let i = 0; i < seg.length; i++) {
+    if (d <= seg[i] || i === seg.length - 1) {
+      const k = seg[i] ? Math.min(1, d / seg[i]) : 0;
+      const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+      return [ax + (bx - ax) * k, ay + (by - ay) * k, Math.atan2(bx - ax, by - ay)];
+    }
+    d -= seg[i];
+  }
+  return [pts[0][0], pts[0][1], 0];
+};

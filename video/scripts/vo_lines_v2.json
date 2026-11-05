@@ -33,9 +33,9 @@
  },
  {
   "id": "v2_07",
-  "text": "Then she freezes. In one study, 70% of survivors did. She can't reach her phone. She doesn't have to.",
-  "tts": "Then she freezes. In one study, seventy percent of survivors did. She can't reach her phone. She doesn't have to.",
-  "take": "t0"
+  "text": "Then she freezes. In one study of 298 survivors, 70% froze. She can't reach her phone. She doesn't have to.",
+  "tts": "Then she freezes. In one study of two hundred ninety-eight survivors, seventy percent froze. She can't reach her phone. She doesn't have to.",
+  "take": "t5"
  },
  {
   "id": "v2_08",
@@ -52,8 +52,9 @@
  },
  {
   "id": "v2_11",
-  "text": "11:02 PM. She looks away from her drink.",
-  "tts": "Eleven-oh-two. She looks away from her drink."
+  "text": "11:02. Someone spikes her drink.",
+  "tts": "Eleven-oh-two. Someone spikes her drink.",
+  "take": "t5"
  },
  {
   "id": "v2_12",
@@ -68,7 +69,10 @@
  {
   "id": "v2_14",
   "text": "11:31. She stumbles. Then she goes still. Her phone asks: You okay?",
-  "tts": "Eleven thirty-one. She stumbles. Then she goes still. Her phone asks: You okay?"
+  "tts": "Eleven thirty-one. She stumbles. Then she goes still. Her phone asks: You okay?",
+  "pauseAfter": {
+   "still.": 0.6
+  }
  },
  {
   "id": "v2_15",
@@ -88,7 +92,10 @@
  },
  {
   "id": "v2_18",
-  "text": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself."
+  "text": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself.",
+  "pauseAfter": {
+   "dark,": 0.45
+  }
  },
  {
   "id": "v2_19",

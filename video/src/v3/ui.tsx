@@ -187,10 +187,9 @@ export const Chapter: React.FC<{ n: string; title: string; color?: string; at?: 
   const frame = useCurrentFrame();
   const p = ez(frame, at, at + 16);
   return (
-    <div style={{ position: "absolute", top: 54, left: 72, display: "flex", alignItems: "center", gap: 16, opacity: p, transform: `translateX(${(1 - p) * -16}px)` }}>
-      <div style={{ fontFamily: F.mono, fontWeight: 600, fontSize: 18, color, letterSpacing: "0.14em" }}>{n}</div>
-      <div style={{ width: 46 * p, height: 1.5, background: color }} />
-      <div style={{ fontFamily: F.mono, fontWeight: 500, fontSize: 18, color: C.muted, letterSpacing: "0.18em", textTransform: "uppercase" }}>{title}</div>
+    <div style={{ position: "absolute", top: 50, left: 72, display: "flex", alignItems: "center", gap: 18, opacity: p, transform: `translateX(${(1 - p) * -16}px)` }}>
+      <div style={{ width: 46 * p, height: 3, background: color }} />
+      <div style={{ fontFamily: F.mono, fontWeight: 600, fontSize: 28, color, letterSpacing: "0.14em", textTransform: "uppercase" }}>{title}</div>
     </div>
   );
 };
@@ -247,12 +246,16 @@ export const Icon: React.FC<{ name: IconName; size: number; color: string; strok
 type CW = { word: string; start: number; end: number; hi: boolean; beat: string };
 const normW = (x: string) => x.toLowerCase().replace(/[^a-z0-9'%-]/g, "");
 
+/** Per-beat caption nudge (s): v3_13's alignment runs ~120 ms ahead of the audio. */
+const CAPTION_OFFSET: Record<string, number> = { v3_13: 0.1 };
+
 /** Words of all beats; `hi` marks only the contiguous run that matches the beat's highlight phrase. */
 const captionWords = (hide: string[]): CW[] => {
   const out: CW[] = [];
   for (const b of TIMELINE.beats) {
     if (hide.includes(b.id)) continue;
-    const ws = b.words.map((x) => ({ ...x, hi: false, beat: b.id }));
+    const off = CAPTION_OFFSET[b.id] ?? 0;
+    const ws = b.words.map((x) => ({ ...x, start: x.start + off, end: x.end + off, hi: false, beat: b.id }));
     for (const phrase of (b.highlight ?? "").split("·").map((p) => p.trim()).filter(Boolean)) {
       const ph = phrase.split(/\s+/).map(normW);
       for (let i = ws.length - ph.length; i >= 0; i--) {
@@ -303,33 +306,39 @@ const chunkPhrases = (words: CW[], maxWords = 6, maxChars = 38) => {
  * Premiere-style captions: phrase chunks, lower third, each word fades/rises in on its VO timestamp,
  * the beat's highlight phrase in the accent color. `hide` = beat ids whose captions are replaced by on-screen type.
  */
-export const Captions16: React.FC<{ hide?: string[] }> = ({ hide = [] }) => {
+export const Captions16: React.FC<{ hide?: string[]; cutoffs?: number[] }> = ({ hide = [], cutoffs = [] }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps;
   const chunks = React.useMemo(() => chunkPhrases(captionWords(hide)), [hide]);
-  const idx = chunks.findIndex((c, i) => t >= c.start - 0.06 && t < Math.min(c.end + 0.6, (chunks[i + 1]?.start ?? Infinity) - 0.06));
+  // a phrase's lingering tail never carries across a cut (cutoffs = section starts, in frames)
+  const cutAfter = (tEnd: number) => { let m = Infinity; for (const c of cutoffs) { const cs = c / fps; if (cs > tEnd - 0.02 && cs < m) m = cs; } return m; };
+  const tailEnd = (c: { end: number }, i: number) => Math.min(c.end + 0.6, (chunks[i + 1]?.start ?? Infinity) - 0.06, Math.max(c.end, cutAfter(c.end)));
+  const idx = chunks.findIndex((c, i) => t >= c.start - 0.06 && t < tailEnd(c, i));
   if (idx < 0) return null;
   const ch = chunks[idx];
   const next = chunks[idx + 1];
   const nextStart = next ? next.start - 0.06 : Infinity;
-  const endT = Math.min(ch.end + 0.6, nextStart);
+  const endT = tailEnd(ch, idx);
   // hard swap when the next phrase follows immediately; fade out only before a pause
-  const outO = nextStart - (ch.end + 0.6) < 0 ? 1 : clamp01((endT - t) / 0.15);
+  const outO = endT === nextStart && nextStart - (ch.end + 0.6) < 0 ? 1 : endT < ch.end + 0.6 && endT !== nextStart ? 1 : clamp01((endT - t) / 0.15);
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 240, background: "linear-gradient(180deg, transparent, rgba(6,5,12,.5))" }} />
-      <div style={{ position: "absolute", left: 340, right: 340, bottom: 64, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 13px", opacity: outO }}>
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 56, display: "flex", justifyContent: "center", opacity: outO }}>
+      <div style={{ maxWidth: 1240, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 13px", padding: "8px 30px 10px", borderRadius: 22, background: "rgba(8,7,14,.66)", backdropFilter: "blur(8px)", boxShadow: "0 8px 30px rgba(0,0,0,.35)" }}>
         {ch.words.map((wd, i) => {
           const p = clamp01((t - wd.start + 0.08) / 0.14);
+          const cur = t >= wd.start - 0.04 && t < wd.end + 0.05 ? 1 : 0;
           return (
             <span key={i} style={{
-              display: "inline-block", fontFamily: F.display, fontWeight: 700, fontSize: 50, letterSpacing: "-0.01em", lineHeight: 1.18,
-              color: wd.hi ? C.accent : "#ffffff", opacity: 0.18 + 0.82 * p, transform: `translateY(${(1 - p) * 8}px)`,
+              display: "inline-block", fontFamily: F.display, fontWeight: 700, fontSize: 52, letterSpacing: "-0.01em", lineHeight: 1.18,
+              color: wd.hi ? C.accent : "#ffffff", opacity: 0.6 + 0.4 * p, transform: `translateY(${(1 - p) * 8}px) scale(${1 + 0.06 * cur * p})`,
               textShadow: `0 2px 0 rgba(0,0,0,.55), 0 4px 22px rgba(0,0,0,.85)${wd.hi && p > 0.5 ? `, 0 0 26px ${C.accent}66` : ""}`,
             }}>{wd.word}</span>
           );
         })}
+      </div>
       </div>
     </AbsoluteFill>
   );
@@ -355,16 +364,16 @@ export const LadderStrip: React.FC<{ keys: [number, LadderKey][]; show: [number,
   const pulse = 0.5 + 0.5 * Math.sin(frame / 5);
   const pop = ez(frame, at, at + 10);
   return (
-    <div style={{ position: "absolute", right: 64, top: 44, display: "flex", alignItems: "center", gap: 8, opacity: vis, transform: `translateY(${(1 - vis) * -14}px)`, padding: "10px 14px", borderRadius: 16, background: "rgba(13,12,22,.66)", border: `1px solid ${C.line}`, backdropFilter: "blur(8px)" }}>
+    <div style={{ position: "absolute", right: 56, top: 40, display: "flex", alignItems: "center", gap: 10, opacity: vis, transform: `translateY(${(1 - vis) * -14}px)`, padding: "12px 16px", borderRadius: 20, background: "rgba(13,12,22,.78)", border: `1px solid ${C.line}`, backdropFilter: "blur(8px)" }}>
       {STEPS.map((s, i) => {
         const active = i === idx;
         const done = idx > i;
         return (
           <React.Fragment key={s.k}>
-            {i > 0 && <div style={{ width: 16, height: 2, background: done || active ? s.c : C.line, opacity: 0.8 }} />}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 11px", borderRadius: 999, background: active ? `${s.c}26` : "transparent", border: `1px solid ${active ? s.c : "transparent"}`, transform: `scale(${active ? 1 + 0.06 * (1 - pop) : 1})` }}>
-              <div style={{ width: 9, height: 9, borderRadius: 99, background: active || done ? s.c : C.line, boxShadow: active ? `0 0 ${6 + 10 * pulse}px ${s.c}` : undefined }} />
-              <div style={{ fontFamily: F.mono, fontWeight: 600, fontSize: 15, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? s.c : done ? C.ink : C.muted }}>{s.t}</div>
+            {i > 0 && <div style={{ width: 20, height: 3, background: done || active ? s.c : C.line, opacity: 0.8 }} />}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 999, background: active ? `${s.c}30` : "transparent", border: `1px solid ${active ? s.c : "transparent"}`, transform: `scale(${active ? 1 + 0.06 * (1 - pop) : 1})` }}>
+              <div style={{ width: 14, height: 14, borderRadius: 99, background: active || done ? s.c : C.line, boxShadow: active ? `0 0 ${6 + 10 * pulse}px ${s.c}` : undefined }} />
+              <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 26, letterSpacing: "0.08em", textTransform: "uppercase", color: active ? s.c : done ? C.ink : C.muted }}>{s.t}</div>
             </div>
           </React.Fragment>
         );

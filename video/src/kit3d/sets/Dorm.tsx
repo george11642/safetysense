@@ -11,7 +11,7 @@ import { P } from "../palette";
 /** Root position for a character sitting on the bed edge (facing +Z). */
 export const BED_SEAT: V3 = [-1.1, 0.1, -0.42];
 
-export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: "cozy" | "alert" }> = ({ lampOn = true, phoneLight = 0, mood = "cozy" }) => {
+export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: "cozy" | "alert"; fairyLights?: boolean }> = ({ lampOn = true, phoneLight = 0, mood = "cozy", fairyLights = true }) => {
   const frame = useCurrentFrame();
   const wall = flatMat(P.wallDorm, { rough: 0.95 });
   const wood = flatMat("#7a5640", { rough: 0.6 });
@@ -126,7 +126,7 @@ export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: 
           </mesh>
         ))}
       </group>
-      <StringLights a={[-2.5, 2.6, -2.1]} b={[2.5, 2.6, -2.1]} sag={0.25} count={18} seed={1} />
+      {fairyLights && <StringLights a={[-2.5, 2.6, -2.1]} b={[2.5, 2.6, -2.1]} sag={0.25} count={18} seed={1} />}
       <Motes center={[1.2, 1.4, -1.4]} spread={[2, 1.5, 1.5]} count={30} />
     </group>
   );

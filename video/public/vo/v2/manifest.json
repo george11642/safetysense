@@ -351,104 +351,109 @@
  {
   "id": "v2_07",
   "file": "vo/v2/v2_07.mp3",
-  "durationSec": 7.151,
-  "text": "Then she freezes. In one study, 70% of survivors did. She can't reach her phone. She doesn't have to.",
-  "spoken": "Then she freezes. In one study, seventy percent of survivors did. She can't reach her phone. She doesn't have to.",
+  "durationSec": 8.742,
+  "text": "Then she freezes. In one study of 298 survivors, 70% froze. She can't reach her phone. She doesn't have to.",
+  "spoken": "Then she freezes. In one study of two hundred ninety-eight survivors, seventy percent froze. She can't reach her phone. She doesn't have to.",
   "words": [
    {
     "word": "Then",
     "start": 0.0,
-    "end": 0.078
+    "end": 0.233
    },
    {
     "word": "she",
-    "start": 0.233,
+    "start": 0.35,
     "end": 0.466
    },
    {
     "word": "freezes.",
-    "start": 0.583,
-    "end": 1.381
+    "start": 0.544,
+    "end": 1.399
    },
    {
     "word": "In",
-    "start": 1.419,
-    "end": 1.575
+    "start": 1.477,
+    "end": 1.632
    },
    {
     "word": "one",
-    "start": 1.652,
-    "end": 1.808
+    "start": 1.749,
+    "end": 1.865
    },
    {
-    "word": "study,",
-    "start": 1.885,
-    "end": 2.507
-   },
-   {
-    "word": "70%",
-    "start": 2.584,
-    "end": 3.206
+    "word": "study",
+    "start": 1.943,
+    "end": 2.176
    },
    {
     "word": "of",
-    "start": 3.245,
-    "end": 3.283
+    "start": 2.253,
+    "end": 2.409
    },
    {
-    "word": "survivors",
-    "start": 3.361,
-    "end": 3.905
+    "word": "298",
+    "start": 2.525,
+    "end": 3.418
    },
    {
-    "word": "did.",
-    "start": 4.332,
-    "end": 4.573
+    "word": "survivors,",
+    "start": 3.496,
+    "end": 4.428
+   },
+   {
+    "word": "70%",
+    "start": 4.506,
+    "end": 5.36
+   },
+   {
+    "word": "froze.",
+    "start": 5.399,
+    "end": 6.163
    },
    {
     "word": "She",
-    "start": 4.612,
-    "end": 4.767
+    "start": 6.202,
+    "end": 6.357
    },
    {
     "word": "can't",
-    "start": 4.845,
-    "end": 5.078
+    "start": 6.435,
+    "end": 6.668
    },
    {
     "word": "reach",
-    "start": 5.155,
-    "end": 5.233
+    "start": 6.746,
+    "end": 6.823
    },
    {
     "word": "her",
-    "start": 5.311,
-    "end": 5.388
+    "start": 6.901,
+    "end": 6.979
    },
    {
     "word": "phone.",
-    "start": 5.466,
-    "end": 6.113
+    "start": 7.056,
+    "end": 7.741
    },
    {
     "word": "She",
-    "start": 6.19,
-    "end": 6.268
+    "start": 7.793,
+    "end": 7.845
    },
    {
     "word": "doesn't",
-    "start": 6.346,
-    "end": 6.501
+    "start": 7.922,
+    "end": 8.078
    },
    {
     "word": "have",
-    "start": 6.579,
-    "end": 6.734
+    "start": 8.155,
+    "end": 8.388
    },
    {
     "word": "to.",
-    "start": 6.812,
-    "end": 7.151
+    "start": 8.777,
+    "end": 8.742
    }
   ]
  },
@@ -657,49 +662,34 @@
  {
   "id": "v2_11",
   "file": "vo/v2/v2_11.mp3",
-  "durationSec": 2.84,
-  "text": "11:02 PM. She looks away from her drink.",
-  "spoken": "Eleven-oh-two. She looks away from her drink.",
+  "durationSec": 2.742,
+  "text": "11:02. Someone spikes her drink.",
+  "spoken": "Eleven-oh-two. Someone spikes her drink.",
   "words": [
    {
-    "word": "11:02",
+    "word": "11:02.",
     "start": 0.0,
-    "end": 0.615
+    "end": 0.588
    },
    {
-    "word": "PM.",
-    "start": 0.615,
-    "end": 1.23
+    "word": "Someone",
+    "start": 1.254,
+    "end": 1.565
    },
    {
-    "word": "She",
-    "start": 1.308,
-    "end": 1.463
-   },
-   {
-    "word": "looks",
-    "start": 1.58,
-    "end": 1.696
-   },
-   {
-    "word": "away",
-    "start": 1.774,
-    "end": 2.007
-   },
-   {
-    "word": "from",
-    "start": 2.084,
-    "end": 2.162
+    "word": "spikes",
+    "start": 1.72,
+    "end": 1.953
    },
    {
     "word": "her",
-    "start": 2.24,
-    "end": 2.317
+    "start": 2.031,
+    "end": 2.109
    },
    {
     "word": "drink.",
-    "start": 2.512,
-    "end": 2.84
+    "start": 2.186,
+    "end": 2.742
    }
   ]
  },
@@ -814,7 +804,7 @@
  {
   "id": "v2_14",
   "file": "vo/v2/v2_14.mp3",
-  "durationSec": 5.606,
+  "durationSec": 6.206,
   "text": "11:31. She stumbles. Then she goes still. Her phone asks: You okay?",
   "spoken": "Eleven thirty-one. She stumbles. Then she goes still. Her phone asks: You okay?",
   "words": [
@@ -855,28 +845,28 @@
    },
    {
     "word": "Her",
-    "start": 3.816,
-    "end": 3.894
+    "start": 4.416,
+    "end": 4.494
    },
    {
     "word": "phone",
-    "start": 3.972,
-    "end": 4.205
+    "start": 4.572,
+    "end": 4.805
    },
    {
     "word": "asks:",
-    "start": 4.282,
-    "end": 4.906
+    "start": 4.882,
+    "end": 5.506
    },
    {
     "word": "You",
-    "start": 4.945,
-    "end": 4.983
+    "start": 5.545,
+    "end": 5.583
    },
    {
     "word": "okay?",
-    "start": 5.061,
-    "end": 5.606
+    "start": 5.661,
+    "end": 6.206
    }
   ]
  },
@@ -1035,7 +1025,7 @@
  {
   "id": "v2_18",
   "file": "vo/v2/v2_18.mp3",
-  "durationSec": 5.633,
+  "durationSec": 6.083,
   "text": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself.",
   "spoken": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself.",
   "words": [
@@ -1106,33 +1096,33 @@
    },
    {
     "word": "the",
-    "start": 3.726,
-    "end": 3.804
+    "start": 4.176,
+    "end": 4.254
    },
    {
     "word": "server",
-    "start": 3.882,
-    "end": 4.192
+    "start": 4.332,
+    "end": 4.642
    },
    {
     "word": "raises",
-    "start": 4.386,
-    "end": 4.581
+    "start": 4.836,
+    "end": 5.031
    },
    {
     "word": "the",
-    "start": 4.619,
-    "end": 4.658
+    "start": 5.069,
+    "end": 5.108
    },
    {
     "word": "alarm",
-    "start": 4.814,
-    "end": 4.969
+    "start": 5.264,
+    "end": 5.419
    },
    {
     "word": "itself.",
-    "start": 5.047,
-    "end": 5.633
+    "start": 5.497,
+    "end": 6.083
    }
   ]
  },
