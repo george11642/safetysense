@@ -1,0 +1,1597 @@
+[
+ {
+  "id": "v2_01",
+  "file": "vo/v2/v2_01.mp3",
+  "durationSec": 4.257,
+  "text": "Tonight, Maya won't be able to call for help. Her phone will.",
+  "spoken": "Tonight, Maya won't be able to call for help... Her phone will.",
+  "words": [
+   {
+    "word": "Tonight,",
+    "start": 0.078,
+    "end": 1.01
+   },
+   {
+    "word": "Maya",
+    "start": 1.087,
+    "end": 1.398
+   },
+   {
+    "word": "won't",
+    "start": 1.476,
+    "end": 1.631
+   },
+   {
+    "word": "be",
+    "start": 1.709,
+    "end": 1.748
+   },
+   {
+    "word": "able",
+    "start": 1.786,
+    "end": 1.942
+   },
+   {
+    "word": "to",
+    "start": 1.981,
+    "end": 2.019
+   },
+   {
+    "word": "call",
+    "start": 2.097,
+    "end": 2.252
+   },
+   {
+    "word": "for",
+    "start": 2.33,
+    "end": 2.408
+   },
+   {
+    "word": "help.",
+    "start": 2.485,
+    "end": 3.226
+   },
+   {
+    "word": "Her",
+    "start": 3.343,
+    "end": 3.459
+   },
+   {
+    "word": "phone",
+    "start": 3.615,
+    "end": 3.77
+   },
+   {
+    "word": "will.",
+    "start": 3.848,
+    "end": 4.257
+   }
+  ]
+ },
+ {
+  "id": "v2_02",
+  "file": "vo/v2/v2_02.mp3",
+  "durationSec": 2.583,
+  "text": "This is Maya. Walking home after midnight.",
+  "spoken": "This is Maya. Walking home after midnight.",
+  "words": [
+   {
+    "word": "This",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "is",
+    "start": 0.233,
+    "end": 0.311
+   },
+   {
+    "word": "Maya.",
+    "start": 0.388,
+    "end": 1.076
+   },
+   {
+    "word": "Walking",
+    "start": 1.231,
+    "end": 1.386
+   },
+   {
+    "word": "home",
+    "start": 1.464,
+    "end": 1.697
+   },
+   {
+    "word": "after",
+    "start": 1.775,
+    "end": 1.93
+   },
+   {
+    "word": "midnight.",
+    "start": 2.008,
+    "end": 2.583
+   }
+  ]
+ },
+ {
+  "id": "v2_03",
+  "file": "vo/v2/v2_03.mp3",
+  "durationSec": 6.066,
+  "text": "One tap: Walk Home Guard is on. It listens on the phone only. Nothing is saved unless something's wrong.",
+  "spoken": "One tap: Walk Home Guard is on. It listens on the phone only. Nothing is saved unless something's wrong.",
+  "words": [
+   {
+    "word": "One",
+    "start": 0.0,
+    "end": 0.233
+   },
+   {
+    "word": "tap:",
+    "start": 0.427,
+    "end": 0.916
+   },
+   {
+    "word": "Walk",
+    "start": 0.994,
+    "end": 1.149
+   },
+   {
+    "word": "Home",
+    "start": 1.227,
+    "end": 1.382
+   },
+   {
+    "word": "Guard",
+    "start": 1.46,
+    "end": 1.616
+   },
+   {
+    "word": "is",
+    "start": 1.693,
+    "end": 1.771
+   },
+   {
+    "word": "on.",
+    "start": 1.849,
+    "end": 2.381
+   },
+   {
+    "word": "It",
+    "start": 2.458,
+    "end": 2.536
+   },
+   {
+    "word": "listens",
+    "start": 2.614,
+    "end": 2.924
+   },
+   {
+    "word": "on",
+    "start": 2.963,
+    "end": 3.002
+   },
+   {
+    "word": "the",
+    "start": 3.08,
+    "end": 3.157
+   },
+   {
+    "word": "phone",
+    "start": 3.274,
+    "end": 3.39
+   },
+   {
+    "word": "only.",
+    "start": 3.468,
+    "end": 4.064
+   },
+   {
+    "word": "Nothing",
+    "start": 4.142,
+    "end": 4.375
+   },
+   {
+    "word": "is",
+    "start": 4.452,
+    "end": 4.608
+   },
+   {
+    "word": "saved",
+    "start": 4.763,
+    "end": 4.918
+   },
+   {
+    "word": "unless",
+    "start": 4.996,
+    "end": 5.229
+   },
+   {
+    "word": "something's",
+    "start": 5.384,
+    "end": 5.617
+   },
+   {
+    "word": "wrong.",
+    "start": 6.083,
+    "end": 6.066
+   }
+  ]
+ },
+ {
+  "id": "v2_04",
+  "file": "vo/v2/v2_04.mp3",
+  "durationSec": 1.463,
+  "text": "Footsteps behind her.",
+  "spoken": "Footsteps behind her.",
+  "words": [
+   {
+    "word": "Footsteps",
+    "start": 0.155,
+    "end": 0.621
+   },
+   {
+    "word": "behind",
+    "start": 0.699,
+    "end": 1.087
+   },
+   {
+    "word": "her.",
+    "start": 1.204,
+    "end": 1.463
+   }
+  ]
+ },
+ {
+  "id": "v2_05",
+  "file": "vo/v2/v2_05.mp3",
+  "durationSec": 2.562,
+  "text": "Someone comes up behind her. She screams.",
+  "spoken": "Someone comes up behind her. She screams.",
+  "words": [
+   {
+    "word": "Someone",
+    "start": 0.155,
+    "end": 0.466
+   },
+   {
+    "word": "comes",
+    "start": 0.583,
+    "end": 0.699
+   },
+   {
+    "word": "up",
+    "start": 0.738,
+    "end": 0.777
+   },
+   {
+    "word": "behind",
+    "start": 0.854,
+    "end": 1.165
+   },
+   {
+    "word": "her.",
+    "start": 1.243,
+    "end": 1.631
+   },
+   {
+    "word": "She",
+    "start": 1.709,
+    "end": 1.786
+   },
+   {
+    "word": "screams.",
+    "start": 1.864,
+    "end": 2.562
+   }
+  ]
+ },
+ {
+  "id": "v2_06",
+  "file": "vo/v2/v2_06.mp3",
+  "durationSec": 4.006,
+  "text": "Her phone hears it. A scream. The words: get off me.",
+  "spoken": "Her phone hears it. A scream. The words: get off me.",
+  "words": [
+   {
+    "word": "Her",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "phone",
+    "start": 0.233,
+    "end": 0.466
+   },
+   {
+    "word": "hears",
+    "start": 0.544,
+    "end": 0.777
+   },
+   {
+    "word": "it.",
+    "start": 0.854,
+    "end": 1.197
+   },
+   {
+    "word": "A",
+    "start": 1.275,
+    "end": 1.352
+   },
+   {
+    "word": "scream.",
+    "start": 1.43,
+    "end": 2.273
+   },
+   {
+    "word": "The",
+    "start": 2.35,
+    "end": 2.428
+   },
+   {
+    "word": "words:",
+    "start": 2.506,
+    "end": 3.099
+   },
+   {
+    "word": "get",
+    "start": 3.177,
+    "end": 3.254
+   },
+   {
+    "word": "off",
+    "start": 3.332,
+    "end": 3.565
+   },
+   {
+    "word": "me.",
+    "start": 3.681,
+    "end": 4.006
+   }
+  ]
+ },
+ {
+  "id": "v2_07",
+  "file": "vo/v2/v2_07.mp3",
+  "durationSec": 7.151,
+  "text": "Then she freezes. In one study, 70% of survivors did. She can't reach her phone. She doesn't have to.",
+  "spoken": "Then she freezes. In one study, seventy percent of survivors did. She can't reach her phone. She doesn't have to.",
+  "words": [
+   {
+    "word": "Then",
+    "start": 0.0,
+    "end": 0.078
+   },
+   {
+    "word": "she",
+    "start": 0.233,
+    "end": 0.466
+   },
+   {
+    "word": "freezes.",
+    "start": 0.583,
+    "end": 1.381
+   },
+   {
+    "word": "In",
+    "start": 1.419,
+    "end": 1.575
+   },
+   {
+    "word": "one",
+    "start": 1.652,
+    "end": 1.808
+   },
+   {
+    "word": "study,",
+    "start": 1.885,
+    "end": 2.507
+   },
+   {
+    "word": "70%",
+    "start": 2.584,
+    "end": 3.206
+   },
+   {
+    "word": "of",
+    "start": 3.245,
+    "end": 3.283
+   },
+   {
+    "word": "survivors",
+    "start": 3.361,
+    "end": 3.905
+   },
+   {
+    "word": "did.",
+    "start": 4.332,
+    "end": 4.573
+   },
+   {
+    "word": "She",
+    "start": 4.612,
+    "end": 4.767
+   },
+   {
+    "word": "can't",
+    "start": 4.845,
+    "end": 5.078
+   },
+   {
+    "word": "reach",
+    "start": 5.155,
+    "end": 5.233
+   },
+   {
+    "word": "her",
+    "start": 5.311,
+    "end": 5.388
+   },
+   {
+    "word": "phone.",
+    "start": 5.466,
+    "end": 6.113
+   },
+   {
+    "word": "She",
+    "start": 6.19,
+    "end": 6.268
+   },
+   {
+    "word": "doesn't",
+    "start": 6.346,
+    "end": 6.501
+   },
+   {
+    "word": "have",
+    "start": 6.579,
+    "end": 6.734
+   },
+   {
+    "word": "to.",
+    "start": 6.812,
+    "end": 7.151
+   }
+  ]
+ },
+ {
+  "id": "v2_08",
+  "file": "vo/v2/v2_08.mp3",
+  "durationSec": 3.196,
+  "text": "Three phones ring. Each one gets her live location.",
+  "spoken": "Three phones ring. Each one gets her live location.",
+  "words": [
+   {
+    "word": "Three",
+    "start": 0.0,
+    "end": 0.233
+   },
+   {
+    "word": "phones",
+    "start": 0.388,
+    "end": 0.699
+   },
+   {
+    "word": "ring.",
+    "start": 0.854,
+    "end": 1.254
+   },
+   {
+    "word": "Each",
+    "start": 1.332,
+    "end": 1.565
+   },
+   {
+    "word": "one",
+    "start": 1.643,
+    "end": 1.876
+   },
+   {
+    "word": "gets",
+    "start": 1.953,
+    "end": 2.031
+   },
+   {
+    "word": "her",
+    "start": 2.109,
+    "end": 2.186
+   },
+   {
+    "word": "live",
+    "start": 2.264,
+    "end": 2.419
+   },
+   {
+    "word": "location.",
+    "start": 2.497,
+    "end": 3.196
+   }
+  ]
+ },
+ {
+  "id": "v2_09",
+  "file": "vo/v2/v2_09.mp3",
+  "durationSec": 6.883,
+  "text": "90 seconds, no safety PIN. A dispatcher calls. If she can't answer, police head to her live location.",
+  "spoken": "Ninety seconds, no safety PIN. A dispatcher calls. If she can't answer, police head to her live location.",
+  "words": [
+   {
+    "word": "90",
+    "start": 0.0,
+    "end": 0.311
+   },
+   {
+    "word": "seconds,",
+    "start": 0.466,
+    "end": 1.228
+   },
+   {
+    "word": "no",
+    "start": 1.306,
+    "end": 1.461
+   },
+   {
+    "word": "safety",
+    "start": 1.539,
+    "end": 1.85
+   },
+   {
+    "word": "PIN.",
+    "start": 1.927,
+    "end": 2.371
+   },
+   {
+    "word": "A",
+    "start": 2.449,
+    "end": 2.526
+   },
+   {
+    "word": "dispatcher",
+    "start": 2.798,
+    "end": 3.07
+   },
+   {
+    "word": "calls.",
+    "start": 3.264,
+    "end": 3.737
+   },
+   {
+    "word": "If",
+    "start": 3.815,
+    "end": 3.892
+   },
+   {
+    "word": "she",
+    "start": 3.97,
+    "end": 4.048
+   },
+   {
+    "word": "can't",
+    "start": 4.125,
+    "end": 4.281
+   },
+   {
+    "word": "answer,",
+    "start": 4.436,
+    "end": 5.018
+   },
+   {
+    "word": "police",
+    "start": 5.057,
+    "end": 5.368
+   },
+   {
+    "word": "head",
+    "start": 5.446,
+    "end": 5.601
+   },
+   {
+    "word": "to",
+    "start": 5.64,
+    "end": 5.679
+   },
+   {
+    "word": "her",
+    "start": 5.756,
+    "end": 5.912
+   },
+   {
+    "word": "live",
+    "start": 6.028,
+    "end": 6.145
+   },
+   {
+    "word": "location.",
+    "start": 6.688,
+    "end": 6.883
+   }
+  ]
+ },
+ {
+  "id": "v2_10",
+  "file": "vo/v2/v2_10.mp3",
+  "durationSec": 2.996,
+  "text": "Saturday. A party. Night Out Guard is on.",
+  "spoken": "Saturday. A party. Night Out Guard is on.",
+  "words": [
+   {
+    "word": "Saturday.",
+    "start": 0.0,
+    "end": 0.849
+   },
+   {
+    "word": "A",
+    "start": 0.927,
+    "end": 1.005
+   },
+   {
+    "word": "party.",
+    "start": 1.199,
+    "end": 1.681
+   },
+   {
+    "word": "Night",
+    "start": 1.759,
+    "end": 1.915
+   },
+   {
+    "word": "Out",
+    "start": 1.992,
+    "end": 2.148
+   },
+   {
+    "word": "Guard",
+    "start": 2.225,
+    "end": 2.381
+   },
+   {
+    "word": "is",
+    "start": 2.458,
+    "end": 2.536
+   },
+   {
+    "word": "on.",
+    "start": 2.614,
+    "end": 2.996
+   }
+  ]
+ },
+ {
+  "id": "v2_11",
+  "file": "vo/v2/v2_11.mp3",
+  "durationSec": 2.84,
+  "text": "11:02 PM. She looks away from her drink.",
+  "spoken": "Eleven-oh-two. She looks away from her drink.",
+  "words": [
+   {
+    "word": "11:02",
+    "start": 0.0,
+    "end": 0.615
+   },
+   {
+    "word": "PM.",
+    "start": 0.615,
+    "end": 1.23
+   },
+   {
+    "word": "She",
+    "start": 1.308,
+    "end": 1.463
+   },
+   {
+    "word": "looks",
+    "start": 1.58,
+    "end": 1.696
+   },
+   {
+    "word": "away",
+    "start": 1.774,
+    "end": 2.007
+   },
+   {
+    "word": "from",
+    "start": 2.084,
+    "end": 2.162
+   },
+   {
+    "word": "her",
+    "start": 2.24,
+    "end": 2.317
+   },
+   {
+    "word": "drink.",
+    "start": 2.512,
+    "end": 2.84
+   }
+  ]
+ },
+ {
+  "id": "v2_12",
+  "file": "vo/v2/v2_12.mp3",
+  "durationSec": 2.898,
+  "text": "11:20. The room starts to tilt.",
+  "spoken": "Eleven-twenty. The room starts to tilt.",
+  "words": [
+   {
+    "word": "11:20.",
+    "start": 0.078,
+    "end": 1.301
+   },
+   {
+    "word": "The",
+    "start": 1.379,
+    "end": 1.456
+   },
+   {
+    "word": "room",
+    "start": 1.534,
+    "end": 1.767
+   },
+   {
+    "word": "starts",
+    "start": 1.845,
+    "end": 2.155
+   },
+   {
+    "word": "to",
+    "start": 2.233,
+    "end": 2.311
+   },
+   {
+    "word": "tilt.",
+    "start": 2.427,
+    "end": 2.898
+   }
+  ]
+ },
+ {
+  "id": "v2_13",
+  "file": "vo/v2/v2_13.mp3",
+  "durationSec": 4.481,
+  "text": "No phone can detect a drug. But SafetySense notices what happens next.",
+  "spoken": "No phone can detect a drug. But SafetySense notices what happens next.",
+  "words": [
+   {
+    "word": "No",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "phone",
+    "start": 0.311,
+    "end": 0.544
+   },
+   {
+    "word": "can",
+    "start": 0.621,
+    "end": 0.777
+   },
+   {
+    "word": "detect",
+    "start": 0.932,
+    "end": 1.087
+   },
+   {
+    "word": "a",
+    "start": 1.165,
+    "end": 1.243
+   },
+   {
+    "word": "drug.",
+    "start": 1.437,
+    "end": 1.981
+   },
+   {
+    "word": "But",
+    "start": 2.058,
+    "end": 2.136
+   },
+   {
+    "word": "SafetySense",
+    "start": 2.214,
+    "end": 2.835
+   },
+   {
+    "word": "notices",
+    "start": 2.99,
+    "end": 3.379
+   },
+   {
+    "word": "what",
+    "start": 3.456,
+    "end": 3.534
+   },
+   {
+    "word": "happens",
+    "start": 3.612,
+    "end": 3.922
+   },
+   {
+    "word": "next.",
+    "start": 4.0,
+    "end": 4.481
+   }
+  ]
+ },
+ {
+  "id": "v2_14",
+  "file": "vo/v2/v2_14.mp3",
+  "durationSec": 5.606,
+  "text": "11:31. She stumbles. Then she goes still. Her phone asks: You okay?",
+  "spoken": "Eleven thirty-one. She stumbles. Then she goes still. Her phone asks: You okay?",
+  "words": [
+   {
+    "word": "11:31.",
+    "start": 0.0,
+    "end": 1.346
+   },
+   {
+    "word": "She",
+    "start": 1.423,
+    "end": 1.579
+   },
+   {
+    "word": "stumbles.",
+    "start": 1.656,
+    "end": 2.475
+   },
+   {
+    "word": "Then",
+    "start": 2.552,
+    "end": 2.708
+   },
+   {
+    "word": "she",
+    "start": 2.785,
+    "end": 2.863
+   },
+   {
+    "word": "goes",
+    "start": 2.902,
+    "end": 3.096
+   },
+   {
+    "word": "still.",
+    "start": 3.174,
+    "end": 3.778
+   },
+   {
+    "word": "Her",
+    "start": 3.816,
+    "end": 3.894
+   },
+   {
+    "word": "phone",
+    "start": 3.972,
+    "end": 4.205
+   },
+   {
+    "word": "asks:",
+    "start": 4.282,
+    "end": 4.906
+   },
+   {
+    "word": "You",
+    "start": 4.945,
+    "end": 4.983
+   },
+   {
+    "word": "okay?",
+    "start": 5.061,
+    "end": 5.606
+   }
+  ]
+ },
+ {
+  "id": "v2_15",
+  "file": "vo/v2/v2_15.mp3",
+  "durationSec": 2.401,
+  "text": "45 seconds. No answer.",
+  "spoken": "Forty-five seconds. No answer.",
+  "words": [
+   {
+    "word": "45",
+    "start": 0.0,
+    "end": 0.544
+   },
+   {
+    "word": "seconds.",
+    "start": 0.621,
+    "end": 1.553
+   },
+   {
+    "word": "No",
+    "start": 1.631,
+    "end": 1.786
+   },
+   {
+    "word": "answer.",
+    "start": 1.864,
+    "end": 2.401
+   }
+  ]
+ },
+ {
+  "id": "v2_16",
+  "file": "vo/v2/v2_16.mp3",
+  "durationSec": 3.502,
+  "text": "Her roommate's phone rings. She taps: I'm on my way.",
+  "spoken": "Her roommate's phone rings. She taps: I'm on my way.",
+  "words": [
+   {
+    "word": "Her",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "roommate's",
+    "start": 0.233,
+    "end": 0.621
+   },
+   {
+    "word": "phone",
+    "start": 0.699,
+    "end": 0.854
+   },
+   {
+    "word": "rings.",
+    "start": 0.932,
+    "end": 1.619
+   },
+   {
+    "word": "She",
+    "start": 1.697,
+    "end": 1.775
+   },
+   {
+    "word": "taps:",
+    "start": 1.852,
+    "end": 2.506
+   },
+   {
+    "word": "I'm",
+    "start": 2.583,
+    "end": 2.661
+   },
+   {
+    "word": "on",
+    "start": 2.739,
+    "end": 2.816
+   },
+   {
+    "word": "my",
+    "start": 2.894,
+    "end": 3.049
+   },
+   {
+    "word": "way.",
+    "start": 3.205,
+    "end": 3.502
+   }
+  ]
+ },
+ {
+  "id": "v2_17",
+  "file": "vo/v2/v2_17.mp3",
+  "durationSec": 3.929,
+  "text": "What if someone takes her phone? Smashes it? Switches it off?",
+  "spoken": "What if someone takes her phone? Smashes it? Switches it off?",
+  "words": [
+   {
+    "word": "What",
+    "start": 0.078,
+    "end": 0.155
+   },
+   {
+    "word": "if",
+    "start": 0.233,
+    "end": 0.311
+   },
+   {
+    "word": "someone",
+    "start": 0.388,
+    "end": 0.699
+   },
+   {
+    "word": "takes",
+    "start": 0.816,
+    "end": 0.932
+   },
+   {
+    "word": "her",
+    "start": 1.01,
+    "end": 1.087
+   },
+   {
+    "word": "phone?",
+    "start": 1.165,
+    "end": 1.873
+   },
+   {
+    "word": "Smashes",
+    "start": 1.95,
+    "end": 2.416
+   },
+   {
+    "word": "it?",
+    "start": 2.494,
+    "end": 2.884
+   },
+   {
+    "word": "Switches",
+    "start": 2.962,
+    "end": 3.273
+   },
+   {
+    "word": "it",
+    "start": 3.312,
+    "end": 3.35
+   },
+   {
+    "word": "off?",
+    "start": 3.506,
+    "end": 3.929
+   }
+  ]
+ },
+ {
+  "id": "v2_18",
+  "file": "vo/v2/v2_18.mp3",
+  "durationSec": 5.633,
+  "text": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself.",
+  "spoken": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself.",
+  "words": [
+   {
+    "word": "Her",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "phone",
+    "start": 0.233,
+    "end": 0.466
+   },
+   {
+    "word": "checks",
+    "start": 0.621,
+    "end": 0.777
+   },
+   {
+    "word": "in",
+    "start": 0.854,
+    "end": 0.932
+   },
+   {
+    "word": "with",
+    "start": 0.971,
+    "end": 1.01
+   },
+   {
+    "word": "our",
+    "start": 1.087,
+    "end": 1.243
+   },
+   {
+    "word": "server",
+    "start": 1.437,
+    "end": 1.631
+   },
+   {
+    "word": "every",
+    "start": 1.709,
+    "end": 1.942
+   },
+   {
+    "word": "minute.",
+    "start": 2.019,
+    "end": 2.561
+   },
+   {
+    "word": "If",
+    "start": 2.6,
+    "end": 2.639
+   },
+   {
+    "word": "it",
+    "start": 2.716,
+    "end": 2.794
+   },
+   {
+    "word": "goes",
+    "start": 2.833,
+    "end": 3.027
+   },
+   {
+    "word": "dark,",
+    "start": 3.105,
+    "end": 3.687
+   },
+   {
+    "word": "the",
+    "start": 3.726,
+    "end": 3.804
+   },
+   {
+    "word": "server",
+    "start": 3.882,
+    "end": 4.192
+   },
+   {
+    "word": "raises",
+    "start": 4.386,
+    "end": 4.581
+   },
+   {
+    "word": "the",
+    "start": 4.619,
+    "end": 4.658
+   },
+   {
+    "word": "alarm",
+    "start": 4.814,
+    "end": 4.969
+   },
+   {
+    "word": "itself.",
+    "start": 5.047,
+    "end": 5.633
+   }
+  ]
+ },
+ {
+  "id": "v2_19",
+  "file": "vo/v2/v2_19.mp3",
+  "durationSec": 3.875,
+  "text": "A ride home. Ride Guard is on. The car turns the wrong way.",
+  "spoken": "A ride home. Ride Guard is on. The car turns the wrong way.",
+  "words": [
+   {
+    "word": "A",
+    "start": 0.0,
+    "end": 0.078
+   },
+   {
+    "word": "ride",
+    "start": 0.155,
+    "end": 0.388
+   },
+   {
+    "word": "home.",
+    "start": 0.466,
+    "end": 1.126
+   },
+   {
+    "word": "Ride",
+    "start": 1.204,
+    "end": 1.359
+   },
+   {
+    "word": "Guard",
+    "start": 1.437,
+    "end": 1.592
+   },
+   {
+    "word": "is",
+    "start": 1.67,
+    "end": 1.748
+   },
+   {
+    "word": "on.",
+    "start": 1.825,
+    "end": 2.353
+   },
+   {
+    "word": "The",
+    "start": 2.431,
+    "end": 2.509
+   },
+   {
+    "word": "car",
+    "start": 2.625,
+    "end": 2.742
+   },
+   {
+    "word": "turns",
+    "start": 2.819,
+    "end": 3.052
+   },
+   {
+    "word": "the",
+    "start": 3.091,
+    "end": 3.13
+   },
+   {
+    "word": "wrong",
+    "start": 3.208,
+    "end": 3.441
+   },
+   {
+    "word": "way.",
+    "start": 3.79,
+    "end": 3.875
+   }
+  ]
+ },
+ {
+  "id": "v2_20",
+  "file": "vo/v2/v2_20.mp3",
+  "durationSec": 3.915,
+  "text": "Her phone asks: You okay? The driver says: cancel it.",
+  "spoken": "Her phone asks: You okay? The driver says: cancel it.",
+  "words": [
+   {
+    "word": "Her",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "phone",
+    "start": 0.311,
+    "end": 0.466
+   },
+   {
+    "word": "asks:",
+    "start": 0.544,
+    "end": 1.181
+   },
+   {
+    "word": "You",
+    "start": 1.258,
+    "end": 1.336
+   },
+   {
+    "word": "okay?",
+    "start": 1.414,
+    "end": 2.077
+   },
+   {
+    "word": "The",
+    "start": 2.154,
+    "end": 2.232
+   },
+   {
+    "word": "driver",
+    "start": 2.426,
+    "end": 2.62
+   },
+   {
+    "word": "says:",
+    "start": 2.776,
+    "end": 3.22
+   },
+   {
+    "word": "cancel",
+    "start": 3.415,
+    "end": 3.609
+   },
+   {
+    "word": "it.",
+    "start": 3.686,
+    "end": 3.915
+   }
+  ]
+ },
+ {
+  "id": "v2_21",
+  "file": "vo/v2/v2_21.mp3",
+  "durationSec": 7.035,
+  "text": "She types her duress PIN. The check-in disappears, like everything's fine. It isn't. Dispatch is already on it.",
+  "spoken": "She types her duress PIN. The check-in disappears, like everything's fine... It isn't. Dispatch is already on it.",
+  "words": [
+   {
+    "word": "She",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "types",
+    "start": 0.233,
+    "end": 0.466
+   },
+   {
+    "word": "her",
+    "start": 0.544,
+    "end": 0.621
+   },
+   {
+    "word": "duress",
+    "start": 0.699,
+    "end": 1.01
+   },
+   {
+    "word": "PIN.",
+    "start": 1.087,
+    "end": 1.558
+   },
+   {
+    "word": "The",
+    "start": 1.636,
+    "end": 1.714
+   },
+   {
+    "word": "check-in",
+    "start": 1.83,
+    "end": 2.102
+   },
+   {
+    "word": "disappears,",
+    "start": 2.218,
+    "end": 3.112
+   },
+   {
+    "word": "like",
+    "start": 3.228,
+    "end": 3.345
+   },
+   {
+    "word": "everything's",
+    "start": 3.422,
+    "end": 3.811
+   },
+   {
+    "word": "fine.",
+    "start": 3.888,
+    "end": 4.532
+   },
+   {
+    "word": "It",
+    "start": 4.599,
+    "end": 4.754
+   },
+   {
+    "word": "isn't.",
+    "start": 4.832,
+    "end": 5.485
+   },
+   {
+    "word": "Dispatch",
+    "start": 5.718,
+    "end": 5.951
+   },
+   {
+    "word": "is",
+    "start": 6.029,
+    "end": 6.107
+   },
+   {
+    "word": "already",
+    "start": 6.262,
+    "end": 6.573
+   },
+   {
+    "word": "on",
+    "start": 6.65,
+    "end": 6.728
+   },
+   {
+    "word": "it.",
+    "start": 6.806,
+    "end": 7.035
+   }
+  ]
+ },
+ {
+  "id": "v2_22",
+  "file": "vo/v2/v2_22.mp3",
+  "durationSec": 6.28,
+  "text": "New Mexico still has no text-to-911. When you can't call, SafetySense calls for you.",
+  "spoken": "New Mexico still has no text to nine-one-one. When you can't call, SafetySense calls for you.",
+  "words": [
+   {
+    "word": "New",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "Mexico",
+    "start": 0.233,
+    "end": 0.699
+   },
+   {
+    "word": "still",
+    "start": 0.777,
+    "end": 1.087
+   },
+   {
+    "word": "has",
+    "start": 1.165,
+    "end": 1.398
+   },
+   {
+    "word": "no",
+    "start": 1.476,
+    "end": 1.709
+   },
+   {
+    "word": "text-to-911.",
+    "start": 1.864,
+    "end": 3.22
+   },
+   {
+    "word": "When",
+    "start": 3.273,
+    "end": 3.324
+   },
+   {
+    "word": "you",
+    "start": 3.402,
+    "end": 3.48
+   },
+   {
+    "word": "can't",
+    "start": 3.557,
+    "end": 3.713
+   },
+   {
+    "word": "call,",
+    "start": 3.79,
+    "end": 4.436
+   },
+   {
+    "word": "SafetySense",
+    "start": 4.475,
+    "end": 5.096
+   },
+   {
+    "word": "calls",
+    "start": 5.174,
+    "end": 5.484
+   },
+   {
+    "word": "for",
+    "start": 5.562,
+    "end": 5.717
+   },
+   {
+    "word": "you.",
+    "start": 5.795,
+    "end": 6.28
+   }
+  ]
+ },
+ {
+  "id": "v2_23",
+  "file": "vo/v2/v2_23.mp3",
+  "durationSec": 2.795,
+  "text": "SafetySense. Calls for help when you can't.",
+  "spoken": "SafetySense. Calls for help when you can't.",
+  "words": [
+   {
+    "word": "SafetySense.",
+    "start": 0.0,
+    "end": 1.089
+   },
+   {
+    "word": "Calls",
+    "start": 1.167,
+    "end": 1.478
+   },
+   {
+    "word": "for",
+    "start": 1.555,
+    "end": 1.633
+   },
+   {
+    "word": "help",
+    "start": 1.788,
+    "end": 1.944
+   },
+   {
+    "word": "when",
+    "start": 2.021,
+    "end": 2.099
+   },
+   {
+    "word": "you",
+    "start": 2.177,
+    "end": 2.254
+   },
+   {
+    "word": "can't.",
+    "start": 2.371,
+    "end": 2.795
+   }
+  ]
+ },
+ {
+  "id": "v2_24",
+  "file": "vo/v2/v2_24.mp3",
+  "durationSec": 3.293,
+  "text": "It supplements 911. It never replaces it.",
+  "spoken": "It supplements nine-one-one. It never replaces it.",
+  "words": [
+   {
+    "word": "It",
+    "start": 0.0,
+    "end": 0.155
+   },
+   {
+    "word": "supplements",
+    "start": 0.233,
+    "end": 0.777
+   },
+   {
+    "word": "911.",
+    "start": 0.854,
+    "end": 1.818
+   },
+   {
+    "word": "It",
+    "start": 1.896,
+    "end": 2.051
+   },
+   {
+    "word": "never",
+    "start": 2.207,
+    "end": 2.44
+   },
+   {
+    "word": "replaces",
+    "start": 2.517,
+    "end": 2.983
+   },
+   {
+    "word": "it.",
+    "start": 3.061,
+    "end": 3.293
+   }
+  ]
+ },
+ {
+  "id": "v2_25",
+  "file": "vo/v2/v2_25.mp3",
+  "durationSec": 3.316,
+  "text": "And if something happened to you, it's not your fault.",
+  "spoken": "And if something happened to you... it's not your fault.",
+  "words": [
+   {
+    "word": "And",
+    "start": 0.311,
+    "end": 0.388
+   },
+   {
+    "word": "if",
+    "start": 0.466,
+    "end": 0.544
+   },
+   {
+    "word": "something",
+    "start": 0.621,
+    "end": 0.932
+   },
+   {
+    "word": "happened",
+    "start": 1.01,
+    "end": 1.32
+   },
+   {
+    "word": "to",
+    "start": 1.398,
+    "end": 1.476
+   },
+   {
+    "word": "you,",
+    "start": 1.592,
+    "end": 2.048
+   },
+   {
+    "word": "it's",
+    "start": 2.125,
+    "end": 2.281
+   },
+   {
+    "word": "not",
+    "start": 2.358,
+    "end": 2.514
+   },
+   {
+    "word": "your",
+    "start": 2.591,
+    "end": 2.747
+   },
+   {
+    "word": "fault.",
+    "start": 2.902,
+    "end": 3.316
+   }
+  ]
+ }
+]

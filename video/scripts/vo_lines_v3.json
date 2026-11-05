@@ -1,0 +1,89 @@
+[
+ {
+  "id": "v3_01",
+  "text": "Maya is walking home. Someone comes up behind her. She can't reach her phone.",
+  "take": "t1",
+  "tts": "[tense] Maya is walking home. Someone comes up behind her. She can't reach her phone."
+ },
+ {
+  "id": "v3_02",
+  "text": "Her phone is already calling for help."
+ },
+ {
+  "id": "v3_03",
+  "text": "Most safety apps wait for you to press a button. But freezing is a normal, involuntary response. In one study, 70% of women seen after a sexual assault reported it.",
+  "tts": "Most safety apps wait for you to press a button. [gently] But freezing is a normal, involuntary response. In one study, seventy percent of women seen after a sexual assault reported it.",
+  "take": "t1"
+ },
+ {
+  "id": "v3_04",
+  "text": "Drugs can take away the ability to act. Phones get taken. And New Mexico still has no text-to-911.",
+  "tts": "Drugs can take away the ability to act. Phones get taken. And New Mexico still has no text to nine-one-one."
+ },
+ {
+  "id": "v3_05",
+  "text": "Meet SafetySense. It calls for help when you can't."
+ },
+ {
+  "id": "v3_06",
+  "text": "Start a Guard for a walk home, a night out, a date, or a ride. Tap it, press the Action Button, ask Siri, or use the Lock Screen."
+ },
+ {
+  "id": "v3_07",
+  "text": "While it's on, your phone listens for screams, breaking glass, distress words, and your safe word. It feels for a fall, then stillness. All the listening happens on your phone.",
+  "take": "t0"
+ },
+ {
+  "id": "v3_08",
+  "text": "If something seems wrong, it asks quietly: You okay? You have 45 seconds. One tap if you're fine.",
+  "tts": "If something seems wrong, it asks quietly: You okay? You have forty-five seconds. One tap if you're fine."
+ },
+ {
+  "id": "v3_09",
+  "text": "No answer? Your trusted contacts get an automated call, and a text with a live link."
+ },
+ {
+  "id": "v3_10",
+  "text": "They see your location, your battery, and a timeline. And they can tap: I'm on my way, or send help now."
+ },
+ {
+  "id": "v3_11",
+  "text": "Still no safety PIN after 90 seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. In this demo, dispatch is simulated.",
+  "tts": "Still no safety PIN after ninety seconds? Professional dispatch calls you. If you can't answer, they send police to your live location. [matter-of-fact] In this demo, dispatch is simulated.",
+  "take": "t1"
+ },
+ {
+  "id": "v3_12",
+  "text": "Your safety PIN stops it. Your duress PIN looks exactly the same, but quietly keeps help coming."
+ },
+ {
+  "id": "v3_13",
+  "text": "And if your phone is smashed or switched off mid-session, our server notices the missing heartbeat, and raises the alert by itself."
+ },
+ {
+  "id": "v3_14",
+  "text": "Need a way out? A fake call gives you a reason to leave."
+ },
+ {
+  "id": "v3_15",
+  "text": "It only listens when you turn it on. Audio stays on your phone. Nothing is saved unless an alert fires, and evidence is encrypted, behind Face ID."
+ },
+ {
+  "id": "v3_16",
+  "text": "On the phone, Apple's sound and speech models feed a rules-based risk engine. In the cloud, Supabase watches heartbeats, Twilio calls your people, and Noonlight handles dispatch.",
+  "take": "t0"
+ },
+ {
+  "id": "v3_17",
+  "text": "SafetySense was built by George Teifel, an electrical engineering senior at UNM, and Mary Teifel, a mechanical engineering freshman at CNM."
+ },
+ {
+  "id": "v3_18",
+  "text": "SafetySense. Calls for help when you can't."
+ },
+ {
+  "id": "v3_19",
+  "text": "It supplements 911. It never replaces it.",
+  "tts": "It supplements nine-one-one. It never replaces it."
+ }
+]

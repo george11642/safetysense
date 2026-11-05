@@ -5,16 +5,23 @@
   "scripts": {
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts Demo ../presentation/videos/SafetySense-Demo-v1.mp4 --codec h264 --crf 18",
-    "render:vertical": "remotion render src/index.ts DemoVertical ../presentation/videos/SafetySense-Demo-vertical-v1.mp4 --codec h264 --crf 18"
+    "render:vertical": "remotion render src/index.ts DemoVertical ../presentation/videos/SafetySense-Demo-vertical-v1.mp4 --codec h264 --crf 18",
+    "render:showcase": "remotion render src/index.ts Kit3DShowcase out/kit3d/Kit3DShowcase.mp4 --gl=angle --codec h264 --crf 18",
+    "stills:showcase": "scripts/kit3d_stills.sh Kit3DShowcase out/kit3d/v $(seq 60 90 2040)"
   },
   "dependencies": {
+    "@react-three/fiber": "9.3.0",
     "@remotion/cli": "4.0.538",
     "@remotion/google-fonts": "4.0.538",
+    "@remotion/media": "4.0.538",
     "@remotion/media-utils": "4.0.538",
+    "@remotion/three": "4.0.538",
     "@remotion/transitions": "4.0.538",
+    "@types/three": "0.178.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "remotion": "4.0.538"
+    "remotion": "4.0.538",
+    "three": "0.178.0"
   },
   "devDependencies": {
     "@types/react": "19.1.8",

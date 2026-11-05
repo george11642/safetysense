@@ -1,0 +1,129 @@
+[
+ {
+  "id": "v2_01",
+  "text": "Tonight, Maya won't be able to call for help. Her phone will.",
+  "maxPause": 0.4,
+  "tts": "[tense] Tonight, Maya won't be able to call for help... Her phone will.",
+  "take": "t2"
+ },
+ {
+  "id": "v2_02",
+  "text": "This is Maya. Walking home after midnight."
+ },
+ {
+  "id": "v2_03",
+  "text": "One tap: Walk Home Guard is on. It listens on the phone only. Nothing is saved unless something's wrong."
+ },
+ {
+  "id": "v2_04",
+  "text": "Footsteps behind her.",
+  "tts": "[quietly] Footsteps behind her.",
+  "take": "t1"
+ },
+ {
+  "id": "v2_05",
+  "text": "Someone comes up behind her. She screams.",
+  "tts": "[urgent] Someone comes up behind her. She screams.",
+  "take": "t2"
+ },
+ {
+  "id": "v2_06",
+  "text": "Her phone hears it. A scream. The words: get off me.",
+  "take": "t0"
+ },
+ {
+  "id": "v2_07",
+  "text": "Then she freezes. In one study, 70% of survivors did. She can't reach her phone. She doesn't have to.",
+  "tts": "Then she freezes. In one study, seventy percent of survivors did. She can't reach her phone. She doesn't have to.",
+  "take": "t0"
+ },
+ {
+  "id": "v2_08",
+  "text": "Three phones ring. Each one gets her live location."
+ },
+ {
+  "id": "v2_09",
+  "text": "90 seconds, no safety PIN. A dispatcher calls. If she can't answer, police head to her live location.",
+  "tts": "Ninety seconds, no safety PIN. A dispatcher calls. If she can't answer, police head to her live location."
+ },
+ {
+  "id": "v2_10",
+  "text": "Saturday. A party. Night Out Guard is on."
+ },
+ {
+  "id": "v2_11",
+  "text": "11:02 PM. She looks away from her drink.",
+  "tts": "Eleven-oh-two. She looks away from her drink."
+ },
+ {
+  "id": "v2_12",
+  "text": "11:20. The room starts to tilt.",
+  "tts": "[uneasy] Eleven-twenty. The room starts to tilt.",
+  "take": "t2"
+ },
+ {
+  "id": "v2_13",
+  "text": "No phone can detect a drug. But SafetySense notices what happens next."
+ },
+ {
+  "id": "v2_14",
+  "text": "11:31. She stumbles. Then she goes still. Her phone asks: You okay?",
+  "tts": "Eleven thirty-one. She stumbles. Then she goes still. Her phone asks: You okay?"
+ },
+ {
+  "id": "v2_15",
+  "text": "45 seconds. No answer.",
+  "tts": "Forty-five seconds. No answer.",
+  "maxPause": 0.5
+ },
+ {
+  "id": "v2_16",
+  "text": "Her roommate's phone rings. She taps: I'm on my way."
+ },
+ {
+  "id": "v2_17",
+  "text": "What if someone takes her phone? Smashes it? Switches it off?",
+  "tts": "[tense] What if someone takes her phone? Smashes it? Switches it off?",
+  "take": "t1"
+ },
+ {
+  "id": "v2_18",
+  "text": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself."
+ },
+ {
+  "id": "v2_19",
+  "text": "A ride home. Ride Guard is on. The car turns the wrong way."
+ },
+ {
+  "id": "v2_20",
+  "text": "Her phone asks: You okay? The driver says: cancel it.",
+  "take": "t0"
+ },
+ {
+  "id": "v2_21",
+  "text": "She types her duress PIN. The check-in disappears, like everything's fine. It isn't. Dispatch is already on it.",
+  "take": "t3",
+  "tts": "She types her duress PIN. The check-in disappears, like everything's fine... [firmly] It isn't. Dispatch is already on it."
+ },
+ {
+  "id": "v2_22",
+  "text": "New Mexico still has no text-to-911. When you can't call, SafetySense calls for you.",
+  "tts": "New Mexico still has no text to nine-one-one. When you can't call, SafetySense calls for you."
+ },
+ {
+  "id": "v2_23",
+  "text": "SafetySense. Calls for help when you can't."
+ },
+ {
+  "id": "v2_24",
+  "text": "It supplements 911. It never replaces it.",
+  "tts": "It supplements nine-one-one. It never replaces it.",
+  "take": "t2 (first half)"
+ },
+ {
+  "id": "v2_25",
+  "text": "And if something happened to you, it's not your fault.",
+  "tts": "[warmly] And if something happened to you... it's not your fault.",
+  "take": "t2 (second half, split from v2_24)"
+ }
+]

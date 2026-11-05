@@ -1,0 +1,48 @@
+"""v3 HYBRID beat sheet (source of truth for scripts/v3_script.md and scripts/v3_timeline.json)."""
+TITLE = "SafetySense v3 HYBRID"
+FORMAT = "16:9, 1920x1080, 30 fps"
+# real footage: public/appflow.mp4 (31.4 s, see src/scenes.tsx callouts: 0 guard on, 5.03 check-in, 10.03 contacts,
+# 14.03 still no answer, 19.0 dispatch, 23.03 evidence, 25.53 PIN); public/img/share_full.png (live link page);
+# design/screens/*.png (10-13 homes, 14 guard, 15 check-in, 16-17 alert, 17c PIN, 19-20 vault, 26 live activity,
+# 27 dynamic island, 39-42 fake call, 05 triggers)
+BEATS = [
+ ("v3_01", 0.30, "can't reach her phone", "—", "night_ambience_loop; footsteps_behind; tension_loop in",
+  "ANIMATED (same low-poly set as v2): Maya on the night path, a shadow enters from behind, camera pushes in; cut away before contact. Letterboxed 2.39:1 for the cold open."),
+ ("v3_02", 0.20, "already", "Ladder chip strip appears bottom-left: CONTACTS ●", "phone_ring x3 staggered; whoosh_hard",
+  "Smash cut to three phones ringing with a live map (animated), then cut to black."),
+ ("v3_03", 0.60, "freezing", "—", "impact_hit on title; music drops to tension drone",
+  "Title 'SafetySense' holds 24 frames (logo + wordmark), then PROBLEM section on dark brand background: kinetic type 'Most safety apps wait for a button.' Big stat card '70%' counting up, sub 'of 298 women reported significant tonic immobility after sexual assault (Möller et al., 2017)'."),
+ ("v3_04", 0.20, "text-to-911", "—", "whoosh_soft per card",
+  "Three cards slide in on each sentence: pill icon 'Drugs take away the ability to act' · phone icon 'Phones get taken' · NM outline 'New Mexico: still no text-to-911'."),
+ ("v3_05", 0.50, "when you can't", "—", "riser into impact_hit; music: product_pulse_loop starts",
+  "'Meet SafetySense': app icon flies in, iPhone frame resolves on the Home screen (design/screens/10-home-night-out.png). Tagline lockup."),
+ ("v3_06", 0.30, "Guard", "Mode chips row: EVERYDAY · WALK HOME · NIGHT OUT · DATE · RIDE", "ui_tap per trigger icon",
+  "ANIMATED 3 s: Maya pressing the Action Button on her phone at the party door. Then REAL: iPhone frame cycling home screens 10/11/12/13 (Night Out, Walk, Date, Ride) + trigger icons (Action Button, Siri, Lock Screen control from 05-onboarding-triggers.png and 26-live-activity-lock.png)."),
+ ("v3_07", 0.25, "on your phone", "Signal chips light in sequence: SCREAM · GLASS · WORDS · SAFE WORD · FALL→STILL", "glass_clink on 'breaking glass'; sticker_pop per chip",
+  "ANIMATED 3 s: party, a glass shatters, waveform rings pulse from Maya's phone. Then REAL: appflow.mp4 0.0-5.0 s (guard on) in the iPhone frame with the signal chips around it; lock-icon tag 'Processed on-device'."),
+ ("v3_08", 0.25, "You okay?", "LADDER: CHECK-IN ● 45 s ring", "phone_buzz",
+  "REAL: appflow.mp4 5.0-10.0 s (check-in screen). Side-callout: '45 s · one tap if you're fine'."),
+ ("v3_09", 0.20, "live link", "LADDER: CONTACTS ●", "phone_ring; alert_step",
+  "ANIMATED 3 s: mom's phone on a kitchen counter lights up. Then REAL: appflow.mp4 10.0-14.0 s (contacts alerted)."),
+ ("v3_10", 0.20, "I'm on my way", "—", "ui_tap on button highlight",
+  "REAL: public/img/share_full.png (contact live-link page) in a second phone frame, slow scroll; highlight rings on location map, battery, timeline, then the 'I'm on my way' and 'Send help now' buttons."),
+ ("v3_11", 0.25, "police", "LADDER: DISPATCH ●", "alert_step; siren_far (soft)",
+  "REAL: appflow.mp4 14.0-23.0 s (still no answer -> professional dispatch). Lower-third: 'Noonlight Dispatch API · sandbox in this demo · no real police dispatched'."),
+ ("v3_12", 0.30, "quietly keeps help coming", "Two PIN chips: SAFETY PIN → STOP · DURESS PIN → looks like stop, DISPATCH continues", "keypad_pin; glitch (tiny)",
+  "ANIMATED 3 s: back seat of the ride, driver from behind says 'cancel it', Maya types a PIN. Then REAL: appflow.mp4 25.5-31.0 s (PIN entry + support screen) with a split overlay showing the same screen for both PINs and the hidden outcome."),
+ ("v3_13", 0.30, "by itself", "HEARTBEAT ♥ every 60 s -> NO HEARTBEAT -> CONTACTS ●", "phone_smash; signal_lost; heartbeat_calm stops",
+  "ANIMATED 3 s: phone hits pavement and goes black. Then MOTION GRAPHIC: phone -> cloud heartbeat line with a ping every 60 s; pings stop; Supabase pg_cron watchdog card fires 'alert with last known location'."),
+ ("v3_14", 0.30, "reason to leave", "—", "phone_ring (single, friendly)",
+  "ANIMATED 2 s: Maya on an awkward date glances at her phone. Then REAL: 40-fake-call-incoming.png -> 42-fake-call-in-call.png in the iPhone frame."),
+ ("v3_15", 0.50, "Nothing is saved", "Privacy chips: ON ONLY WHEN YOU START · AUDIO STAYS ON PHONE · SAVED ONLY ON ALERT · AES-GCM + FACE ID", "whoosh_soft; music thins to pad",
+  "Clean brand-color section. Four promise cards build in. REAL: 19-vault-locked.png -> 20-vault-unlocked.png in the iPhone frame."),
+ ("v3_16", 0.40, "Noonlight", "—", "ui_tap per node",
+  "ARCHITECTURE: animated diagram mirroring README: iPhone (SoundAnalysis, SpeechAnalyzer, CoreMotion, Foundation Models 2nd opinion -> risk engine) -> HTTPS -> Supabase (Postgres RLS, Vault, pg_cron heartbeat watchdog) -> Twilio (voice+SMS to contacts) / Noonlight (dispatch) / live-link page (Vercel)."),
+ ("v3_17", 0.50, "George Teifel · Mary Teifel", "—", "music: resolve_pad crossfade in",
+  "TEAM: two cards (photos from the team bio if George approves; otherwise initials) 'George Teifel · UNM · Electrical Engineering, Senior' and 'Mary Teifel · CNM · Mechanical Engineering, Freshman'."),
+ ("v3_18", 0.50, "can't", "—", "notify_ping (tonal)",
+  "ANIMATED 3 s: Maya home safe, roommate beside her, phone on the table showing 'Session ended'. Then logo lockup + tagline."),
+ ("v3_19", 0.25, "never replaces it", "—", "resolve_pad tail",
+  "End card: 'SafetySense supplements 911. It never replaces it.' · 'In an emergency, call 911.' · 'Support 24/7: RAINN 1-800-656-4673' · 'UNM & CNM App Contest 2026'. Hold 3 s."),
+]
+END_HOLD = 3.0
