@@ -83,6 +83,24 @@ export const CAST = {
     skinTone: "#e8b597",
     hairTone: "#7a4a2e",
   },
+  /** v3 fix r4 (additive, v3 only): maya3 with ONE hair tone on both of the pack's hair materials (the alternating
+   *  blond/brown strand clumps read as ribbed plates), so the bob shades as one soft volume. */
+  maya4: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#1d8f91", "Suit_Legs/Black": "#2c3658", White: "#ef7b9b", Hair_Blond: "#4a2c1c", Hair_Brown: "#432819", "Suit_Feet/Black": "#eeeaf4" },
+    extras: ["bobShell"],
+    hair: "#4a2c1c",
+    skinTone: "#e2a587",
+    hairTone: "#5a3424",
+  },
+  /** v3 fix r4 (additive, v3 only): mom2 with lilac cuffs + collar (the cream "White" slot read as yellow wrist rings). */
+  mom3: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#6a4c9c", "Suit_Legs/Black": "#33294a", White: "#b9a6dc", Hair_Blond: "#74462c", Hair_Brown: "#6a3f28", "Suit_Feet/Black": "#2a2232" },
+    hair: "#7a4a2e",
+    skinTone: "#e8b597",
+    hairTone: "#7a4a2e",
+  },
   /** r9 (v2): dispatcher with side-swept hair (eyes clear of the fringe), a bun and a fitted headset. */
   dispatcher2: {
     model: "suitF",

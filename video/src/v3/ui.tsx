@@ -3,6 +3,8 @@ import React from "react";
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, spring, useCurrentFrame, useVideoConfig, Easing, Sequence } from "remotion";
 import { C, F } from "../theme";
 import { TIMELINE } from "./timing";
+// v3 fix r4: measured speech onsets for phrase-initial words (scripts/v3_caption_onsets.py); captions only
+import ONSETS from "../../scripts/v3_caption_onsets.json";
 
 export const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 export const ez = (frame: number, a: number, b: number, from = 0, to = 1) =>
@@ -45,7 +47,7 @@ const PushThrough: React.FC<{ dur: number; zin: number; zout: number; children: 
   const b = zout ? clamp01((f - (dur - zout)) / zout) : 0;
   const ea = a * a, eb = b * b;
   const sc = 1 + 0.16 * ea + 0.14 * eb;
-  const bl = 14 * ea + 12 * eb;
+  const bl = 6 * ea + 5 * eb; // v3 fix r4: lighter blur (no ghosted half-frames)
   return <AbsoluteFill style={{ transform: `scale(${sc})`, filter: bl > 0.4 ? `blur(${bl}px)` : undefined }}>{children}</AbsoluteFill>;
 };
 
@@ -301,7 +303,9 @@ const captionWords = (hide: string[]): CW[] => {
   for (const b of TIMELINE.beats) {
     if (hide.includes(b.id)) continue;
     const off = CAPTION_OFFSET[b.id] ?? 0;
-    const ws = b.words.map((x) => ({ ...x, start: x.start + off, end: x.end + off, hi: false, beat: b.id }));
+    const on = (ONSETS as Record<string, Record<string, number>>)[b.id] ?? {};
+    // v3 fix r4: a word that follows a pause lights on its measured onset (the aligner ran 150-240 ms late there)
+    const ws = b.words.map((x, i) => ({ ...x, start: Math.min(x.start, on[String(i)] ?? Infinity) + off, end: x.end + off, hi: false, beat: b.id }));
     for (const phrase of (b.highlight ?? "").split("·").map((p) => p.trim()).filter(Boolean)) {
       const ph = phrase.split(/\s+/).map(normW);
       for (let i = ws.length - ph.length; i >= 0; i--) {
