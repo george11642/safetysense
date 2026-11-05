@@ -173,7 +173,7 @@ export const ReelAudio: React.FC = () => {
         const drop = ramp(g, [[W(5, "comes") - 4, 1], [W(5, "behind") - 2, 0.12], [W(5, "She") - 1, 0.12], [W(5, "She"), 1]]); // r3: near-silence before the hit
         return base * cut * drop * hush;
       }} />
-      <Bed src="music/tension_build.wav" from={S.contacts - 4} to={S.party + 6} duck={0.6} vol={(g) => ramp(g, [[S.contacts - 4, 0], [S.contacts + 14, 1], [S.party - 4, 1], [S.party + 6, 0]])} />
+      <Bed src="music/tension_build.wav" from={S.contacts - 4} to={S.party + 6} duck={0.6} vol={(g) => ramp(g, [[S.contacts - 4, 0], [S.contacts + 14, 1], [S.party - 4, 1], [S.party + 6, 0]]) * ramp(g, [[W(9, "Nobody") - 16, 1], [W(9, "Nobody") - 8, 0.08], [W(9, "Nobody") + 2, 0.08], [W(9, "cancels.") + 8, 1]])} />
       <Bed src="music/tension_loop.wav" from={S.party - 2} to={S.cancel + 10} duck={0.6} vol={(g) => {
         const base = ramp(g, [[S.party - 2, 0], [S.party + 14, 1.05], [S.notice, 1.05], [S.notice + 6, 0.7], [S.hallway, 1.05], [W(14, "still.") + 4, 1.05], [W(14, "still.") + 8, 0.12], [W(14, "Her") - 2, 0.12], [W(14, "Her") + 6, 1.05], [S.cancel - 6, 1.05], [S.cancel + 10, 0]]);
         const hush = g >= W(18, "dark,") + 4 && g < W(18, "raises") - 2 ? 0 : 1; // the pings stop: a beat of silence

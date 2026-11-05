@@ -61,7 +61,7 @@ const PILL: [number, Pill][] = [
   [T.notHave, { label: "ALERTED", sub: "3 contacts · live map", color: C.accent, icon: "people" }],
   [T.dispatcher, { label: "DISPATCH", sub: "Dispatcher calling", color: C.danger, icon: "siren" }],
   [T.noAnswer9, { label: "DISPATCH", sub: "Police to her location", color: C.danger, icon: "siren" }],
-  [T.relief, { label: "SAFE", sub: "Help reached her", color: C.calm, icon: "shield" }],
+  [T.relief, { label: "HELP ARRIVED", sub: "Simulated", color: C.calm, icon: "shield" }], // fix r2: no "SAFE" outcome word
   [T.party, L("Night Out")],
   [T.youOkay, { label: "CHECK-IN", sub: "“You okay?” · 45 s", color: C.warn, icon: "clock" }],
   [T.noAnswer, { label: "ALERTED", sub: "3 contacts · live map", color: C.accent, icon: "people" }], // r10: same per-user contact list as THE WALK (SPEC §8)
@@ -125,6 +125,9 @@ const Icon: React.FC<{ kind: Pill["icon"]; color: string; size: number }> = ({ k
 const HIDE: [number, number][] = [
   [S.freeze, S.contacts], // freeze close-ups + the 70% card
   [S.dispatch, W(9, "If") - 3], // dispatcher close-up
+  // fix r2: the emotional close-ups play clean (her slump, the roommate's call); the HUD returns for the check-in + 45 s
+  [W(14, "Then") - 2, W(14, "You") - 2],
+  [S.roommate, S.phone],
 ];
 /** r9: the right-hand cluster is not sticky any more: the clock shows for ~2 s when the scene time changes (and during
  *  fast-forwards); the CALLS SHE MADE 0 counter pops in at each escalation that did not need her to call, then leaves. */
@@ -199,14 +202,14 @@ export const ReelHud: React.FC = () => {
     <AbsoluteFill style={{ pointerEvents: "none", opacity: gone }}>
       {/* state pill */}
       {frame >= T.pillIn && (
-        <div style={{ position: "absolute", left: 34, top: 150, opacity: pillK, transform: `translateX(${(1 - pillK) * -140 + gl}px) scale(${(0.92 + 0.08 * pop) * 0.7})`, transformOrigin: "left top" }}>
-          <div style={{ ...glass, maxWidth: 600, overflow: "hidden", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 20, padding: "18px 34px 18px 24px", borderRadius: 999, borderColor: `${pill.color}99`, boxShadow: `${glass.boxShadow}, 0 0 ${urgent ? 18 + 26 * pulse : 0}px ${pill.color}88` }}>
+        <div style={{ position: "absolute", left: 34, top: 150, opacity: pillK, transform: `translateX(${(1 - pillK) * -140 + gl}px) scale(${(0.92 + 0.08 * pop) * 0.8})`, transformOrigin: "left top" }}>
+          <div style={{ ...glass, maxWidth: 730, overflow: "hidden", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 20, padding: "18px 34px 18px 24px", borderRadius: 999, borderColor: `${pill.color}99`, boxShadow: `${glass.boxShadow}, 0 0 ${urgent ? 18 + 26 * pulse : 0}px ${pill.color}88` }}>
             <div style={{ width: 74, height: 74, borderRadius: 99, display: "grid", placeItems: "center", background: `${pill.color}2e`, border: `3px solid ${pill.color}` }}>
               <Icon kind={pill.icon} color={pill.color} size={44} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.0 }}>
               <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 50, color: pill.color, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{pill.label}</span>
-              <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 44, color: C.ink, opacity: 0.95, marginTop: 4, whiteSpace: "nowrap" }}>{pill.sub}</span>
+              <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 46, color: C.ink, opacity: 0.95, marginTop: 4, whiteSpace: "nowrap" }}>{pill.sub}</span>
             </div>
           </div>
         </div>

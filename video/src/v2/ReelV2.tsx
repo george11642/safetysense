@@ -45,10 +45,13 @@ const HIGH = 0.26;
 const CAPTION_Y = LOW;
 const TITLE_CARDS = [S.walk, S.party, S.phone, S.ride];
 const cancelBubble = (f: number) => f >= W(20, "cancel") - 3 && f < S.duress;
-const statCard = (f: number) => f >= W(7, "of") - 2 && f < WE(7, "freezing.") + 4;
+// fix r2: the stat card no longer hides the captions; they sit just above the card (rhythm + access for muted viewers)
+const statCard = (f: number) => f >= W(7, "of") - 3 && f < WE(7, "freezing.") + 6; // (chunk y is taken at the chunk's first word)
+// fix r2: the NO TEXT-TO-911 stamp already says the line, so the word captions step aside while it is up
+const nmStamp = (f: number) => f >= W(22, "no") - 1 && f < W(22, "When") + 4;
 const endCard = (f: number) => f >= W(24, "It") - 1;
 const hideCaptions = (f: number) =>
-  TITLE_CARDS.some((t) => f >= t && f < t + TITLE) || (f >= S.contacts && f < B(8) - 1) || cancelBubble(f) || statCard(f) || endCard(f);
+  TITLE_CARDS.some((t) => f >= t && f < t + TITLE) || (f >= S.contacts && f < B(8) - 1) || cancelBubble(f) || nmStamp(f) || endCard(f);
 const high = (f: number) =>
   (f >= W(5, "She") - 2 && f < S.detect) || // "She screams": the phone lies in the low band
   (f >= W(9, "A") - 2 && f < MAP_AT) || // dispatcher shot: caption in the dark band above her
@@ -57,8 +60,12 @@ const high = (f: number) =>
  *  clear of the NO ANSWER stamp and the route; the dispatcher shot now ends before "If" so no chunk straddles the cut. */
 const MAP_AT = W(9, "If") - 3;
 const mapShot = (f: number) => f >= MAP_AT && f < S.relief;
-const splitDivider = (f: number) => f >= W(21, "It") && f < S.montage; // r10: the duress split puts captions on its divider
-const captionY = (f: number) => (splitDivider(f) ? 0.505 : mapShot(f) ? 0.72 : high(f) ? HIGH : undefined);
+const splitDivider = (f: number) => f >= W(21, "It") && f < S.montage; // fix r2: the duress reveal is one full-bleed frame; captions sit low
+// fix r2: the contacts' captions drop below the live-map inset (it moved up, clear of the faces); the montage captions
+// sit under the polaroid grid; the stat card's caption sits just above the card
+const contactsShot = (f: number) => f >= S.contacts && f < S.dispatch;
+const montage = (f: number) => f >= S.montage && f < S.logo;
+const captionY = (f: number) => (contactsShot(f) ? 0.885 : montage(f) ? 0.895 : statCard(f) ? 0.625 : splitDivider(f) ? 0.86 : mapShot(f) ? 0.72 : high(f) ? HIGH : undefined);
 const backingAt = (f: number) => (f >= S.cup && f < S.tilt) || (f >= S.duress && f < W(21, "It"));
 export const _be = BE;
 const CUTS = [...SCENES.map((x) => x[0]), W(9, "A") - 2, MAP_AT, W(8, "ring.") - 2, W(8, "gets") - 4].sort((a, b) => a - b);
@@ -80,6 +87,8 @@ export const ReelV2: React.FC = () => {
       })}
       {!clean && <ReelHud />}
       {showCaptions && <Captions timeline={TIMELINE} y={CAPTION_Y} fontSize={86} maxWords={3} tightPop clean hideAt={hideCaptions} yAt={captionY} backingAt={backingAt} cutFrames={CUTS} />}
+      {/* fix r2: an eased 12-frame fade to black on the last frames */}
+      <AbsoluteFill style={{ background: "#000", pointerEvents: "none", opacity: Math.pow(Math.min(1, Math.max(0, (frame - (S.total - 13)) / 12)), 1.6) }} />
       <ReelAudio />
     </AbsoluteFill>
   );

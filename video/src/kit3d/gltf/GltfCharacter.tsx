@@ -12,6 +12,7 @@ import React, { useLayoutEffect, useMemo, useRef, useState, useEffect } from "re
 import * as THREE from "three";
 import { clone as skClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { subdivideSmooth } from "./subdivide";
 import { continueRender, delayRender, staticFile, useCurrentFrame, useRemotionEnvironment } from "remotion";
 import { useThree } from "@react-three/fiber";
 import { Clip, evalClips, Pose, AnimName, NEUTRAL } from "../pose";
@@ -79,23 +80,27 @@ const useAsset = (model: string, anims: string): Asset | null => {
 // ---------------------------------------------------------------------------------------------------------------
 // geometry smoothing (the packs ship flat-shaded low-poly normals; welding + recomputing gives soft forms)
 const smoothCache = new Map<string, THREE.BufferGeometry>();
-const smoothGeo = (g: THREE.BufferGeometry) => {
-  let s = smoothCache.get(g.uuid);
+const smoothGeo = (g: THREE.BufferGeometry, hifi = false) => {
+  const key = g.uuid + (hifi ? "|hifi" : "");
+  let s = smoothCache.get(key);
   if (s) return s;
   const c = g.clone();
   c.deleteAttribute("normal");
   if (c.getAttribute("uv")) c.deleteAttribute("uv");
   s = mergeVertices(c, 1e-5);
   s.computeVertexNormals();
-  smoothCache.set(g.uuid, s);
+  // v2 fix r2 (opt-in): two levels of curved (PN) subdivision on every part bigger than the tiny painted eye / brow
+  // decals, so faces, hair and limbs shade as rounded forms instead of low-poly facets
+  if (hifi && s.getIndex() && s.getIndex()!.count / 3 > 100) s = subdivideSmooth(s, 2);
+  smoothCache.set(key, s);
   return s;
 };
 
 // rim (Fresnel) term so silhouettes separate from dark night sets
 type Rim = { color: string; strength: number };
 const matCache = new Map<string, THREE.MeshStandardMaterial>();
-const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Rim | null, opts: { dark?: boolean; skin?: boolean; hair?: boolean; toon?: boolean; lock?: string; lockAmt?: number } = {}) => {
-  const key = `${base.uuid}|${color}|${rim?.color}|${rim?.strength}|${opts.dark}|${opts.skin}|${opts.hair}|${opts.toon}|${opts.lock}|${opts.lockAmt}`;
+const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Rim | null, opts: { dark?: boolean; skin?: boolean; hair?: boolean; toon?: boolean; lock?: string; lockAmt?: number; hifi?: boolean } = {}) => {
+  const key = `${base.uuid}|${color}|${rim?.color}|${rim?.strength}|${opts.dark}|${opts.skin}|${opts.hair}|${opts.toon}|${opts.lock}|${opts.lockAmt}|${opts.hifi}`;
   let m = matCache.get(key);
   if (m) return m;
   m = new THREE.MeshStandardMaterial({
@@ -124,13 +129,19 @@ const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Ri
   // people. The locked material keeps its shading (light/shadow ratio) but pulls hue + brightness toward one fixed tone.
   const lockC = opts.lock ? new THREE.Color(opts.lock) : null; // THREE.Color parses sRGB hex into linear working space
   const lockU = { value: new THREE.Vector4(lockC?.r ?? 0, lockC?.g ?? 0, lockC?.b ?? 0, lockC ? (opts.lockAmt ?? 0.8) : 0) };
-  if (rimU || skinLit || lockC) {
+  const hairHi = !!opts.hifi && !!opts.hair && !opts.dark;
+  const skinHi = !!opts.hifi && skinLit;
+  if (rimU || skinLit || lockC || hairHi) {
     const skinU = { value: new THREE.Vector3(1.0, 0.42, 0.32) };
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uRim = rimU ?? { value: new THREE.Vector4(0, 0, 0, 0) };
       sh.uniforms.uSss = skinU;
       sh.uniforms.uLock = lockU;
-      sh.fragmentShader = "uniform vec4 uRim;\nuniform vec3 uSss;\nuniform vec4 uLock;\n" + sh.fragmentShader.replace(
+      if (hairHi) {
+        // bind-space position for the strand pattern (stable under skinning and camera moves)
+        sh.vertexShader = "varying vec3 vBindPos;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvBindPos = position;");
+      }
+      sh.fragmentShader = (hairHi ? "varying vec3 vBindPos;\n" : "") + "uniform vec4 uRim;\nuniform vec3 uSss;\nuniform vec4 uLock;\n" + sh.fragmentShader.replace(
         "#include <opaque_fragment>",
         `#include <opaque_fragment>
         {
@@ -147,10 +158,37 @@ const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Ri
             float shade = 0.8 + 0.32 * smoothstep(0.0, 0.42, ll);
             gl_FragColor.rgb = mix(gl_FragColor.rgb, uLock.rgb * shade + uRim.rgb * uRim.a * 0.6 * pow(1.0 - ndv, 3.2), uLock.a);
           }` : ""}
+          ${hairHi ? `
+          {
+            // v2 fix r2 hair: strand streaks running down from the crown (angle around the head, broken up along the
+            // length) plus two Kajiya-style sheen lobes along the hair flow, so the bob reads as hair, not a helmet
+            vec3 bp = vBindPos;
+            float ang = atan(bp.x, bp.z);
+            float u = ang * 46.0 + sin(bp.y * 9.0) * 1.3;
+            float st = 0.55 * sin(u) + 0.3 * sin(u * 2.7 + 1.7) + 0.15 * sin(u * 6.1 + bp.y * 14.0);
+            gl_FragColor.rgb *= 1.0 + 0.16 * st;
+            vec3 Vv = normalize(vViewPosition);
+            vec3 Nn = normalize(normal);
+            vec3 upV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+            vec3 T = normalize(upV - Nn * dot(Nn, upV) + 1e-4);
+            vec3 L = normalize(vec3(-0.2, 0.5, 0.85));
+            vec3 H = normalize(L + Vv);
+            float t1 = dot(T, normalize(H - (0.12 + 0.05 * st) * Nn));
+            float t2 = dot(T, normalize(H + 0.22 * Nn));
+            float s1 = pow(sqrt(max(0.0, 1.0 - t1 * t1)), 80.0);
+            float s2 = pow(sqrt(max(0.0, 1.0 - t2 * t2)), 30.0);
+            float lit = clamp(dot(Nn, L) * 0.6 + 0.5, 0.0, 1.0);
+            gl_FragColor.rgb += (vec3(1.0, 0.92, 0.82) * 0.2 * s1 * (0.7 + 0.3 * st) + diffuseColor.rgb * 0.3 * s2) * lit;
+          }` : ""}
+          ${skinHi ? `
+          {
+            // v2 fix r2 skin: warm translucent rim (light bleeding through ears / cheek edges)
+            gl_FragColor.rgb += vec3(1.0, 0.5, 0.38) * 0.1 * pow(1.0 - ndv, 2.2);
+          }` : ""}
         }`,
       );
     };
-    m.customProgramCacheKey = () => (skinLit ? (opts.toon ? "gltfRimSkinToon" : "gltfRimSkin") : "gltfRim") + (lockC ? "Lock" : "");
+    m.customProgramCacheKey = () => (skinLit ? (opts.toon ? "gltfRimSkinToon" : "gltfRimSkin") : "gltfRim") + (lockC ? "Lock" : "") + (hairHi ? "HairHi" : "") + (skinHi ? "SkinHi" : "");
   }
   matCache.set(key, m);
   return m;
@@ -232,7 +270,7 @@ const NAMES = {
   ulL: "UpperLegL", llL: "LowerLegL", ftL: "FootL", ulR: "UpperLegR", llR: "LowerLegR", ftR: "FootR",
 };
 
-const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number, toon = false): Rig => {
+const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number, toon = false, hifi = false): Rig => {
   const root = skClone(asset.gltf.scene);
   const meshes: THREE.SkinnedMesh[] = [];
   const hide = MODELS[cast.model].hide ?? [];
@@ -244,7 +282,7 @@ const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number,
       m.visible = false;
       return;
     }
-    m.geometry = smoothGeo(m.geometry);
+    m.geometry = smoothGeo(m.geometry, hifi);
     const mats = Array.isArray(m.material) ? m.material : [m.material];
     const out = mats.map((bm) => {
       const b = bm as THREE.MeshStandardMaterial;
@@ -256,7 +294,7 @@ const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number,
       const dark = !!cast.darkFace && skin && parentName.includes("Head");
       m.userData.srcMat = n;
       const lock = dark ? undefined : skin ? cast.skinTone : hair ? cast.hairTone : undefined;
-      return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark, toon, lock, lockAmt: skin ? 0.85 : 0.6 });
+      return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark, toon, lock, lockAmt: skin ? 0.85 : 0.6, hifi });
     });
     m.material = Array.isArray(m.material) ? out : out[0];
     m.castShadow = true;
@@ -515,6 +553,11 @@ export type GltfCharacterProps = CharacterProps & {
   darts?: boolean;
   /** 0..1 extra finger curl (e.g. a fist / clutch); held props always get a full grip in toon mode. */
   grip?: number;
+  /** v2 fix r2 (opt-in, off for v3): curved subdivision of the low-poly meshes, strand-textured hair with sheen lobes and
+   *  a translucent skin rim. */
+  hifi?: boolean;
+  /** fix r2 (opt-in): pose keys forced on top of the evaluated clips (IK targets, etc.). */
+  poseAdd?: Partial<Pose>;
 };
 
 export const GltfCharacter: React.FC<GltfCharacterProps> = (props) => {
@@ -524,7 +567,8 @@ export const GltfCharacter: React.FC<GltfCharacterProps> = (props) => {
   const asset = useAsset(def.file, def.anims);
   const rim: Rim | null = rimIn === null ? null : { color: rimIn?.color ?? "#b4c8ff", strength: Math.min(0.5, (rimIn?.strength ?? 0.22) * 0.9) };
   const toon = !!props.toon;
-  const rig = useMemo(() => (asset ? buildRig(asset, cast, rim, def.height, toon) : null), [asset, cast, rim?.color, rim?.strength, def.height, toon]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hifi = !!props.hifi;
+  const rig = useMemo(() => (asset ? buildRig(asset, cast, rim, def.height, toon, hifi) : null), [asset, cast, rim?.color, rim?.strength, def.height, toon, hifi]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!rig) return null;
   return <Posed {...props} rig={rig} cast={cast} />;
 };
@@ -533,7 +577,7 @@ type Anchors = { phoneR: THREE.Group | null; cupR: THREE.Group | null; phoneL: T
 
 const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
   rig, cast, clips, pose: poseIn, frameOffset = 0, seed = 0, position = [0, 0, 0], rotationY = 0, holdR = "none", holdL = "none",
-  phoneScreen, phoneGlow = 0, faceFill = 0.35, face, act = 0, ikOffR, ikOffL, castShadow = true, toon = false, darts = false, grip = 0, look,
+  phoneScreen, phoneGlow = 0, faceFill = 0.35, face, act = 0, ikOffR, ikOffL, castShadow = true, toon = false, darts = false, grip = 0, look, hifi = false, poseAdd,
 }) => {
   const frame = useCurrentFrame() + frameOffset;
   const anchors = useRef<Anchors>({ phoneR: null, cupR: null, phoneL: null, cupL: null, head: null, chest: null, face: null });
@@ -570,7 +614,8 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
     B(NAMES.hips).position.copy(buf.hp);
 
     // ---- 2. acting deltas from the kit pose library
-    const P: Pose = poseIn ?? evalClips(list, frame, seed);
+    const P0: Pose = poseIn ?? evalClips(list, frame, seed);
+    const P: Pose = poseAdd ? { ...P0, ...poseAdd } : P0; // fix r2 (opt-in): pose overrides on top of the clips (e.g. hands on a wheel)
     const refClips: Clip[] = poseIn ? [] : full.map((c) => ({ ...c, anim: BASE[c.anim].ref }));
     const R: Pose = poseIn ? NEUTRAL : refClips.length ? evalClips(refClips, frame, seed) : evalClips([{ anim: "idle", start: 0 }], frame, seed);
     const d = (k: keyof Pose) => (P[k] as number) - (R[k] as number);
@@ -868,7 +913,8 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
             // r9: sized to this rig's head (skull ~0.2 m wide, ears ~0.105 m out at eye height); the band hugs the crown,
             // the cups sit on the ears and the mic boom runs to the mouth
             // r12: band + cups sit OUTSIDE the hair volume (the cups were sunk into the bob, which read as a helmet)
-            <group position={[0, 0.1, 0.018]} scale={[1.2, 1.06, 1.05]}>
+            // fix r2 (hifi): seated on the head: a narrower band and foam pads that bridge cup -> hair (no floating cups)
+            <group position={[0, hifi ? 0.095 : 0.1, 0.018]} scale={hifi ? [1.04, 1.0, 1.02] : [1.2, 1.06, 1.05]}>
               <mesh rotation={[0, 0, 0]} scale={[1, 1.05, 1]}>
                 <torusGeometry args={[0.11, 0.008, 8, 28, Math.PI]} />
                 <meshStandardMaterial color="#20202c" roughness={0.35} metalness={0.3} />
@@ -879,6 +925,12 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
                     <cylinderGeometry args={[0.036, 0.036, 0.026, 18]} />
                     <meshStandardMaterial color="#2a2a38" roughness={0.4} />
                   </mesh>
+                  {hifi && (
+                    <mesh position={[-sd * 0.019, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                      <cylinderGeometry args={[0.034, 0.038, 0.022, 18]} />
+                      <meshStandardMaterial color="#14141c" roughness={0.9} />
+                    </mesh>
+                  )}
                   <mesh position={[sd * 0.012, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
                     <cylinderGeometry args={[0.024, 0.024, 0.006, 16]} />
                     <meshStandardMaterial color="#5cc7b2" emissive="#5cc7b2" emissiveIntensity={0.6} />

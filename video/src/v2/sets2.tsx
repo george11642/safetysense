@@ -297,7 +297,7 @@ export const FollowerShadow: React.FC<{ head: V3; length: number; width?: number
 // ---------------------------------------------------------------------------
 /** Clean full-frame chapter card: punch-zoom color burst + rotating rays behind the sticker (like the references'
  *  title cards on their own frame). Render for `dur` frames from `at`. */
-export const ChapterCard: React.FC<{ text: string; color: string; at?: number; dur?: number; sub?: string; variant?: 0 | 1 | 2 | 3 }> = ({ text, color, at = 0, dur = 27, sub, variant = 0 }) => {
+export const ChapterCard: React.FC<{ text: string; color: string; at?: number; dur?: number; sub?: string; variant?: 0 | 1 | 2 | 3; children?: React.ReactNode }> = ({ text, color, at = 0, dur = 27, sub, variant = 0, children }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const f = frame - at;
@@ -311,8 +311,25 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
   const rays = Array.from({ length: 18 });
   const mid = new THREE.Color(color).multiplyScalar(0.45).getStyle();
   const shake = f >= 2 && f < 12 ? 1 - (f - 2) / 10 : 0;
+  // fix r2: the card sits OVER the next scene (a blurred, dimmed plate that pushes in and resolves to sharp as the
+  // sticker leaves), never a full-frame flat burst that hard-cuts out of 3D. Each chapter exits differently.
+  const live = !!children;
+  const exitK = interpolate(f, [dur - 8, dur], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const ex = exitK * exitK;
+  const exitT = [
+    `translateY(${ex * 1300}px) rotate(${ex * 14}deg)`, // drops away
+    `scale(${1 + ex * 2.2})`, // zooms through the lens
+    `translateY(${-ex * 1400}px) rotate(${-ex * 10}deg)`, // flies up
+    `translateX(${-ex * 1400}px) skewX(${ex * 18}deg)`, // whips out left
+  ][variant];
   return (
     <AbsoluteFill style={{ background: "#0d0b16" }}>
+      {live && (
+        <AbsoluteFill style={{ filter: `blur(${(1 - exitK) * 16}px) brightness(${0.68 + 0.32 * exitK}) saturate(${0.8 + 0.2 * exitK})`, transform: `scale(${1.14 - 0.14 * Math.min(1, f / dur)})` }}>
+          {children}
+        </AbsoluteFill>
+      )}
+      <AbsoluteFill style={{ opacity: live ? 0.36 * (1 - exitK) : 1, mixBlendMode: live ? "screen" : "normal" }}>
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 44%, ${color} 0%, ${mid} 38%, #0d0b16 82%)`, transform: `translateX(${(variant % 2 ? -1 : 1) * ease * 1100}px) scale(${1.25 - 0.25 * punch})`, filter: ease > 0.01 ? `blur(${ease * 24}px)` : "none" }}>
         <svg width="1080" height="1920" style={{ position: "absolute", inset: 0, opacity: 0.22 }}>
           {variant === 0 && (
@@ -358,11 +375,12 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
         </defs>
         <rect width="1080" height="1920" fill={`url(#ht${variant})`} mask={`url(#htk${variant})`} />
       </svg>
+      </AbsoluteFill>
       <AbsoluteFill style={{ opacity: 0.09, backgroundImage: "repeating-radial-gradient(circle at 17% 31%, #fff 0 1px, transparent 1px 3px), repeating-radial-gradient(circle at 71% 63%, #000 0 1px, transparent 1px 4px)", mixBlendMode: "overlay" }} />
       {/* r9: the sticker sits OUTSIDE the whip (it never enters clipped) and the stamp shakes the frame on impact */}
       {/* r10: the sticker slams in with a 3D tilt (it swings flat from ~40 deg) and a squash-and-stretch overshoot, then
           keeps a slow tilt drift so the card never sits as a flat graphic */}
-      <AbsoluteFill style={{ perspective: 1400, perspectiveOrigin: "50% 44%" }}>
+      <AbsoluteFill style={{ perspective: 1400, perspectiveOrigin: "50% 44%", transform: exitT, opacity: 1 - (variant === 1 ? ex : 0) }}>
         <AbsoluteFill style={{
           transformOrigin: "50% 44%",
           transform: `translate(${shake * Math.sin(f * 7.3) * 14}px, ${shake * Math.cos(f * 5.1) * 10}px) rotateX(${interpolate(f, [0, 5, 9], [38, -6, 0], { extrapolateRight: "clamp" }) + 3 * Math.sin(f / 9)}deg) rotateY(${(variant % 2 ? -1 : 1) * (interpolate(f, [0, 6, 10], [-12, 4, 0], { extrapolateRight: "clamp" }) + 4 * Math.sin(f / 11))}deg) scale(${interpolate(f, [0, 2, 4, 7, 10], [0.86, 1.06, 0.97, 1.02, 1], { extrapolateRight: "clamp" })}, ${interpolate(f, [0, 2, 4, 7, 10], [0.9, 0.86, 1.06, 0.98, 1], { extrapolateRight: "clamp" })})`,

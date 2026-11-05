@@ -14,10 +14,10 @@ import { OF } from "../kit3d/overlay/fonts";
 
 // ---------------------------------------------------------------------------
 const POLAROIDS: { src: string; label: string; how: string; x: number; y: number; r: number }[] = [
-  { src: "v2/pol_walk.jpg", label: "THE WALK", how: "0 calls · scream heard", x: 270, y: 640, r: -7 },
-  { src: "v2/pol_drink.jpg", label: "THE DRINK", how: "0 calls · no answer", x: 810, y: 650, r: 6 },
-  { src: "v2/pol_phone.jpg", label: "THE PHONE", how: "0 calls · phone went dark", x: 275, y: 1180, r: 5 },
-  { src: "v2/pol_ride.jpg", label: "THE RIDE", how: "0 calls · duress PIN", x: 805, y: 1190, r: -6 },
+  { src: "v2/pol_walk.jpg", label: "THE WALK", how: "0 calls · scream heard", x: 272, y: 770, r: -7 },
+  { src: "v2/pol_drink.jpg", label: "THE DRINK", how: "0 calls · no answer", x: 808, y: 780, r: 6 },
+  { src: "v2/pol_phone.jpg", label: "THE PHONE", how: "0 calls · phone went dark", x: 276, y: 1330, r: 5 },
+  { src: "v2/pol_ride.jpg", label: "THE RIDE", how: "0 calls · duress PIN", x: 804, y: 1340, r: -6 },
 ];
 
 /** v2_22: the four scenarios as polaroids pinned on a real New Mexico outline; "NO TEXT-TO-911" stamp; on "When you
@@ -38,7 +38,7 @@ export const Montage: React.FC = () => {
         {Array.from({ length: 24 }).map((_, i) => <line key={i} x1={i * 50} y1={0} x2={i * 50} y2={1920} stroke={C.calm} strokeWidth={1} />)}
         {Array.from({ length: 40 }).map((_, i) => <line key={`h${i}`} x1={0} y1={i * 50} x2={1080} y2={i * 50} stroke={C.calm} strokeWidth={1} />)}
       </svg>
-      <svg width="860" height="946" viewBox="0 0 100 110" style={{ position: "absolute", left: 110, top: 440, transform: `scale(${(0.85 + 0.15 * mapK) * (1 - 0.25 * te)}) translateY(${-te * 60}px)`, opacity: mapK * (1 - 0.8 * te) }}>
+      <svg width="860" height="946" viewBox="0 0 100 110" style={{ position: "absolute", left: 110, top: 560, transform: `scale(${(0.85 + 0.15 * mapK) * (1 - 0.25 * te)}) translateY(${-te * 60}px)`, opacity: mapK * (1 - 0.8 * te) }}>
         {/* r7: shaded relief inside the real outline: mountain ridges (Sangre de Cristo, Sandias, Sacramentos), mesas,
             the Rio Grande running north-south through Albuquerque, contour lines, all clipped to the state */}
         <defs>
@@ -72,8 +72,8 @@ export const Montage: React.FC = () => {
         const land = 6 + i * 7;
         const inK = spring({ frame: f - land + 10, fps: 30, config: { damping: 7, stiffness: 170, mass: 0.8 } });
         const squash = 1 + 0.08 * Math.max(0, Math.sin(Math.min(1, Math.max(0, (f - land) / 8)) * Math.PI)) * (f >= land ? 1 : 0);
-        const tx = 140 + i * 267, ty = 1215;
-        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(1.18, 0.8, te); // r12: bigger cards, one label each (the small "0 calls · ..." lines were too much text at once) // r10: another +30% at phone size; tuck back to the row on "When"
+        const tx = 140 + i * 267, ty = 1300; // fix r2: the collage is centred in frame; the row tucks right under the 0
+        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(1.24, 0.8, te); // r12: bigger cards, one label each (the small "0 calls · ..." lines were too much text at once) // r10: another +30% at phone size; tuck back to the row on "When"
         return (
           <div key={p.label} style={{ position: "absolute", left: x - 170 + (i % 2 ? 1 : -1) * (1 - inK) * 760, top: y - 205, transform: `rotate(${p.r * (1 - 0.5 * te) + (1 - inK) * (i % 2 ? -35 : 35)}deg) scale(${sc * squash}, ${sc / squash})`, background: "#f6f4fb", padding: "14px 14px 70px", borderRadius: 6, boxShadow: "0 20px 50px rgba(0,0,0,.6)" }}>
             <Img src={staticFile(p.src)} style={{ width: 312, height: 312, objectFit: "cover", display: "block", filter: f >= nm && f < when ? "grayscale(0.6)" : "none" }} />
@@ -81,15 +81,16 @@ export const Montage: React.FC = () => {
           </div>
         );
       })}
-      <Stamp text="NO TEXT-TO-911" at={nm} out={when + 4} y={0.5} size={106} sub="NEW MEXICO · STILL LISTED, NOV 2026" from={2.6} damping={9} shake={18} />
+      {/* fix r2: the stamp lands ABOVE the grid (it covered the polaroid labels mid-frame) */}
+      <Stamp text="NO TEXT-TO-911" at={nm} out={when + 4} y={0.205} size={100} sub="NEW MEXICO · STILL LISTED, NOV 2026" from={2.6} damping={9} shake={18} />
       {f >= when + 4 && (
-        <div style={{ position: "absolute", left: 0, right: 0, top: 470, display: "flex", flexDirection: "column", alignItems: "center", transform: `scale(${heroK})`, opacity: Math.min(1, heroK * 1.5) }}>
+        <div style={{ position: "absolute", left: 0, right: 0, top: 540, display: "flex", flexDirection: "column", alignItems: "center", transform: `scale(${heroK})`, opacity: Math.min(1, heroK * 1.5) }}>
           <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 54, color: C.ink, letterSpacing: 3 }}>CALLS SHE HAD TO MAKE</div>
           <div style={{ fontFamily: OF.sticker, fontSize: 420, lineHeight: 0.95, color: C.accent, WebkitTextStroke: "14px #ffffff", paintOrder: "stroke fill", textShadow: `0 16px 0 #120f1e, 0 0 80px ${C.accent}88` }}>0</div>
           <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.calm, opacity: fadeIn(f, calls - 6, 8) }}>SafetySense raised the alarm.</div>
         </div>
       )}
-      {f >= when + 4 && <PulseRings x={540} y={780} at={when + 4} every={18} life={44} max={520} />}
+      {f >= when + 4 && <PulseRings x={540} y={850} at={when + 4} every={18} life={44} max={520} />}
       <Grade vignette={0.5} />
     </AbsoluteFill>
   );
@@ -116,19 +117,21 @@ const ComfortPlate: React.FC<{ g0: number; blur?: number; dim?: number; inset?: 
         <ambientLight color="#ffe2c4" intensity={0.9} />
         <directionalLight position={[1.5, 2.5, 3]} color="#ffd8b0" intensity={1.4} />
         <MorningWindow />
-        <Character look={MAYA} position={mayaSeat} rotationY={0.18} clips={[{ anim: "sit", start: -A }, { anim: "relief", start: -A, mask: "head" }]} frameOffset={g0 - A} seed={1} faceFill={0.4} act={0.6} face={{ smile: 0.3 + 0.4 * late, worry: 0.2 * (1 - late), eyeX: 0.55 * look2, brow: 0.15 * late }} />
+        <Character look={MAYA} position={[mayaSeat[0] + 0.03 * touch, mayaSeat[1], mayaSeat[2]]} rotationY={0.18 + 0.12 * look2} clips={[{ anim: "sit", start: -A }, { anim: "relief", start: -A, mask: "head" }]} frameOffset={g0 - A} seed={1} faceFill={0.4} act={0.9} face={{ smile: 0.3 + 0.4 * late, worry: 0.2 * (1 - late), eyeX: 0.55 * look2, brow: 0.15 * late }} />
         {/* r7: no blanket blob: her arms and hands stay visible, her head tips toward her roommate */}
-        <Character look={ROOMMATE_HD} position={roomSeat} rotationY={-0.3 - 0.3 * touch} grip={0.2}
+        <Character look={ROOMMATE_HD} position={[roomSeat[0] - 0.06 * touch, roomSeat[1], roomSeat[2] + 0.02 * touch]} rotationY={-0.3 - 0.3 * touch} grip={0.2}
           clips={touchAt === undefined ? [{ anim: "sit", start: -A }] : [{ anim: "sit", start: -A }, { anim: "hug", start: touchAt, mask: "armR", fade: 18 }]}
-          ikOffR={[-0.58, 0.06, -0.28]} frameOffset={g0 - A} seed={6} faceFill={0.4} act={0.7} face={{ smile: 0.35 + 0.35 * late, worry: 0.3 * touch * (1 - late), eyeX: -0.4 * look2 }} />
+          ikOffR={[-0.52, 0.06, -0.26]} frameOffset={g0 - A} seed={6} faceFill={0.4} act={0.9} face={{ smile: 0.35 + 0.35 * late, worry: 0.3 * touch * (1 - late), eyeX: -0.4 * look2 }} />
         <CameraRig rig={inset ? pushIn(0, Z - A, [-0.72, 1.0, -0.35], [0.2, 0.05, 1], 3.0, 2.5, 30, "linear") : (fr) => {
           // r11: a continuous push (never settles into a hold) with a lateral parallax arc; the frame lifts as it pushes so
           // their heads stay well clear of the tagline
+          // fix r2: closer and higher in frame (their faces sat small in the dark middle third), a steady push that never
+          // eases to a stop, and a slow orbit so the two-shot keeps moving to the last frame
           const k = prog(fr, 0, Z - A, "linear");
-          const d = lerp(5.4, 3.55, 1 - (1 - k) ** 1.6);
-          const lift = 0.12 * k;
-          const t: [number, number, number] = [-0.68, 0.98, -0.35];
-          return { pos: [t[0] + 0.3 * d - 0.5 + 0.8 * k, t[1] + 0.14 + lift + 0.05 * Math.sin(fr / 40), t[2] + d], look: [t[0] + 0.05 * k, t[1] + 0.02 + lift, t[2]], fov: 32 };
+          const d = lerp(4.1, 3.1, k);
+          const a = lerp(0.2, -0.1, k);
+          const t: [number, number, number] = [-0.76, 1.06, -0.35];
+          return { pos: [t[0] + Math.sin(a) * d, t[1] + 0.14 + 0.03 * Math.sin(fr / 40), t[2] + Math.cos(a) * d], look: [t[0], t[1] + 0.03 * k, t[2]], fov: 34 };
         }} frameOffset={g0 - A} handheld={0.004} />
       </Scene3D>
     </div>
@@ -300,13 +303,14 @@ export const Close: React.FC = () => {
       </div>
       {/* r9: one locked text slot UNDER the characters (never over their bodies); it types the VO line by line */}
       {/* r11: in the final ~2 s the supplement line settles back in above the 911 pill (the last thing a judge reads) */}
+      {/* fix r2: the supplement line settles in at CAPTION size (two lines), never footnote size */}
       {f >= settleAt && (
-        <div style={{ position: "absolute", top: 1418, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 42, color: C.ink, WebkitTextStroke: "6px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, settleAt, 10), transform: `translateY(${(1 - fadeIn(f, settleAt, 12)) * 16}px)` }}>
-          It supplements 911. <span style={{ color: C.calm }}>It never replaces it.</span>
+        <div style={{ position: "absolute", top: 1318, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 58, lineHeight: 1.04, color: C.ink, WebkitTextStroke: "7px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, settleAt, 10), transform: `translateY(${(1 - fadeIn(f, settleAt, 12)) * 16}px)` }}>
+          It supplements 911.<br /><span style={{ color: C.calm }}>It never replaces it.</span>
         </div>
       )}
       {cut && (
-        <div style={{ position: "absolute", top: 1250 - 50 * fadeIn(f, settleAt, 12), left: 40, right: 40, height: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 70, lineHeight: 1.08, color: C.ink, WebkitTextStroke: "8px #120f1e", paintOrder: "stroke fill" }}>
+        <div style={{ position: "absolute", top: 1250 - 110 * fadeIn(f, settleAt, 12), left: 40, right: 40, height: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 70, lineHeight: 1.08, color: C.ink, WebkitTextStroke: "8px #120f1e", paintOrder: "stroke fill" }}>
           {lineA ? (
             <>
               <WordReveal words={words24} size={70} stroke />
@@ -330,7 +334,8 @@ export const Close: React.FC = () => {
       <div style={{ position: "absolute", top: 1620, left: 70, right: 70, boxSizing: "border-box", padding: "16px 26px", borderRadius: 30, background: "rgba(8,26,24,.92)", border: `6px solid ${C.calm}`, fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.ink, textAlign: "center", lineHeight: 1.12, boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${16 + 14 * Math.sin(f / 11)}px ${C.calm}66`, opacity: fadeIn(f, rainnAt, 8) }}>
         Support 24/7 · RAINN<br /><span style={{ color: C.calm, fontSize: 78 }}>1-800-656-4673</span>
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 1850, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 22, color: "#b9b5cc", opacity: 0.85 }}>Dramatization, fictional characters · 3D: “Suit” by Quaternius (CC-BY 3.0, poly.pizza) + Quaternius CC0 packs</div>
+      {/* fix r2: the credits get their own short beat, at a readable size */}
+      <div style={{ position: "absolute", left: 0, right: 0, top: 1822, textAlign: "center", fontFamily: OF.caption, fontWeight: 800, fontSize: 29, lineHeight: 1.2, color: "#cfcbe0", opacity: 0.95 * fadeIn(f, settleAt + 14, 10) }}>Dramatization · fictional characters<br />3D characters: Quaternius (CC0 · “Suit” CC-BY 3.0)</div>
       <Grade vignette={0.4} grain={0.04} />
     </AbsoluteFill>
   );

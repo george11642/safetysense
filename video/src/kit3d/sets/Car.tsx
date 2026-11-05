@@ -72,7 +72,7 @@ export type CarInteriorProps = {
 };
 
 /** Interior: cabin shell, seats, wheel, dash, and city lights streaming past the windows. */
-export const CarInterior: React.FC<CarInteriorProps> = ({ speed = 0.35, dashColor = "#5cc7b2", turnSignal = false, tension = 0, sweep = 1, dome = 0.6, plush = false, passengerSeat = true, frontHeadrests = true, detail = false }) => {
+export const CarInterior: React.FC<CarInteriorProps & { frontDetail?: boolean }> = ({ speed = 0.35, dashColor = "#5cc7b2", turnSignal = false, tension = 0, sweep = 1, dome = 0.6, plush = false, passengerSeat = true, frontHeadrests = true, detail = false, frontDetail = true }) => {
   const frame = useCurrentFrame();
   const shell = flatMat("#1b1a28", { rough: 0.8, side: THREE.DoubleSide });
   const trim = flatMat("#2a2838", { rough: 0.6 });
@@ -120,6 +120,8 @@ export const CarInterior: React.FC<CarInteriorProps> = ({ speed = 0.35, dashColo
       <mesh position={[0, 0.5, -1.75]} material={shell}>
         <boxGeometry args={[1.6, 1, 0.06]} />
       </mesh>
+      {/* fix r2 (v2): frontDetail={false} lets a scene bring its own dash + wheel */}
+      {frontDetail && (<>
       {/* dashboard */}
       <mesh position={[0, 0.78, 0.95]} rotation={[0.25, 0, 0]} material={flatMat(P.carDash, { rough: 0.7 })} castShadow receiveShadow>
         <boxGeometry args={[1.6, 0.3, 0.5]} />
@@ -142,6 +144,7 @@ export const CarInterior: React.FC<CarInteriorProps> = ({ speed = 0.35, dashColo
           <boxGeometry args={[0.3, 0.03, 0.02]} />
         </mesh>
       </group>
+      </>)}
       {plush ? (
         <>
           <PlushSeat position={[0.38, 0, 0.2]} headrest={frontHeadrests} />

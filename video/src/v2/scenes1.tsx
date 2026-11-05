@@ -190,7 +190,8 @@ export const Arm: React.FC = () => {
           <Scene3D>
             <CampusHD />
             <Character look={MAYA} clips={[{ anim: "walk", start: cut, offset: 10 }]} position={[0.1, Y, z]} faceFill={0.45} />
-            <ListenRings center={[0.1, Y, z]} start={cut} every={24} life={56} maxR={3.2} y={Y + 0.01} />
+            {/* fix r2: a soft, slow "listening" ripple (no pulsing floor decal that read as a game cursor) */}
+            <ListenRings center={[0.1, Y, z]} start={cut} every={40} life={70} maxR={3.6} y={Y + 0.01} opacity={0.3} pool={false} />
             <CameraRig rig={(fr) => {
               const zz = z0 + Math.max(0, fr - cut) * WALK_SPEED * 0.9;
               const d = lerp(5.6, 3.6, prog(fr, cut, 188, "glide"));
@@ -198,8 +199,9 @@ export const Arm: React.FC = () => {
             }} handheld={0.01} />
           </Scene3D>
           <Grade />
-          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="Audio stays on this phone while guarding" y={0.845} size={42} />
-          <InfoPill at={W(3, "Nothing") - F0} icon="🔒" text="No audio saved unless something's wrong" y={0.845} size={42} />
+          {/* fix r2: bigger chips in their own band under the captions (they were small and fought the caption line) */}
+          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="Audio stays on this phone" y={0.885} size={54} />
+          <InfoPill at={W(3, "Nothing") - F0} icon="🔒" text="No audio saved unless something's wrong" y={0.885} size={44} />
         </>
       )}
     </AbsoluteFill>
@@ -239,7 +241,7 @@ export const Walk: React.FC = () => {
   const bounce = hit > 5 && hit < 11 ? Math.sin(((hit - 5) / 6) * Math.PI) * 0.045 : 0;
   const py = hit < 5 ? lerp(0.16, 0, fall) : bounce; // r7: drops in from just above frame (no giant blurred phone on the cut frame)
   const spin = hit < 11 ? (1 - Math.min(1, hit / 11)) * 1.2 : 0;
-  if (f < TITLE) return <ChapterCard text="THE WALK" color={C.accent} variant={0} />;
+  if (f < TITLE) return <ChapterCard text="THE WALK" color={C.accent} variant={0}><Freeze frame={TITLE}><Walk /></Freeze></ChapterCard>;
   return (
     <AbsoluteFill>
       <div style={{ position: "absolute", inset: 0, filter: f >= shotC ? "contrast(1.1)" : "none" }}>
@@ -361,8 +363,9 @@ export const FreezeScene: React.FC = () => {
   const reach = W(7, "She", 1) - F0;
   const back = W(7, "She", 2) - F0;
   const ecuEnd = sIn + 38;
-  const grey = interpolate(f, [0, 5, back, back + 12], [0.25, 0.6, 0.6, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const cold = interpolate(f, [0, 6, back, back + 10], [0, 0.16, 0.16, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // fix r2: the time-stopped world desaturates less (0.6 grey turned her skin chalk-white, off-model vs every other shot)
+  const grey = interpolate(f, [0, 5, back, back + 12], [0.15, 0.32, 0.32, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const cold = interpolate(f, [0, 6, back, back + 10], [0, 0.07, 0.07, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const M: [number, number, number] = [0.1, Y, 0];
   // r10: the phone lies ~2 m in front of her (out of reach, not at her feet), the same spot in every shot
   const PH: [number, number, number] = [0.5, Y + 0.012, 2.1];
@@ -455,7 +458,7 @@ export const FreezeScene: React.FC = () => {
       <Grade vignette={0.65} />
       {/* r12: a real sticker (the small pill faded before it could be read) */}
       <StickerTitle text="FREEZE" at={W(7, "freezes.") - F0} out={sIn - 4} sub="AN INVOLUNTARY RESPONSE" size={120} y={0.22} rotate={-5} color="#8fd3ff" />
-      <StatCard at={W(7, "of") - F0 - 2} out={W(7, "freezing.") - F0 + 2} top={1410} />
+      <StatCard at={W(7, "298") - F0 - 2} out={W(7, "freezing.") - F0 + 4} top={1340} />
       <Flash at={back} dur={10} color={C.calm} max={0.25} />
     </AbsoluteFill>
   );
@@ -529,7 +532,8 @@ export const Contacts: React.FC = () => {
       </AbsoluteFill>
       <Grade vignette={0.45} />
       <NameTag key={name} at={at + 1} text={name} color={col} size={84} style={{ left: 48, top: 1085 }} />
-      <div style={{ position: "absolute", right: 44, top: 1420 }}>
+      {/* fix r2: the live-map inset sits above the caption band (captions drop to the bottom for this beat) */}
+      <div style={{ position: "absolute", right: 44, top: 1130 }}>
         <MiniMap at={Math.max(at + 3, shot === 2 ? live - 6 : at + 3)} w={shot === 2 ? 380 : 300} h={shot === 2 ? 250 : 200} />
       </div>
       <Flash at={c2} dur={3} color="#ffffff" max={0.18} />
@@ -684,6 +688,10 @@ export const Dispatch: React.FC = () => {
             <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 34, letterSpacing: 4, color: C.warn, textShadow: "0 3px 12px rgba(0,0,0,.8)", opacity: fadeIn(f, 0, 5) }}>TIME TO CANCEL</div>
             <div style={{ ...glass, borderRadius: 26, padding: "6px 34px", fontFamily: OF.caption, fontWeight: 900, fontSize: 96, color: cd > 0 ? C.ink : C.warn, fontVariantNumeric: "tabular-nums", borderColor: `${C.warn}88`, transform: `scale(${0.7 + 0.3 * fadeIn(f, 0, 5)})` }}>
               {Math.floor(cd / 60)}:{String(cd % 60).padStart(2, "0")}
+            </div>
+            {/* fix r2: a time-lapse chip, so the 90 s window never reads as a 1-second cancel */}
+            <div style={{ ...glass, marginTop: 6, borderRadius: 999, padding: "6px 22px", fontFamily: OF.caption, fontWeight: 900, fontSize: 36, color: C.warn, borderColor: `${C.warn}88`, opacity: fadeIn(f, 2, 5) }}>
+              ▶▶ FAST-FORWARD · 90 SEC
             </div>
           </div>
           <Stamp text="NOBODY CANCELS" at={noPin} out={desk - 4} y={0.255} size={70} color={C.warn} sub="CANCEL NEEDS HER SAFETY PIN" from={1.6} damping={11} shake={10} />

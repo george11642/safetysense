@@ -123,8 +123,8 @@ export const LongShadow: React.FC<{ position: V3; length: number; opacity?: numb
 };
 
 /** Expanding teal rings on the ground ("listening"). */
-export const ListenRings: React.FC<{ center: V3; every?: number; life?: number; start?: number; maxR?: number; color?: string; y?: number }> = ({
-  center, every = 26, life = 52, start = 0, maxR = 2.6, color = P.calm, y = 0.13,
+export const ListenRings: React.FC<{ center: V3; every?: number; life?: number; start?: number; maxR?: number; color?: string; y?: number; opacity?: number; pool?: boolean }> = ({
+  center, every = 26, life = 52, start = 0, maxR = 2.6, color = P.calm, y = 0.13, opacity = 0.85, pool = true,
 }) => {
   const frame = useCurrentFrame();
   const t = frame - start;
@@ -140,11 +140,11 @@ export const ListenRings: React.FC<{ center: V3; every?: number; life?: number; 
         return (
           <mesh key={a} rotation={[-Math.PI / 2, 0, 0]} renderOrder={4}>
             <ringGeometry args={[r, r + 0.05 + 0.04 * (1 - p), 64]} />
-            <meshBasicMaterial color={color} transparent opacity={0.85 * (1 - p)} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+            <meshBasicMaterial color={color} transparent opacity={opacity * (1 - p) * Math.min(1, p * 6)} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
         );
       })}
-      <LightPool position={[0, 0.002, 0]} color={color} radius={1.2} opacity={0.18} />
+      {pool && <LightPool position={[0, 0.002, 0]} color={color} radius={1.2} opacity={0.18} />}
     </group>
   );
 };
@@ -155,7 +155,7 @@ export const ListenRings: React.FC<{ center: V3; every?: number; life?: number; 
 export const ReachingHand: React.FC<{ position: V3; rotation?: V3; sleeve?: string; skin?: string; curl?: number; rimColor?: string }> = ({ position, rotation = [0, 0, 0], sleeve = "#15131d", skin = "#241d26", curl = 0.35, rimColor = "#ff9ad8" }) => {
   const rim = { color: rimColor, strength: 0.9 };
   const sk = rimMat(skin, { rough: 0.6 }, rim);
-  const kn = rimMat("#2c232e", { rough: 0.6 }, rim);
+  const kn = rimMat("#" + new THREE.Color(skin).multiplyScalar(0.82).getHexString(), { rough: 0.6 }, rim); // fix r2: no black claw tips
   const sl = rimMat(sleeve, { rough: 0.85 }, rim);
   const fold = rimMat("#1c1a26", { rough: 0.85 }, rim);
   return (
@@ -217,6 +217,38 @@ export const ServerRack: React.FC<{ position?: V3; alarm?: number; seed?: number
           </group>
         );
       })}
+      {/* fix r2: a real cabinet: bevelled frame posts + top/bottom rails (chrome edge that catches light), a perforated
+          side panel, vented blanking plates between units, and a cable tray with bundled cables running overhead */}
+      {[-0.39, 0.39].map((x) => (
+        <mesh key={`post${x}`} position={[x, 1.05, 0.44]} material={flatMat("#3a3850", { rough: 0.3, metal: 0.8 })}>
+          <boxGeometry args={[0.035, 2.12, 0.04]} />
+        </mesh>
+      ))}
+      {[0.02, 2.09].map((y) => (
+        <mesh key={`rail${y}`} position={[0, y, 0.44]} material={flatMat("#3a3850", { rough: 0.3, metal: 0.8 })}>
+          <boxGeometry args={[0.82, 0.04, 0.05]} />
+        </mesh>
+      ))}
+      {Array.from({ length: 10 }).map((_, i) => (
+        <mesh key={`vent${i}`} position={[0.402, 0.35 + i * 0.16, 0]} rotation={[0, Math.PI / 2, 0]} material={flatMat("#100f18", { rough: 0.8 })}>
+          <planeGeometry args={[0.7, 0.025]} />
+        </mesh>
+      ))}
+      <group position={[0, 2.32, 0.1]}>
+        <mesh material={flatMat("#2a2838", { rough: 0.5, metal: 0.6 })}><boxGeometry args={[0.9, 0.03, 0.34]} /></mesh>
+        {[-0.16, 0.16].map((z) => <mesh key={z} position={[0, 0.05, z]} material={flatMat("#2a2838", { rough: 0.5, metal: 0.6 })}><boxGeometry args={[0.9, 0.08, 0.015]} /></mesh>)}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <mesh key={`cab${i}`} position={[0, 0.04, -0.1 + i * 0.05]} rotation={[0, 0, Math.PI / 2]} material={flatMat(["#1d3b5a", "#3a1d4a", "#1d1c28", "#2a5a4a", "#1d1c28"][i], { rough: 0.6 })}>
+            <cylinderGeometry args={[0.016, 0.016, 0.92, 10]} />
+          </mesh>
+        ))}
+        {/* cables dropping into the rack top */}
+        {[-0.2, 0.05, 0.22].map((x, i) => (
+          <mesh key={`drop${i}`} position={[x, -0.13, -0.05 + i * 0.04]} material={flatMat(["#1d3b5a", "#3a1d4a", "#2a5a4a"][i], { rough: 0.6 })}>
+            <cylinderGeometry args={[0.014, 0.014, 0.26, 8]} />
+          </mesh>
+        ))}
+      </group>
       <Glow position={[0, 1.1, 0.6]} color={alarm > 0.5 ? P.danger : P.calm} size={2.2} opacity={0.18 + 0.25 * alarm * (0.5 + 0.5 * Math.sin(frame / 3))} />
     </group>
   );

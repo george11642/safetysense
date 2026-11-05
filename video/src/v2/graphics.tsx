@@ -135,7 +135,7 @@ export const StatCard: React.FC<{ at: number; out: number; top?: number }> = ({ 
       </div>
       {/* r10: the card says what the VO says ("of 298 survivors, 70% reported freezing"); the study's term stays exact */}
       <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 50, color: C.ink, lineHeight: 1.08 }}>of 298 survivors in one study<br />(significant tonic immobility)</span>
-      <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 42, color: C.warn, marginTop: 6 }}>Möller et al., 2017 · Acta Obstet Gynecol Scand</span>
+      <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.warn, marginTop: 8, lineHeight: 1.1 }}>Möller et al., 2017<br />Acta Obstet Gynecol Scand</span>
     </div>
   );
 };

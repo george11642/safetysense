@@ -84,7 +84,7 @@ export const PartyDressing: React.FC<{ top?: boolean; crowd?: boolean }> = ({ to
  *  with friends, phone in hand) while the HUD flips to NIGHT OUT and a pill confirms Night Out Guard is on. */
 export const Party: React.FC = () => {
   const f = useCurrentFrame();
-  if (f < TITLE) return <ChapterCard text="THE DRINK" color={C.warn} variant={1} sub="WHAT IF · ANOTHER NIGHT" />;
+  if (f < TITLE) return <ChapterCard text="THE DRINK" color={C.warn} variant={1} sub="WHAT IF · ANOTHER NIGHT"><Freeze frame={TITLE}><Party /></Freeze></ChapterCard>;
   return (
     <AbsoluteFill>
       <Scene3D fog={PARTY_FOG} background="#2a1838">
@@ -148,9 +148,11 @@ export const CupScene: React.FC = () => {
             <Character look={MAYA} position={[-0.42, 0, -0.95]} rotationY={-1.45} seed={1} clips={[{ anim: "laugh", start: 0, offset: 5 }]} faceFill={0.6} rim={{ color: "#ffd6f2", strength: 1.0 }} />
             <Character look={FRIEND_HD} position={[-1.3, 0, -1.55]} rotationY={0.95} seed={4} clips={[{ anim: "talk", start: 0, offset: 7 }]} />
             <Character look={{ ...LOOKS.hooded, top: "#211f30" }} position={STR} rotationY={-0.6} pose={strangerPose} seed={13} faceFill={0} rim={{ color: "#ff9ad8", strength: 0.7 }} />
-            {reach > 0.01 && <ReachingHand position={[hx, hy, hz]} rotation={[0, -0.75, -0.18]} curl={lerp(0.45, 0.2, reach)} skin="#b98466" sleeve="#3a2d4c" />}
+            {reach > 0.01 && <ReachingHand position={[hx, hy, hz]} rotation={[0, -0.75, -0.18]} curl={lerp(0.45, 0.2, reach)} skin="#b98466" sleeve="#3a2d4c" rimColor="#ffc2e2" />}
+            {/* fix r2: the arm runs back to his shoulder (no disembodied hand): upper sleeve from shoulder to the forearm */}
+            {reach > 0.01 && <ArmLink from={[STR[0] - 0.16, 1.36, STR[2] + 0.12]} to={[hx + 0.62, hy - 0.11, hz + 0.58]} color="#3a2d4c" />}
             {/* r11: a soft key on the hand so it reads as a real hand in a flannel sleeve, not a dark glove */}
-            {reach > 0.01 && <pointLight position={[hx + 0.1, hy + 0.35, hz + 0.45]} color="#ffd8c8" intensity={1.3 * reach} distance={1.0} decay={1.8} />}
+            {reach > 0.01 && <pointLight position={[hx + 0.1, hy + 0.35, hz + 0.45]} color="#ffd8c8" intensity={2.2 * reach} distance={1.1} decay={1.8} />}
             {/* back-light: rim on the stranger and the arm from behind the counter */}
             <pointLight position={[0.95, 1.7, -1.9]} color="#ff9ad8" intensity={7} distance={2.6} decay={1.6} />
             <pointLight position={[cupPos[0] + 0.2, COUNTER_TOP + 0.5, cupPos[2] - 0.5]} color="#ffc6e8" intensity={1.4 * reach} distance={1.2} decay={1.8} />
@@ -174,6 +176,20 @@ export const CupScene: React.FC = () => {
       )}
       <Grade vignette={0.65} />
     </AbsoluteFill>
+  );
+};
+
+/** fix r2: a sleeve segment between two points (the spiker's shoulder -> the reaching forearm). */
+const ArmLink: React.FC<{ from: [number, number, number]; to: [number, number, number]; color: string }> = ({ from, to, color }) => {
+  const a = new THREE.Vector3(...from), b = new THREE.Vector3(...to);
+  const mid = a.clone().add(b).multiplyScalar(0.5);
+  const len = a.distanceTo(b);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+  return (
+    <group position={mid.toArray()} quaternion={q}>
+      <mesh castShadow><cylinderGeometry args={[0.07, 0.085, len, 20]} /><meshStandardMaterial color={color} roughness={0.85} /></mesh>
+      <mesh position={[0, len / 2, 0]}><sphereGeometry args={[0.085, 18, 12]} /><meshStandardMaterial color={color} roughness={0.85} /></mesh>
+    </group>
   );
 };
 
@@ -337,6 +353,8 @@ export const HallwayScene: React.FC = () => {
         <Hallway pulse={0.7} />
         <pointLight position={[0.2, 1.9, -1.4]} color="#9fd8ff" intensity={3} distance={3} decay={1.6} />
         <pointLight position={[-0.4, 1.6, 1.6]} color="#ffe2cc" intensity={1.6} distance={3.5} decay={1.6} />
+        {/* fix r2: a cool rim behind her once she sits, so her head and shoulders separate from the hall */}
+        <pointLight position={[0.95, 1.35, -0.55]} color="#a8c8ff" intensity={2.6 * prog(f, sit, sit + 12)} distance={1.8} decay={1.6} />
         <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 1, worry: 0.2, brow: -0.1, mouth: 0.08 } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
           clips={[{ anim: "woozy", start: 0, speed: 0.8 }, { anim: "stumbleCatch", start: stumble, fade: 4 }, { anim: "sitRest", start: sit, fade: 14 }]} />
         <CameraRig rig={(fr) => {
@@ -348,7 +366,8 @@ export const HallwayScene: React.FC = () => {
           // readable 3/4 FRONT shot from inside the hall, just under her eye line: her face (eyes closed) is the subject,
           // with a slow push across the 45 s so the beat never reads as a held frame
           const push = prog(fr, still, noAns + 20, "linear");
-          return { pos: [lerp(-0.6, lerp(-0.45, -0.36, push), low), lerp(1.45, lerp(0.9, 0.92, push), low), lerp(d, lerp(1.45, 1.22, push), low)], look: [lerp(0.15, 0.46, low), lerp(1.15, 0.92, low), lerp(0.0, 0.1, low)], fov: lerp(42, lerp(41, 37, push), low) };
+          // fix r2: pulled out a little (the face crop was tight and the hair mass filled the frame)
+          return { pos: [lerp(-0.6, lerp(-0.5, -0.42, push), low), lerp(1.45, lerp(0.95, 0.95, push), low), lerp(d, lerp(1.85, 1.6, push), low)], look: [lerp(0.15, 0.46, low), lerp(1.15, 0.88, low), lerp(0.0, 0.1, low)], fov: lerp(42, lerp(42, 39, push), low) };
         }} handheld={0.012} shakes={[[stumble + 2, 0.02], [noAns, 0.035]]} />
       </Scene3D>
       <Grade wash="#ef4fa0" washOpacity={0.08} vignette={0.75} />
@@ -361,7 +380,8 @@ export const HallwayScene: React.FC = () => {
           </ScreenPhone>
         </div>
       )}
-      <Stamp text="NO ANSWER" at={noAns} y={0.62} size={92} from={1.5} damping={12} shake={14} rotate={-8} />
+      {/* fix r2: up and clear of the caption band ("You okay?" still on screen when it lands) */}
+      <Stamp text="NO ANSWER" at={noAns} y={0.55} size={92} from={1.5} damping={12} shake={14} rotate={-8} />
       {/* r7: a red vignette pulse, not a flat full-frame fill */}
       <AbsoluteFill style={{ pointerEvents: "none", boxShadow: `inset 0 0 ${200 * Math.max(0, 1 - Math.abs(f - noAns - 2) / 7)}px ${C.danger}` }} />
     </AbsoluteFill>
@@ -401,7 +421,7 @@ export const Roommate: React.FC = () => {
   const f = useCurrentFrame();
   const F0 = S.roommate;
   const rings = W(16, "rings.") - F0;
-  const page = W(16, "She") - F0;
+  const page = W(16, "She") - F0 - 8; // fix r2: the phone slides up before "She" (the caption sat over it mid-slide)
   const tap = W(16, "I'm") - F0;
   const run = W(16, "way.") - F0 + 2;
   const reach = run + 24;

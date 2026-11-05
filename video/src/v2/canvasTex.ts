@@ -149,7 +149,7 @@ export const crackTex = () =>
     g.lineCap = "round";
     for (let i = 0; i < 14; i++) {
       let a = (i / 14) * Math.PI * 2 + rnd() * 0.3, x = cx, y = cy;
-      g.lineWidth = 3.2;
+      g.lineWidth = 6; // fix r2: a bolder crack web that reads at phone size
       g.beginPath();
       g.moveTo(x, y);
       for (let k = 0; k < 7; k++) {
@@ -157,7 +157,7 @@ export const crackTex = () =>
         const d = 50 + rnd() * 90;
         x += Math.cos(a) * d; y += Math.sin(a) * d;
         g.lineTo(x, y);
-        g.lineWidth = Math.max(1, 3.2 - k * 0.4);
+        g.lineWidth = Math.max(2, 6 - k * 0.7);
       }
       g.stroke();
     }
@@ -172,7 +172,7 @@ export const crackTex = () =>
       g.stroke();
     }
     const sp = g.createRadialGradient(cx, cy, 0, cx, cy, 90);
-    sp.addColorStop(0, "rgba(255,255,255,.55)");
+    sp.addColorStop(0, "rgba(255,255,255,.8)");
     sp.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = sp;
     g.fillRect(0, 0, W, H);
