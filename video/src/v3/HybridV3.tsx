@@ -12,7 +12,7 @@ import {
 } from "./scenes3d";
 import {
   Architecture, Barriers, BrandSting, CheckIn, ContactsReal, HeroAlert, DispatchOverlay, EndCard, FakeCall, GuardModes, Heartbeat, ListeningReal, LiveLink, Lockup, Meet,
-  Pins, Privacy, Problem, SignalRail, Stat, Team, Toast, Triggers, CancelSticker,
+  Pins, Privacy, Problem, SignalRail, Stat, Team, Toast, Triggers, CancelSticker, SkipChip,
 } from "./scenes2d";
 
 /** Cut list (absolute frames), derived from VO word timings so it survives any re-timing. Each range is [from, to). */
@@ -42,7 +42,15 @@ const POLICE_OUT = w("v3_11", "In") - 3;
 const DISPATCH_SKIP = 34;
 
 /* ------------------------------------------------------------------ AUDIO */
-const duck = (abs: number) => 1 - 0.32 * (voEnvelope[Math.min(voEnvelope.length - 1, Math.max(0, abs))] ?? 0);
+// v3 fix r2: the two key lines ("freezing is a normal, involuntary response" and "quietly keeps help coming") get a
+// deeper duck (-4.4 dB more) so they sit clearly on top of the bed
+const KEY_LINES: [number, number][] = [[w("v3_03", "But") - 6, w("v3_03", "In") - 4], [w("v3_12", "but") - 6, bEnd("v3_12") + 10]];
+const duck = (abs: number) => {
+  const env = voEnvelope[Math.min(voEnvelope.length - 1, Math.max(0, abs))] ?? 0;
+  let key = 0;
+  for (const [a, b] of KEY_LINES) key = Math.max(key, interpolate(abs, [a - 8, a, b, b + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+  return (1 - 0.32 * env) * (1 - 0.4 * key);
+};
 
 const Sfx: React.FC<{ at: number; file: string; vol: number; dur?: number; loop?: boolean; fadeOut?: number }> = ({ at, file, vol, dur = 150, loop, fadeOut = 0 }) => (
   <Sequence from={at} durationInFrames={dur} name={`sfx ${file}`}>
@@ -133,7 +141,9 @@ const SoundTrack: React.FC = () => {
       <Sfx at={w("v3_11", "police") - 6} file="siren_far.wav" vol={0.12} dur={110} fadeOut={30} />
       {/* PINs: the ride first, then the two PINs */}
       <Sfx at={f0("car") - 4} file="car_interior_loop.wav" vol={0.7} dur={len("car") + 8} loop fadeOut={8} />
-      <Sfx at={f0("car") + 2} file="turn_signal.wav" vol={0.12} dur={len("car") - 4} fadeOut={8} />
+      {/* v3 fix r2: a car-door thunk + a louder indicator mark the scene change (a new scenario, not the police scene) */}
+      <Sfx at={f0("car") - 1} file="thud.wav" vol={0.38} dur={24} fadeOut={8} />
+      <Sfx at={f0("car") + 2} file="turn_signal.wav" vol={0.2} dur={len("car") - 4} fadeOut={8} />
       <Sfx at={POLICE_IN} file="impact_hit.wav" vol={0.32} dur={60} />
       <Sfx at={w("v3_12", "safety") + 2} file="keypad_pin.wav" vol={0.34} dur={34} />
       <Sfx at={w("v3_12", "PIN", 1) - 2} file="keypad_pin.wav" vol={0.34} dur={34} />
@@ -246,7 +256,8 @@ const FlashCut: React.FC = () => {
 
 /* ------------------------------------------------------------------ COMPOSITION */
 /** 2D sections that get a slow push-in so motion never fully stops (3D shots already have camera moves). */
-const DRIFT = new Set<K>(["mapLive", "problem", "stat", "barriers", "modes", "triggers", "listenReal", "checkin", "contacts", "live", "pins", "heart", "fake", "privacy", "team", "end"]);
+// v3 fix r2: "stat" (its own centred push keeps the citation in title-safe), "privacy" (keyed camera) and "end" are out
+const DRIFT = new Set<K>(["mapLive", "problem", "modes", "triggers", "listenReal", "checkin", "contacts", "live", "pins", "heart", "fake", "team"]);
 export const HybridV3: React.FC = () => {
   const S = (k: K, kind: "cut" | "fade" | "push", node: React.ReactNode, inT = 8, outT = 8) => (
     <Shot key={k} name={k} from={CUTS[k][0]} to={CUTS[k][1]} kind={kind} inT={inT} outT={outT} drift={DRIFT.has(k) ? 0.055 : 0}>{node}</Shot>
@@ -283,8 +294,13 @@ export const HybridV3: React.FC = () => {
 
       {/* RESPOND */}
       {S("checkin", "cut", <CheckIn from={f0("checkin")} srcStart={Math.round((f0("checkin") - f0("listenReal")) * 0.8)} />)}
-      {S("mom", "cut", <><MomPhone3D dur={len("mom")} /><Toast at={f0("mom") + 8} from={f0("mom")} title="SafetySense" body="SafetySense: Ava may need help (missed check-in). Live location and what to do: safetysense-live.vercel.app/a/…" /></>)}
+      {/* v3 fix r2: the check-in's remaining 35 s are skipped visibly ("+35 s · no answer"), so "No answer?" reads as
+          Ava not answering, never as Mom not picking up */}
+      {S("mom", "cut", <><MomPhone3D dur={len("mom")} /><Toast at={f0("mom") + 8} from={f0("mom")} title="SafetySense" body="SafetySense: Ava may need help (missed check-in). Live location and what to do: safetysense-live.vercel.app/a/…" />
+        <SkipChip at={f0("mom") + 1} from={f0("mom")} label="▸▸ +35 s · no answer" style={{ left: 96, top: 800, fontSize: 48 }} /></>)}
       {S("contacts", "cut", <ContactsReal from={f0("contacts")} />)}
+      {/* v3 fix r2: a 6-frame whip across the warm kitchen -> UI cut (the lighting jump was abrupt) */}
+      <Sequence from={f0("contacts") - 3} durationInFrames={7} name="whip mom->contacts"><Whip /></Sequence>
       {/* v3 fix r1: a 1 s 3D cutaway on "They see your location" (her pin + her people on the map) between UI cards */}
       {S("mapLive", "cut", <><DispatchMap3D dur={len("mapLive")} policeAt={99999} /><InsertTag text="Ava · live location" color={C.calm} /></>)}
       {S("live", "cut", <LiveLink from={f0("live")} />)}
@@ -297,6 +313,8 @@ export const HybridV3: React.FC = () => {
 
       {/* PINS: the reason first (the ride), then the app */}
       {S("car", "cut", <><CarPin3D dur={len("car")} /><CancelSticker at={DRIVER_TURN + 5} out={PIN_AT + 4} top={150} /></>)}
+      {/* v3 fix r2: a short dip through black into the ride (no double exposure of the dispatch UI) */}
+      <Sequence from={f0("car") - 3} durationInFrames={7} name="dip dispatch->car"><Dip /></Sequence>
       {S("pins", "cut", <Pins from={f0("pins")} />)}
 
       {/* HEARTBEAT */}
@@ -327,17 +345,41 @@ export const HybridV3: React.FC = () => {
         // v3 r6: every mute ends >= 20 frames after its line (and Captions16 never re-shows a chunk that started muted)
         mute={[[w("v3_03", "Most") - 2, w("v3_03", "But") - 2], [w("v3_03", "In") - 2, bEnd("v3_03") + 20], [w("v3_04", "And") - 2, bEnd("v3_04") + 20],
           [bStart("v3_05") - 2, bEnd("v3_05") + 12], [w("v3_06", "Start") - 2, w("v3_06", "for")],
-          [w("v3_08", "You") - 2, w("v3_08", "You", 1) - 2], [w("v3_08", "One") - 2, bEnd("v3_08") + 8], [w("v3_09", "automated") + 6, w("v3_10", "They") - 2], [w("v3_10", "And") - 2, bEnd("v3_10") + 20],
+          [w("v3_08", "You") - 2, w("v3_08", "You", 1) - 2], [w("v3_08", "One") - 2, bEnd("v3_08") + 8], [w("v3_09", "automated") + 6, w("v3_10", "They") - 2],
+          // v3 fix r2: the sentence "And they can tap" (2nd "and"), ending before "Still no answer" starts
+          [w("v3_10", "And", 1) - 2, w("v3_11", "Still") - 2],
           [w("v3_11", "Professional") - 2, w("v3_11", "If") - 2],
-          // v3 fix r1: the privacy headlines already say each line (one reading channel)
-          [bStart("v3_15") - 2, bEnd("v3_15") + 20],
-          // the team cards carry the names + majors once they land
-          [w("v3_17", "George") - 2, bEnd("v3_17") + 20]]}
+          // v3 fix r2: captions now run under privacy (v3_15) and the team (v3_17) too: a projected room with weak
+          // audio still gets the narration; the privacy headlines now quote the VO word for word
+        ].map(([a, b]) => [a, clampMute(a, b)] as [number, number])}
         // keep the tipped cup + glass flash clear of the caption pill
         lift={[[w("v3_07", "breaking") - 16, w("v3_07", "breaking") + 40, 175]]} />
       <SoundTrack />
     </AbsoluteFill>
   );
+};
+
+/** v3 fix r2: a mute never swallows the next beat's first words: its end is clamped to that beat's start - 2 frames. */
+const clampMute = (a: number, b: number) => {
+  const next = TIMELINE.beats.map((x) => sec(x.startSec)).filter((f) => f > a + 2).sort((x, y) => x - y)[0];
+  return next === undefined ? b : Math.min(b, next - 2);
+};
+
+/** Whip pan: a bright motion-blurred band sweeps across with a quick slide, bridging two differently lit shots. */
+const Whip: React.FC = () => {
+  const f = useCurrentFrame();
+  const k = f / 6;
+  const peak = 1 - Math.abs(f - 3) / 3.5;
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none", overflow: "hidden" }}>
+      <AbsoluteFill style={{ background: "#120f1c", opacity: Math.max(0, peak) * 0.55 }} />
+      <div style={{ position: "absolute", top: 0, bottom: 0, width: 1400, left: -1400 + k * 3600, background: "linear-gradient(90deg, transparent, rgba(255,214,170,.55) 35%, rgba(255,255,255,.75) 50%, rgba(180,190,255,.5) 65%, transparent)", filter: "blur(40px)" }} />
+    </AbsoluteFill>
+  );
+};
+const Dip: React.FC = () => {
+  const f = useCurrentFrame();
+  return <AbsoluteFill style={{ background: "#000", opacity: interpolate(f, [0, 3, 6], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) }} />;
 };
 
 const FadeOut: React.FC = () => {

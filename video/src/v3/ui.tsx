@@ -301,7 +301,7 @@ const captionWords = (hide: string[]): CW[] => {
 };
 
 /** Phrase chunks: break at punctuation, beat changes and pauses; split long phrases into balanced halves. */
-const chunkPhrases = (words: CW[], maxWords = 6, maxChars = 38) => {
+const chunkPhrases = (words: CW[], maxWords = 7, maxChars = 44) => { // v3 fix r2: 7 words / 44 chars (no orphan "location.")
   const phrases: CW[][] = [];
   let cur: CW[] = [];
   words.forEach((x, i) => {
@@ -327,6 +327,8 @@ const chunkPhrases = (words: CW[], maxWords = 6, maxChars = 38) => {
   for (const p of phrases.flatMap(split)) {
     const last = merged[merged.length - 1];
     if (last && last[0].beat === p[0].beat && !/[.!?]$/.test(last[last.length - 1].word) && last.length + p.length <= maxWords && len(last) + len(p) + 1 <= maxChars && p[0].start - last[last.length - 1].end < 0.3) last.push(...p);
+    // v3 fix r2: a lone sentence-final word after a short pause rejoins its clause (no orphan "location.")
+    else if (last && p.length === 1 && last[0].beat === p[0].beat && !/[.!?,;:]$/.test(last[last.length - 1].word) && last.length < 8 && p[0].start - last[last.length - 1].end < 1.0) last.push(...p);
     else merged.push(p);
   }
   return merged.map((ws) => ({ words: ws, start: ws[0].start, end: ws[ws.length - 1].end }));
