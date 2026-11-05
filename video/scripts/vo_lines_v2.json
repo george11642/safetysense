@@ -7,18 +7,8 @@
   "take": "t2"
  },
  {
-  "id": "v2_02",
-  "text": "This is Maya. Walking home after midnight."
- },
- {
   "id": "v2_03",
   "text": "One tap: Walk Home Guard is on. It listens on the phone only. Nothing is saved unless something's wrong."
- },
- {
-  "id": "v2_04",
-  "text": "Footsteps behind her.",
-  "tts": "[quietly] Footsteps behind her.",
-  "take": "t1"
  },
  {
   "id": "v2_05",
@@ -33,9 +23,9 @@
  },
  {
   "id": "v2_07",
-  "text": "Then she freezes. In one study of 298 survivors, 70% froze. She can't reach her phone. She doesn't have to.",
-  "tts": "Then she freezes. In one study of two hundred ninety-eight survivors, seventy percent froze. She can't reach her phone. She doesn't have to.",
-  "take": "t5"
+  "text": "Then she freezes. In one study of 298 survivors, 70% reported freezing. She can't reach her phone. She doesn't have to.",
+  "tts": "Then she freezes. In one study of two hundred ninety-eight survivors, seventy percent reported freezing. She can't reach her phone. She doesn't have to.",
+  "take": "t5 + r4 splice (middle sentence)"
  },
  {
   "id": "v2_08",
@@ -43,24 +33,15 @@
  },
  {
   "id": "v2_09",
-  "text": "90 seconds, no safety PIN. A dispatcher calls. If she can't answer, police head to her live location.",
-  "tts": "Ninety seconds, no safety PIN. A dispatcher calls. If she can't answer, police head to her live location."
- },
- {
-  "id": "v2_10",
-  "text": "Saturday. A party. Night Out Guard is on."
+  "text": "90 seconds. Nobody cancels. A dispatcher calls. If she can't answer, police head to her live location.",
+  "tts": "Ninety seconds. Nobody cancels. A dispatcher calls. If she can't answer, police head to her live location.",
+  "take": "t0 + r4 splice (first sentence)"
  },
  {
   "id": "v2_11",
   "text": "11:02. Someone spikes her drink.",
   "tts": "Eleven-oh-two. Someone spikes her drink.",
   "take": "t5"
- },
- {
-  "id": "v2_12",
-  "text": "11:20. The room starts to tilt.",
-  "tts": "[uneasy] Eleven-twenty. The room starts to tilt.",
-  "take": "t2"
  },
  {
   "id": "v2_13",
@@ -75,27 +56,22 @@
   }
  },
  {
-  "id": "v2_15",
-  "text": "45 seconds. No answer.",
-  "tts": "Forty-five seconds. No answer.",
-  "maxPause": 0.5
- },
- {
   "id": "v2_16",
   "text": "Her roommate's phone rings. She taps: I'm on my way."
  },
  {
   "id": "v2_17",
-  "text": "What if someone takes her phone? Smashes it? Switches it off?",
-  "tts": "[tense] What if someone takes her phone? Smashes it? Switches it off?",
-  "take": "t1"
+  "text": "What if someone takes her phone? Smashes it?",
+  "tts": "[tense] What if someone takes her phone? Smashes it?",
+  "take": "t1 trimmed (r5: 'Switches it off?' cut for runtime)"
  },
  {
   "id": "v2_18",
-  "text": "Her phone checks in with our server every minute. If it goes dark, the server raises the alarm itself.",
+  "text": "If it goes dark, the server raises the alarm itself.",
   "pauseAfter": {
    "dark,": 0.45
-  }
+  },
+  "take": "r5 trimmed ('Her phone checks in with our server every minute.' moved on screen)"
  },
  {
   "id": "v2_19",
@@ -114,12 +90,9 @@
  },
  {
   "id": "v2_22",
-  "text": "New Mexico still has no text-to-911. When you can't call, SafetySense calls for you.",
-  "tts": "New Mexico still has no text to nine-one-one. When you can't call, SafetySense calls for you."
- },
- {
-  "id": "v2_23",
-  "text": "SafetySense. Calls for help when you can't."
+  "text": "New Mexico is still listed with no text-to-911. When you can't call, SafetySense calls for you.",
+  "tts": "New Mexico is still listed with no text to nine-one-one. When you can't call, SafetySense calls for you.",
+  "take": "t0 + r4 splice (first sentence)"
  },
  {
   "id": "v2_24",

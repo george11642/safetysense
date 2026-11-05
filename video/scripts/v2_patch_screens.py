@@ -51,7 +51,7 @@ def guard(name, clock, mode, elapsed, checkin, left):
         patch(im, (420, 625, 790, 765), elapsed, 128, 600, color=(244, 242, 250), align="c", bg_at=(600, 610))
     patch(im, (880, 1215, 1105, 1290), checkin, 46, 650, color=(244, 242, 250), align="r", bg_at=(860, 1250))
     patch(im, (770, 1335, 1105, 1405), left, 44, 450, color=(178, 174, 196), align="r", bg_at=(750, 1370))
-    patch(im, (215, 2475, 1110, 2550), "Mom, Jordan and Sam get a call and", 44, 420, color=(178, 174, 196), bg_at=(200, 2510))
+    patch(im, (215, 2475, 1110, 2550), "Your 3 trusted contacts get a call and", 44, 420, color=(178, 174, 196), bg_at=(200, 2510))
     im.save(OUT / f"{name}.png")
 
 
@@ -67,7 +67,7 @@ def home(src, name, clock):
 def checkin(name, clock):
     im = Image.open(SRC / "15-check-in.png").convert("RGB")
     status(im, clock)
-    patch(im, (40, 1868, 1166, 1940), "If you don't answer, Mom, Jordan and Sam will be", 41, 420, color=(150, 146, 170), align="c", bg_at=(30, 1900))
+    patch(im, (40, 1868, 1166, 1940), "If you don't answer, your 3 contacts will be", 41, 420, color=(150, 146, 170), align="c", bg_at=(30, 1900))
     im.save(OUT / f"{name}.png")
 
 

@@ -52,29 +52,35 @@ export const voOn = (f: number) => {
   return v;
 };
 
-/** Scene boundaries (absolute frames). Each scene runs until the next one starts. */
+/** Scene boundaries (absolute frames). Each scene runs until the next one starts.
+ *  r5 (runtime cut, 122.8 s -> ~104 s): v2_02, v2_04, v2_10, v2_12, v2_15 and v2_23 are gone; their beats are now
+ *  picture-only moments (name sticker in the cold open, the follower's shadow under the title card, the party establishing
+ *  shot, the tilt under v2_13, the "+45 SEC / NO ANSWER" chip, the logo under "SafetySense calls for you"). */
+export const TITLE = 27;
+/** r5: picture-only "45 seconds, no answer" beat in the gap between v2_14 and v2_16. */
+export const NOANSWER = BE(14) + 12;
 export const S = {
   cold: 0,
-  establish: B(2),
   arm: B(3),
-  walk: B(4),
+  walk: Math.max(B(5) - 43, WE(3, "wrong.") + 8), // r6: card starts >= 0.25 s after "wrong." ends; THE WALK card (0..TITLE), then 16 frames of the follower's shadow before "Someone"
   detect: B(6),
   freeze: B(7),
-  contacts: B(8) - 18, // panels slam in on the hit in the 0.7 s pause before "Three phones ring"
+  contacts: B(8) - 18, // first contact cut lands on the hit in the pause before "Three phones ring"
   dispatch: B(9),
-  party: B(10),
+  relief: BE(9) + 2, // r8: 1.1 s relief beat (patrol car reaches her, she is safe) closes THE WALK
+  party: BE(9) + 36,
   cup: B(11),
-  tilt: B(12),
-  notice: B(13),
+  tilt: B(13),
+  notice: W(13, "But") - 4,
   hallway: B(14),
   roommate: B(16),
-  phone: B(17) - 2,
-  server: B(18),
-  ride: B(19) - 4,
+  phone: B(17) - 31,
+  server: W(17, "it?") + 8, // r5: the heartbeat pings start while "Smashes it?" lands, so they read before "dark"
+  ride: B(19) - 31,
   cancel: B(20),
   duress: B(21),
   montage: B(22) - 6,
-  logo: B(23) - 4,
-  end: B(25) - 6,
+  logo: W(22, "SafetySense") - 3,
+  end: B(25) - 4,
   total: TOTAL_FRAMES,
 } as const;

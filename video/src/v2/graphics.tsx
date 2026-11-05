@@ -127,11 +127,11 @@ export const StatCard: React.FC<{ at: number; out: number; top?: number }> = ({ 
   const n = 70; // shown exactly (no count-up: never display a wrong number)
   return (
     <div style={{ position: "absolute", left: 70, right: 70, top, ...glass, borderRadius: 34, padding: "26px 36px", opacity: o * k, transform: `translateY(${(1 - k) * 60}px) rotate(${-1.5 * (1 - k)}deg)`, display: "flex", alignItems: "center", gap: 28, borderColor: `${C.warn}88` }}>
-      <div style={{ fontFamily: OF.sticker, fontSize: 150, color: C.warn, lineHeight: 0.9, textShadow: `0 0 40px ${C.warn}66` }}>{n}%</div>
+      <div style={{ fontFamily: OF.sticker, fontSize: 140, color: C.warn, lineHeight: 0.9, textShadow: `0 0 40px ${C.warn}66` }}>{n}%</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 36, color: C.ink, lineHeight: 1.12 }}>of 298 women reported significant tonic immobility</span>
-        <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 31, color: C.warn }}>Möller et al., 2017</span>
-        <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 28, color: C.muted }}>Freezing is involuntary.</span>
+        {/* r8: the claim reads at phone size; the citation stays small */}
+        <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.ink, lineHeight: 1.06 }}>of 298 women reported significant tonic immobility</span>
+        <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 26, color: C.warn }}>Möller et al., 2017 · Acta Obstet Gynecol Scand</span>
       </div>
     </div>
   );
@@ -375,8 +375,8 @@ export const Wordmark: React.FC<{ size?: number; at?: number }> = ({ size = 1, a
 };
 
 /** Word-by-word reveal synced to absolute frames (local to the parent). */
-export const WordReveal: React.FC<{ words: { w: string; at: number; hi?: boolean }[]; size: number; color?: string; hiColor?: string; style?: React.CSSProperties; font?: string; weight?: number }> = ({
-  words, size, color = C.ink, hiColor = C.accent, style, font = OF.caption, weight = 900,
+export const WordReveal: React.FC<{ words: { w: string; at: number; hi?: boolean }[]; size: number; color?: string; hiColor?: string; style?: React.CSSProperties; font?: string; weight?: number; stroke?: boolean }> = ({
+  words, size, color = C.ink, hiColor = C.accent, style, font = OF.caption, weight = 900, stroke = false,
 }) => {
   const frame = useCurrentFrame();
   return (
@@ -384,7 +384,7 @@ export const WordReveal: React.FC<{ words: { w: string; at: number; hi?: boolean
       {words.map((x, i) => {
         const p = spring({ frame: frame - x.at, fps: 30, config: { damping: 12, stiffness: 240, mass: 0.5 } });
         return (
-          <span key={i} style={{ display: "inline-block", fontFamily: font, fontWeight: weight, fontSize: size, color: x.hi ? hiColor : color, opacity: frame >= x.at ? Math.min(1, p * 1.4) : 0, transform: `translateY(${(1 - p) * 14}px)` }}>{x.w}</span>
+          <span key={i} style={{ display: "inline-block", fontFamily: font, fontWeight: weight, fontSize: size, color: x.hi ? hiColor : color, opacity: frame >= x.at ? Math.min(1, p * 1.4) : 0, transform: `translateY(${(1 - p) * 14}px)`, ...(stroke ? { WebkitTextStroke: `${size * 0.1}px #120f1e`, paintOrder: "stroke fill", textShadow: `0 ${size * 0.07}px 0 #120f1e` } : {}) }}>{x.w}</span>
         );
       })}
     </div>

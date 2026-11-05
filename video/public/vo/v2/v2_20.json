@@ -12,47 +12,47 @@
   },
   {
    "word": "phone",
-   "start": 0.311,
+   "start": 0.23,
    "end": 0.466
   },
   {
    "word": "asks:",
-   "start": 0.544,
+   "start": 0.43,
    "end": 1.181
   },
   {
    "word": "You",
-   "start": 1.258,
+   "start": 1.18,
    "end": 1.336
   },
   {
    "word": "okay?",
-   "start": 1.414,
+   "start": 1.35,
    "end": 2.077
   },
   {
    "word": "The",
-   "start": 2.154,
+   "start": 2.11,
    "end": 2.232
   },
   {
    "word": "driver",
-   "start": 2.426,
+   "start": 2.27,
    "end": 2.62
   },
   {
    "word": "says:",
-   "start": 2.776,
+   "start": 2.55,
    "end": 3.22
   },
   {
    "word": "cancel",
-   "start": 3.415,
+   "start": 3.175,
    "end": 3.609
   },
   {
    "word": "it.",
-   "start": 3.686,
+   "start": 3.505,
    "end": 3.915
   }
  ],

@@ -7,52 +7,52 @@
  "words": [
   {
    "word": "And",
-   "start": 0.311,
+   "start": 0.0,
    "end": 0.388
   },
   {
    "word": "if",
-   "start": 0.466,
+   "start": 0.215,
    "end": 0.544
   },
   {
    "word": "something",
-   "start": 0.621,
+   "start": 0.57,
    "end": 0.932
   },
   {
    "word": "happened",
-   "start": 1.01,
+   "start": 0.91,
    "end": 1.32
   },
   {
    "word": "to",
-   "start": 1.398,
+   "start": 1.31,
    "end": 1.476
   },
   {
    "word": "you,",
-   "start": 1.592,
+   "start": 1.51,
    "end": 2.048
   },
   {
    "word": "it's",
-   "start": 2.125,
+   "start": 1.99,
    "end": 2.281
   },
   {
    "word": "not",
-   "start": 2.358,
+   "start": 2.05,
    "end": 2.514
   },
   {
    "word": "your",
-   "start": 2.591,
+   "start": 2.51,
    "end": 2.747
   },
   {
    "word": "fault.",
-   "start": 2.902,
+   "start": 2.77,
    "end": 3.316
   }
  ],

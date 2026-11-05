@@ -27,14 +27,31 @@ Top-left stack, 1080x1920 safe area (top 180 px reserved for the IG UI, so the H
 - `RISK` meter (0-100 bar, teal -> amber -> red), with signal icons that pop next to it when detected
   (🔊 SCREAM, 🗣 "GET OFF ME", 〰 STUMBLE, ▁ STILL, ⤴ OFF ROUTE, ♥ HEARTBEAT).
 - `ALERT LADDER` chip row: `CHECK-IN → CONTACTS → DISPATCH`; the current step fills with color.
-Top-right, the running gag: **`TAPS 0`** (big mono number). It counts the taps Maya needed to get help.
-It never moves off 0. On the close the whole HUD collapses to just `TAPS 0`.
+Top-right, the running gag: **`CALLS SHE MADE 0`** (big number; same metric as the end card "CALLS SHE HAD TO MAKE 0").
+It never moves off 0; it punches and glows at every escalation (words heard, contacts ring, police, no answer, server alarm, duress).
+The HUD hides on the clean chapter-card frames and collapses on the close.
 Under it, a time chip like the reference's "+25 MIN": `11:31 PM` in-scene clock, or `+0:45` / `+1:30` during the ladder.
 
 Facts on screen and in VO were checked against README.md and docs/SPEC.md (45 s check-in, 90 s to dispatch,
 60 s heartbeat, duress PIN -> dispatch, dispatcher calls first, Ride = route deviation -> check-in, no drug detection
 claim, Möller et al. 2017: 70% of 298 women). Dispatch is a Noonlight **sandbox** in the prototype; the dispatch beat
 carries an on-screen "simulated in our demo" strip.
+
+**Round 4 picture notes (review fixes):** HD characters (src/kit3d/CharacterHD.tsx, additive): real hands (knuckles,
+two-segment fingers + thumb), skin eyelids that blink/widen, iris + catchlights, arched brows that bend, lips/teeth,
+Fresnel rim light; Maya has one chin-length bob from every angle; the brother has his own face. Chapter cards
+(THE WALK / DRINK / PHONE / RIDE) own a clean 0.9 s full frame with a punch-zoom burst, then 0.1-0.3 s of air before
+the line. Cold open: her phone face-up on the wet sidewalk (textured concrete, puddle, leaves), cut to her face on
+"Maya", back to the phone flipping to "Calling for help" on "Her phone will". THE WALK: a hard-edged walking human
+shadow stretches up the sidewalk to her heels; "She screams" = the phone drops and bounces on the sidewalk under a red
+light, her shoes at the top of frame. Freeze: bullet-time orbit / ECU of her eyes / orbit / phone out of reach at
+ground level / crane-up as the phone calls for help. Contacts: three fast full-frame cuts. Dispatch HUD: "Dispatcher
+calling" until NO ANSWER, then "Police to her location"; 1 s relief beat (help reached her). Drink: silhouetted
+sleeved forearm hovers over the cup; caption on a dark plate high on the wall. "Notices": X-ray phone in her back
+pocket + on-device motion trace. Ride: the driver is a neutral silhouette, eyes in a modelled mirror (bezel, mount,
+windshield slice). Duress: POV thumb on the PIN pad -> "LOOKS CALM" -> glitch split (driver unaware / hidden silent
+alert). Close: one living comfort plate under the lockup and end card; RAINN fades in with "it's not your fault" and
+the full end card holds 5 s.
 """,
 "v3": """## Concept
 A premier product demo: animated low-poly vignettes (same Maya, same sets as v2) set up each moment in 2-4 s, then
@@ -98,7 +115,9 @@ EXTRA = {
 "v2": """
 ## Music map (suggested)
 - 0-3 s: no bed, heartbeat_calm + impact on "Tonight".
-- THE WALK: `tension_loop` from v2_04, hard stop for 0.4 s on "She screams", back in at v2_06, `tension_build` under v2_08-v2_09.
+- THE WALK: `tension_loop` from the THE WALK card, hard stop for 0.4 s on "She screams", back in at v2_06, `tension_build` under v2_08-v2_09.
+- r5 mix: every SFX is ducked 8 dB under narration; music beds duck 6-8 dB (more under THE PHONE / server lines); phone rings start just after the word "ring(s)".
+- r5 cut (122.8 s -> 104 s): v2_02, v2_04, v2_10, v2_12, v2_15, v2_23 removed (picture-only beats now); v2_17/v2_18 trimmed from the same takes; word starts re-timed with scripts/v2_retime.py (whisper-1 + speech onsets; run after every `make_vo_v2v3.py build v2`).
 - THE DRINK / THE PHONE / THE RIDE: `tension_loop` (low-passed at the woozy beat), `tension_build` under v2_20-v2_21.
 - Close (v2_22 on): crossfade to `resolve_pad`.
 All beds already sit at -24 LUFS, so they can be placed at volume 1.0 under the -16 LUFS VO; duck a further 3 dB under dense lines if needed.
@@ -127,10 +146,10 @@ if __name__ == "__main__":
         MUSIC[v] = [("tension_loop.wav", 0, 1, True)]
         build(v)
         if v == "v2":
-            MUSIC[v] = [("tension_loop.wav", T(v, "v2_04"), T(v, "v2_05") + 0.2 - T(v, "v2_04"), True),
+            MUSIC[v] = [("tension_loop.wav", T(v, "v2_05") - 1.4, 1.4 + 1.7, True),
                         ("tension_loop.wav", T(v, "v2_06"), T(v, "v2_08") - T(v, "v2_06"), True),
-                        ("tension_build.wav", T(v, "v2_08"), T(v, "v2_10") - T(v, "v2_08"), False),
-                        ("tension_loop.wav", T(v, "v2_10"), T(v, "v2_20") - T(v, "v2_10"), True),
+                        ("tension_build.wav", T(v, "v2_08"), T(v, "v2_11") - 2.5 - T(v, "v2_08"), False),
+                        ("tension_loop.wav", T(v, "v2_11") - 2.5, T(v, "v2_20") - T(v, "v2_11") + 2.5, True),
                         ("tension_build.wav", T(v, "v2_20"), T(v, "v2_22") + 1.0 - T(v, "v2_20"), False),
                         ("resolve_pad.wav", T(v, "v2_22") - 0.5, 24.0, False)]  # resolve bed runs to the end
         else:

@@ -1,8 +1,12 @@
 // v2 scenes, part 4: the close (New Mexico montage, logo lockup, "it's not your fault" + end card with RAINN).
 import React from "react";
 import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame } from "remotion";
-import { BED_SEAT, CameraRig, Character, DormRoom, LOOKS, Scene3D, Grade, pushIn, lerp } from "../kit3d";
+import { BED_SEAT, CameraRig, DormRoom, LOOKS, Scene3D, Grade, pushIn, lerp, P } from "../kit3d";
+import { CampusHD } from "./sets2";
+import { ListenRings } from "./props3d";
 import { C, F } from "../theme";
+import { Character } from "./Actor";
+import { MAYA, ROOMMATE_HD } from "./looks";
 import { S, W, WE } from "./cues";
 import { NM_ABQ, NM_PATH, PulseRings, Stamp, WordReveal, Wordmark, fadeIn } from "./graphics";
 import { Blanket, MorningWindow } from "./props3d";
@@ -10,10 +14,10 @@ import { OF } from "../kit3d/overlay/fonts";
 
 // ---------------------------------------------------------------------------
 const POLAROIDS: { src: string; label: string; how: string; x: number; y: number; r: number }[] = [
-  { src: "v2/pol_walk.jpg", label: "THE WALK", how: "0 calls · scream heard", x: 175, y: 640, r: -8 },
-  { src: "v2/pol_drink.jpg", label: "THE DRINK", how: "0 calls · no answer", x: 905, y: 650, r: 7 },
-  { src: "v2/pol_phone.jpg", label: "THE PHONE", how: "0 calls · phone went dark", x: 185, y: 1520, r: 6 },
-  { src: "v2/pol_ride.jpg", label: "THE RIDE", how: "0 calls · duress PIN", x: 895, y: 1530, r: -7 },
+  { src: "v2/pol_walk.jpg", label: "THE WALK", how: "0 calls · scream heard", x: 190, y: 700, r: -7 },
+  { src: "v2/pol_drink.jpg", label: "THE DRINK", how: "0 calls · no answer", x: 890, y: 710, r: 6 },
+  { src: "v2/pol_phone.jpg", label: "THE PHONE", how: "0 calls · phone went dark", x: 200, y: 1440, r: 5 },
+  { src: "v2/pol_ride.jpg", label: "THE RIDE", how: "0 calls · duress PIN", x: 880, y: 1450, r: -6 },
 ];
 
 /** v2_22: the four scenarios as polaroids pinned on a real New Mexico outline; "NO TEXT-TO-911" stamp; on "When you
@@ -24,7 +28,7 @@ export const Montage: React.FC = () => {
   const nm = W(22, "text-to-911.") - F0;
   const when = W(22, "When") - F0;
   const calls = W(22, "calls") - F0;
-  const mapK = spring({ frame: f - 2, fps: 30, config: { damping: 14 } });
+  const mapK = spring({ frame: f + 8, fps: 30, config: { damping: 14 } }); // r5: map is already up on frame 1 (no near-black frame)
   const tuck = interpolate(f, [when, when + 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const te = 1 - Math.pow(1 - tuck, 3);
   const heroK = spring({ frame: f - when - 4, fps: 30, config: { damping: 9, stiffness: 200 } });
@@ -35,30 +39,55 @@ export const Montage: React.FC = () => {
         {Array.from({ length: 40 }).map((_, i) => <line key={`h${i}`} x1={0} y1={i * 50} x2={1080} y2={i * 50} stroke={C.calm} strokeWidth={1} />)}
       </svg>
       <svg width="860" height="946" viewBox="0 0 100 110" style={{ position: "absolute", left: 110, top: 440, transform: `scale(${(0.85 + 0.15 * mapK) * (1 - 0.25 * te)}) translateY(${-te * 60}px)`, opacity: mapK * (1 - 0.8 * te) }}>
-        <path d={NM_PATH} fill="rgba(92,199,178,.12)" stroke={C.calm} strokeWidth={0.9} strokeLinejoin="round" />
+        {/* r7: shaded relief inside the real outline: mountain ridges (Sangre de Cristo, Sandias, Sacramentos), mesas,
+            the Rio Grande running north-south through Albuquerque, contour lines, all clipped to the state */}
+        <defs>
+          <clipPath id="nmclip"><path d={NM_PATH} /></clipPath>
+          <linearGradient id="nmfill" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#3a3458" /><stop offset="0.55" stopColor="#2c3a4e" /><stop offset="1" stopColor="#3b2f44" />
+          </linearGradient>
+        </defs>
+        <path d={NM_PATH} fill="url(#nmfill)" />
+        <g clipPath="url(#nmclip)">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <path key={`c${i}`} d={`M 0 ${12 + i * 7} Q 25 ${8 + i * 7 + (i % 3) * 3} 50 ${13 + i * 7} T 100 ${10 + i * 7}`} fill="none" stroke="#8fd3ff" strokeOpacity={0.08} strokeWidth={0.35} />
+          ))}
+          {[[44, 8, 9, 22], [52, 12, 7, 18], [47, 34, 4, 12], [58, 70, 6, 16], [22, 60, 5, 10], [70, 30, 8, 9], [30, 20, 6, 8], [80, 60, 7, 8]].map(([x, y, w, h], i) => (
+            <g key={`m${i}`}>
+              <path d={`M ${x - w} ${y + h} L ${x - w * 0.2} ${y} L ${x + w} ${y + h} Z`} fill="#1d1a30" opacity={0.75} />
+              <path d={`M ${x - w * 0.2} ${y} L ${x + w} ${y + h} L ${x + w * 0.15} ${y + h} Z`} fill="#4a4870" opacity={0.6} />
+              <path d={`M ${x - w * 0.2} ${y} L ${x - w * 0.45} ${y + h * 0.28} L ${x + w * 0.1} ${y + h * 0.3} Z`} fill="#e8e4f4" opacity={0.25} />
+            </g>
+          ))}
+          <path d="M 42 4 C 41 14, 44 22, 42 30 S 39 42, 41 52 S 38 70, 37 80 S 36 90, 40 96" fill="none" stroke="#5aa8e8" strokeWidth={0.9} strokeOpacity={0.8} strokeLinecap="round" />
+        </g>
+        <path d={NM_PATH} fill="none" stroke={C.calm} strokeWidth={0.9} strokeLinejoin="round" />
         <circle cx={NM_ABQ[0]} cy={NM_ABQ[1]} r={1.5} fill={C.accent} />
         <circle cx={NM_ABQ[0]} cy={NM_ABQ[1]} r={1.5 + ((f % 30) / 30) * 6} fill="none" stroke={C.accent} strokeWidth={0.5} opacity={1 - (f % 30) / 30} />
         <text x={NM_ABQ[0] + 3} y={NM_ABQ[1] - 2} fontFamily={OF.caption} fontWeight={900} fontSize="3.6" fill={C.ink}>Albuquerque</text>
         <text x="50" y="108.5" textAnchor="middle" fontFamily={OF.caption} fontWeight={900} fontSize="4.2" fill={C.calm} letterSpacing="0.6">NEW MEXICO</text>
       </svg>
       {POLAROIDS.map((p, i) => {
-        const inK = spring({ frame: f - 4 - i * 5, fps: 30, config: { damping: 12, stiffness: 160 } });
-        const tx = 135 + i * 270, ty = 1600;
-        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(0.72, 0.66, te);
+        // r7: each polaroid is tossed in from above, lands with an overshoot bounce and a squash
+        const land = 6 + i * 7;
+        const inK = spring({ frame: f - land + 10, fps: 30, config: { damping: 7, stiffness: 170, mass: 0.8 } });
+        const squash = 1 + 0.08 * Math.max(0, Math.sin(Math.min(1, Math.max(0, (f - land) / 8)) * Math.PI)) * (f >= land ? 1 : 0);
+        const tx = 140 + i * 267, ty = 1215;
+        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(0.66, 0.62, te); // r8: all four fully in frame, clear of the caption band
         return (
-          <div key={p.label} style={{ position: "absolute", left: x - 170, top: y - 205 + (1 - inK) * 1200, transform: `rotate(${p.r * (1 - 0.5 * te) + (1 - inK) * 20}deg) scale(${sc})`, background: "#f6f4fb", padding: "14px 14px 86px", borderRadius: 6, boxShadow: "0 20px 50px rgba(0,0,0,.6)" }}>
+          <div key={p.label} style={{ position: "absolute", left: x - 170 + (i % 2 ? 1 : -1) * (1 - inK) * 760, top: y - 205, transform: `rotate(${p.r * (1 - 0.5 * te) + (1 - inK) * (i % 2 ? -35 : 35)}deg) scale(${sc * squash}, ${sc / squash})`, background: "#f6f4fb", padding: "14px 14px 86px", borderRadius: 6, boxShadow: "0 20px 50px rgba(0,0,0,.6)" }}>
             <Img src={staticFile(p.src)} style={{ width: 312, height: 312, objectFit: "cover", display: "block", filter: f >= nm && f < when ? "grayscale(0.6)" : "none" }} />
             <div style={{ position: "absolute", bottom: 44, left: 0, right: 0, textAlign: "center", fontFamily: OF.sticker, fontSize: 36, color: "#14131f" }}>{p.label}</div>
             <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 25, color: i === 3 ? "#b4741e" : "#2c8a78" }}>{p.how}</div>
           </div>
         );
       })}
-      <Stamp text="NO TEXT-TO-911" at={nm} out={when + 4} y={0.5} size={100} sub="NEW MEXICO · AS OF NOV 2026" />
+      <Stamp text="NO TEXT-TO-911" at={nm} out={when + 4} y={0.5} size={100} sub="NEW MEXICO · STILL LISTED, NOV 2026" />
       {f >= when + 4 && (
         <div style={{ position: "absolute", left: 0, right: 0, top: 470, display: "flex", flexDirection: "column", alignItems: "center", transform: `scale(${heroK})`, opacity: Math.min(1, heroK * 1.5) }}>
           <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 54, color: C.ink, letterSpacing: 3 }}>CALLS SHE HAD TO MAKE</div>
           <div style={{ fontFamily: OF.sticker, fontSize: 420, lineHeight: 0.95, color: C.accent, WebkitTextStroke: "14px #ffffff", paintOrder: "stroke fill", textShadow: `0 16px 0 #120f1e, 0 0 80px ${C.accent}88` }}>0</div>
-          <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.calm, opacity: fadeIn(f, calls - 6, 8) }}>SafetySense made them.</div>
+          <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.calm, opacity: fadeIn(f, calls - 6, 8) }}>SafetySense raised the alarm.</div>
         </div>
       )}
       {f >= when + 4 && <PulseRings x={540} y={780} at={when + 4} every={18} life={44} max={520} />}
@@ -68,100 +97,191 @@ export const Montage: React.FC = () => {
 };
 
 // ---------------------------------------------------------------------------
-/** Warm, defocused bedroom plate (same set and light as the closing shot) behind the logo lockup, so the story world
- *  never disappears. */
-const MorningPlate: React.FC<{ blur?: number }> = ({ blur = 7 }) => (
-  <div style={{ position: "absolute", inset: 0, filter: `blur(${blur}px) brightness(0.75)` }}>
-    <Scene3D fog={null} background="#3a2e40" exposure={1.35}>
-      <DormRoom lampOn phoneLight={0} />
-      <ambientLight color="#ffe2c4" intensity={0.9} />
-      <directionalLight position={[1.5, 2.5, 3]} color="#ffd8b0" intensity={1.4} />
-      <MorningWindow />
-      <Character look={LOOKS.maya} position={[BED_SEAT[0] + 0.05, BED_SEAT[1], BED_SEAT[2]]} rotationY={0.18} clips={[{ anim: "sit", start: 0 }]} seed={1} />
-      <Blanket seat={[BED_SEAT[0] + 0.05, BED_SEAT[1], BED_SEAT[2]]} />
-      <Character look={LOOKS.roommate} position={[BED_SEAT[0] + 0.72, BED_SEAT[1], BED_SEAT[2] + 0.02]} rotationY={-0.3} clips={[{ anim: "sit", start: 0 }]} seed={6} />
-      <CameraRig rig={pushIn(0, 200, [-0.72, 0.92, -0.35], [0.3, 0.16, 1], 5.2, 4.8, 32)} handheld={0.004} />
-    </Scene3D>
-  </div>
-);
+/** r4: one living 3D plate under the whole close (logo lockup -> "it's not your fault" -> end card): morning in the
+ *  dorm, Maya safe in a blanket, her roommate beside her, one continuous slow push-in keyed to the absolute frame. */
+const ComfortPlate: React.FC<{ g0: number; blur?: number; dim?: number; inset?: boolean; a0?: number }> = ({ g0, blur = 0, dim = 0, inset = false, a0 }) => {
+  const f = useCurrentFrame();
+  const mayaSeat: [number, number, number] = [BED_SEAT[0] + 0.05, BED_SEAT[1], BED_SEAT[2]];
+  const roomSeat: [number, number, number] = [BED_SEAT[0] + 0.72, BED_SEAT[1], BED_SEAT[2] + 0.02];
+  const A = a0 ?? S.end, Z = S.total;
+  return (
+    <div style={{ position: "absolute", inset: 0, filter: blur || dim ? `blur(${blur}px) brightness(${1 - dim})` : "none" }}>
+      <Scene3D fog={null} background="#3a2e40" exposure={1.35} width={inset ? INSET.w : undefined} height={inset ? INSET.h : undefined}>
+        <DormRoom lampOn phoneLight={0} />
+        <ambientLight color="#ffe2c4" intensity={0.9} />
+        <directionalLight position={[1.5, 2.5, 3]} color="#ffd8b0" intensity={1.4} />
+        <MorningWindow />
+        <Character look={MAYA} position={mayaSeat} rotationY={0.18} clips={[{ anim: "sit", start: -A }, { anim: "relief", start: -A, mask: "head" }]} frameOffset={g0 - A} seed={1} faceFill={0.4} face={{ smile: 0.45, worry: 0.25 }} />
+        {/* r7: no blanket blob: her arms and hands stay visible, her head tips toward her roommate */}
+        <Character look={ROOMMATE_HD} position={roomSeat} rotationY={-0.3} clips={[{ anim: "sit", start: -A }]} frameOffset={g0 - A} seed={6} faceFill={0.4} face={{ smile: 0.5, worry: 0.3 }} />
+        <CameraRig rig={inset ? pushIn(0, Z - A, [-0.72, 1.0, -0.35], [0.2, 0.05, 1], 3.0, 2.5, 30, "linear") : pushIn(0, Z - A, [-0.72, 1.12, -0.35], [0.3, -0.02, 1], 4.9, 3.5, 32, "linear")} frameOffset={g0 - A} handheld={0.004} />
+      </Scene3D>
+    </div>
+  );
+};
 
-/** v2_23-24: logo lockup + tagline (word-synced) + "supplements 911" line, all at phone-readable sizes. */
+/** Clean brand background for the logo lockup and the end slate (r5: no dimmed, muddy 3D plate under the text). */
+const BrandBg: React.FC = () => {
+  const f = useCurrentFrame();
+  return (
+    <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 38%, #2c2448 0%, ${C.bgDeep} 70%)` }}>
+      <PulseRings x={540} y={640} at={0} every={30} life={80} max={620} color={C.accent} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle at ${50 + 6 * Math.sin(f / 50)}% 80%, ${C.calm}22 0%, rgba(0,0,0,0) 45%)` }} />
+    </AbsoluteFill>
+  );
+};
+
+/** v2_22 tail + v2_24 (r5): hard cut to the lockup on "SafetySense calls for you"; the tagline lands with it; the
+ *  supplement line reads exactly what the VO says ("It supplements 911. It never replaces it."). The 0-counter payoff
+ *  from the montage carries in as a small chip, so the two beats are one. */
 export const Logo: React.FC = () => {
   const f = useCurrentFrame();
   const F0 = S.logo;
-  const tag: { w: string; at: number; hi?: boolean }[] = [
-    { w: "Calls", at: W(23, "Calls") - F0 }, { w: "for", at: W(23, "for") - F0 }, { w: "help", at: W(23, "help") - F0 },
-    { w: "when", at: W(23, "when") - F0 }, { w: "you", at: W(23, "you") - F0 }, { w: "can't.", at: W(23, "can't.") - F0, hi: true },
-  ];
+  const tag: { w: string; at: number; hi?: boolean }[] = ["Calls", "for", "help", "when", "you", "can't."].map((w, i) => ({ w, at: 2 + i * 3, hi: w === "can't." }));
   const sup: { w: string; at: number; hi?: boolean }[] = [
-    { w: "SafetySense", at: W(24, "It") - F0 }, { w: "supplements", at: W(24, "supplements") - F0 }, { w: "911.", at: W(24, "911.") - F0 },
+    { w: "It", at: W(24, "It") - F0 }, { w: "supplements", at: W(24, "supplements") - F0 }, { w: "911.", at: W(24, "911.") - F0 },
     { w: "It", at: W(24, "It", 1) - F0 }, { w: "never", at: W(24, "never") - F0, hi: true }, { w: "replaces", at: W(24, "replaces") - F0, hi: true }, { w: "it.", at: W(24, "it", 2) - F0, hi: true },
   ];
   const nine = W(24, "it", 2) - F0 + 6;
   return (
     <AbsoluteFill style={{ background: C.bgDeep }}>
-      <MorningPlate />
-      <AbsoluteFill style={{ background: `linear-gradient(180deg, rgba(13,12,22,.55) 0%, rgba(13,12,22,.93) 22%, rgba(13,12,22,.94) 78%, rgba(13,12,22,.6) 100%)` }} />
-      <AbsoluteFill style={{ alignItems: "center", transform: `scale(${1 + f * 0.0005})` }}>
-        <PulseRings x={540} y={640} at={0} every={30} life={80} max={620} color={C.accent} />
+      <BrandBg />
+      <AbsoluteFill style={{ alignItems: "center" }}>
         <div style={{ position: "absolute", top: 520, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
-          <Wordmark size={1.35} at={2} />
+          <Wordmark size={1.3} at={0} />
         </div>
-        <WordReveal words={tag} size={92} style={{ position: "absolute", top: 790, left: 50, right: 50 }} />
-        <div style={{ position: "absolute", top: 1010, left: 140, right: 140, height: 4, background: `${C.accent}66`, transform: `scaleX(${fadeIn(f, sup[0].at - 6, 12)})` }} />
-        <WordReveal words={sup} size={70} weight={900} hiColor={C.calm} style={{ position: "absolute", top: 1060, left: 50, right: 50 }} />
-        <div style={{ position: "absolute", top: 1330, left: 0, right: 0, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 62, color: C.danger, opacity: fadeIn(f, nine, 8) }}>
-          In an emergency, call 911.
+        <WordReveal words={tag} size={104} stroke style={{ position: "absolute", top: 720, left: 40, right: 40, lineHeight: 1.05 }} />
+        <div style={{ position: "absolute", top: 990, left: 140, right: 140, height: 5, borderRadius: 4, background: `${C.accent}88`, transform: `scaleX(${fadeIn(f, sup[0].at - 6, 12)})` }} />
+        <WordReveal words={sup} size={84} weight={900} hiColor={C.calm} stroke style={{ position: "absolute", top: 1040, left: 40, right: 40, lineHeight: 1.08 }} />
+        <div style={{ position: "absolute", top: 1340, left: 70, right: 70, textAlign: "center", padding: "20px 24px", borderRadius: 26, background: C.danger, fontFamily: OF.caption, fontWeight: 900, fontSize: 66, color: "#fff", opacity: fadeIn(f, nine, 8), transform: `scale(${0.9 + 0.1 * fadeIn(f, nine, 8)})`, boxShadow: "0 12px 34px rgba(0,0,0,.5)" }}>
+          In an emergency, call 911
         </div>
       </AbsoluteFill>
-      <Grade vignette={0.5} grain={0.05} />
+      <Grade vignette={0.45} grain={0.04} />
     </AbsoluteFill>
   );
 };
 
 // ---------------------------------------------------------------------------
-/** v2_25: soft cut to morning; Maya safe at home in a blanket, roommate beside her. The line plays over the picture with
- *  no card; once its caption has cleared, a large end card lands and holds: SafetySense, 911, RAINN. */
+/** v2_25 (r5): "And if something happened to you, it's not your fault." plays over the comfort plate, sharp and
+ *  unobscured (only the caption and the RAINN line, which stays bottom). After "fault." a hard cut (no crossfade, so no
+ *  text ever double-exposes) to the clean end slate: SafetySense, tagline, supplements 911, call 911, RAINN. */
 export const EndScene: React.FC = () => {
   const f = useCurrentFrame();
   const F0 = S.end;
-  const card = WE(25, "fault.") - F0 + 10; // caption is hidden from WE(fault)+6
-  const ck = spring({ frame: f - card, fps: 30, config: { damping: 15 } });
-  const mayaSeat: [number, number, number] = [BED_SEAT[0] + 0.05, BED_SEAT[1], BED_SEAT[2]];
-  const roomSeat: [number, number, number] = [BED_SEAT[0] + 0.72, BED_SEAT[1], BED_SEAT[2] + 0.02];
+  const card = WE(25, "fault.") - F0 + 8;
+  const ck = spring({ frame: f - card, fps: 30, config: { damping: 15, stiffness: 180 } });
+  const rainnIn = W(25, "And") - F0 + 4;
+  const rk = spring({ frame: f - rainnIn, fps: 30, config: { damping: 14 } });
+  const rainn = (big: boolean) => (
+    <div style={{ width: "100%", boxSizing: "border-box", padding: big ? "26px 30px" : "18px 26px", borderRadius: 30, background: "rgba(8,26,24,.92)", border: `6px solid ${C.calm}`, fontFamily: OF.caption, fontWeight: 900, fontSize: big ? 58 : 44, color: C.ink, textAlign: "center", lineHeight: 1.15, boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${16 + 14 * Math.sin(f / 11)}px ${C.calm}66` }}>
+      Support 24/7 · RAINN<br /><span style={{ color: C.calm, fontSize: big ? 96 : 72 }}>1-800-656-4673</span>
+    </div>
+  );
+  if (f < card) {
+    return (
+      <AbsoluteFill>
+        <ComfortPlate g0={F0} />
+        <Grade wash="#ffb070" washOpacity={0.1} vignette={0.4} grain={0.04} />
+        <div style={{ position: "absolute", left: 60, right: 60, top: 1500, opacity: rk, transform: `translateY(${(1 - rk) * 40}px)` }}>{rainn(false)}</div>
+      </AbsoluteFill>
+    );
+  }
+  // r6: hard cut to a fully built end card (no fade from black, so no near-black dip between the comfort plate and the card)
+  const el = (i: number) => ({ opacity: 1, transform: `translateY(${(1 - Math.min(1, ck)) * (10 + i * 4)}px)` });
   return (
-    <AbsoluteFill>
-      <div style={{ position: "absolute", inset: 0, filter: `blur(${8 * ck}px) brightness(${1 - 0.45 * ck})` }}>
-        <Scene3D fog={null} background="#3a2e40" exposure={1.35}>
-          <DormRoom lampOn phoneLight={0} />
-          <ambientLight color="#ffe2c4" intensity={0.9} />
-          <directionalLight position={[1.5, 2.5, 3]} color="#ffd8b0" intensity={1.4} />
-          <MorningWindow />
-          <Character look={LOOKS.maya} position={mayaSeat} rotationY={0.18} clips={[{ anim: "sit", start: 0 }, { anim: "relief", start: 0, mask: "head" }]} seed={1} faceFill={0.4} />
-          <Blanket seat={mayaSeat} />
-          <Character look={LOOKS.roommate} position={roomSeat} rotationY={-0.3} clips={[{ anim: "sit", start: 0 }, { anim: "talk", start: 20, mask: "head" }]} seed={6} faceFill={0.4} />
-          <CameraRig rig={pushIn(0, 165, [-0.72, 1.12, -0.35], [0.3, -0.02, 1], 4.4, 3.8, 32)} handheld={0.004} />
-        </Scene3D>
+    <AbsoluteFill style={{ background: C.bgDeep }}>
+      <BrandBg />
+      <div style={{ position: "absolute", left: 50, right: 50, top: 0, bottom: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 36 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 22, ...el(0) }}>
+          <Img src={staticFile("img/icon.png")} style={{ width: 132, height: 132, borderRadius: 30 }} />
+          <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 110, color: C.ink }}>SafetySense</span>
+        </div>
+        <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 92, lineHeight: 1.04, color: C.accent, textAlign: "center", WebkitTextStroke: "9px #120f1e", paintOrder: "stroke fill", ...el(1) }}>Calls for help<br />when you can't.</div>
+        <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 62, color: C.ink, textAlign: "center", lineHeight: 1.15, ...el(2) }}>It supplements 911.<br />It never replaces it.</div>
+        <div style={{ width: "100%", boxSizing: "border-box", padding: "28px 30px", borderRadius: 30, background: C.danger, fontFamily: OF.caption, fontWeight: 900, fontSize: 68, color: "#ffffff", textAlign: "center", boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${20 + 18 * Math.sin(f / 9)}px ${C.danger}88`, ...el(3) }}>
+          In an emergency, call 911
+        </div>
+        <div style={{ width: "100%", ...el(4) }}>{rainn(true)}</div>
       </div>
-      <Grade wash="#ffb070" washOpacity={0.14} vignette={0.45} grain={0.04} />
-      <AbsoluteFill style={{ background: "#000", opacity: interpolate(f, [0, 10], [1, 0], { extrapolateRight: "clamp" }), pointerEvents: "none" }} />
-      {f >= card && <AbsoluteFill style={{ background: "rgba(13,12,22,.9)", opacity: ck }} />}
-      {f >= card && (
-        <div style={{ position: "absolute", left: 40, right: 40, top: 300, display: "flex", flexDirection: "column", alignItems: "center", gap: 34, opacity: ck, transform: `translateY(${(1 - ck) * 60}px)` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <Img src={staticFile("img/icon.png")} style={{ width: 124, height: 124, borderRadius: 28 }} />
-            <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 104, color: C.ink }}>SafetySense</span>
-          </div>
-          <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 84, lineHeight: 1.05, color: C.accent, textAlign: "center", textShadow: "0 4px 0 #120f1e" }}>Calls for help<br />when you can't.</div>
-          <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 58, color: C.ink, textAlign: "center", lineHeight: 1.15 }}>It supplements 911.<br />It never replaces it.</div>
-          <div style={{ marginTop: 10, width: "100%", boxSizing: "border-box", padding: "26px 30px", borderRadius: 30, background: C.danger, fontFamily: OF.caption, fontWeight: 900, fontSize: 72, color: "#ffffff", textAlign: "center", boxShadow: "0 12px 34px rgba(0,0,0,.5)" }}>
-            In an emergency, call 911
-          </div>
-          <div style={{ width: "100%", boxSizing: "border-box", padding: "24px 30px", borderRadius: 30, background: "#0b1f1c", border: `6px solid ${C.calm}`, fontFamily: OF.caption, fontWeight: 900, fontSize: 56, color: C.ink, textAlign: "center", lineHeight: 1.2 }}>
-            Support 24/7 · RAINN<br /><span style={{ color: C.calm, fontSize: 88 }}>1-800-656-4673</span>
-          </div>
+      <Grade vignette={0.4} grain={0.04} />
+    </AbsoluteFill>
+  );
+};
+
+
+// ---------------------------------------------------------------------------
+/** r7: ONE locked end layout from "SafetySense calls for you" to the last frame (no reflow, no cut-away): wordmark,
+ *  tagline, a living 3D inset (Maya walking home safe, then morning in the dorm with her roommate), the supplement line,
+ *  the caption band, "In an emergency, call 911" and RAINN. Everything only fades in place; the only motion in the final
+ *  seconds is the inset's slow camera push and a faint particle drift. The captions say "SafetySense calls for you." in
+ *  sync; the tagline lands as a static line after "you." */
+const INSET = { left: 70, top: 650, w: 940, h: 560 };
+const SafeWalk: React.FC<{ full?: boolean }> = ({ full = false }) => {
+  const f = useCurrentFrame();
+  const z = -2 + f * 0.035;
+  return (
+    <Scene3D width={full ? undefined : INSET.w} height={full ? undefined : INSET.h} fog={{ color: P.fogNight, near: 6, far: 30 }}>
+      <CampusHD dim={0.2} />
+      <Character look={MAYA} clips={[{ anim: "walk", start: 0, speed: 0.75 }]} position={[0.1, 0.12, z]} faceFill={0.55} face={{ smile: 0.55, worry: 0 }} act={0.4} />
+      <ListenRings center={[0.1, 0.12, z]} start={0} every={26} life={56} maxR={2.6} y={0.13} />
+      <pointLight position={[0.6, 2.2, z + 1.8]} color="#ffe2cc" intensity={2.4} distance={4} decay={1.5} />
+      <CameraRig rig={(fr) => { const zz = -2 + fr * 0.035; return full ? { pos: [0.6, 1.5, zz + lerp(4.2, 3.4, Math.min(1, fr / 90))], look: [0.1, 1.05, zz], fov: 40 } : { pos: [0.55, 1.45, zz + lerp(3.4, 2.9, Math.min(1, fr / 200))], look: [0.1, 1.2, zz], fov: 34 }; }} handheld={0.004} />
+    </Scene3D>
+  );
+};
+const Drift: React.FC = () => {
+  const f = useCurrentFrame();
+  return (
+    <svg width="1080" height="1920" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {Array.from({ length: 34 }).map((_, i) => {
+        const x = (i * 337) % 1080, y = 1920 - ((f * (0.6 + (i % 5) * 0.25) + i * 211) % 2000);
+        return <circle key={i} cx={x + 12 * Math.sin(f / 40 + i)} cy={y} r={2 + (i % 3)} fill={i % 2 ? C.calm : C.accent} opacity={0.18} />;
+      })}
+    </svg>
+  );
+};
+/** r8: the close is full-bleed 3D, never a static card with a thumbnail. "SafetySense calls for you": Maya walks home
+ *  safe (full frame) under the wordmark; on "It supplements 911" a soft cut to the morning two-shot (Maya and her
+ *  roommate in the dorm) that keeps drifting to the last frame. The compliance line and "it's not your fault" play as
+ *  the big word captions; "In an emergency, call 911" and RAINN sit at the bottom; after "fault." only the supplement
+ *  line settles in (a ~3.5 s end hold over the living plate). */
+export const Close: React.FC = () => {
+  const f = useCurrentFrame();
+  const F0 = S.logo;
+  const tagAt = WE(22, "you.", 1) - F0 + 4;
+  const plateAt = W(24, "It") - F0 - 6;
+  const nine = WE(24, "it", 2) - F0 + 4;
+  const rainnAt = W(25, "And") - F0 + 2;
+  const tailAt = WE(25, "fault.") - F0 + 8;
+  const mix = Math.min(1, Math.max(0, (f - plateAt) / 10));
+  return (
+    <AbsoluteFill style={{ background: C.bgDeep }}>
+      {f < plateAt + 12 && <AbsoluteFill><SafeWalk full /></AbsoluteFill>}
+      {f >= plateAt - 2 && <AbsoluteFill style={{ opacity: mix }}><ComfortPlate g0={F0 + plateAt} a0={F0 + plateAt} /></AbsoluteFill>}
+      <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(13,11,22,.82) 0%, rgba(13,11,22,.15) 34%, rgba(13,11,22,0) 52%, rgba(13,11,22,.25) 66%, rgba(13,11,22,.85) 100%)" }} />
+      <Drift />
+      <div style={{ position: "absolute", top: 230, left: 0, right: 0, display: "flex", justifyContent: "center", opacity: fadeIn(f, 0, 6) }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <Img src={staticFile("img/icon.png")} style={{ width: 120, height: 120, borderRadius: 28, boxShadow: `0 10px 40px ${C.accent}55` }} />
+          <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 104, color: C.ink, letterSpacing: -1, textShadow: "0 6px 24px rgba(0,0,0,.6)" }}>SafetySense</span>
+        </div>
+      </div>
+      <div style={{ position: "absolute", top: 390, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 86, lineHeight: 1.02, color: C.accent, WebkitTextStroke: "9px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, tagAt, 8) }}>
+        Calls for help<br />when you can't.
+      </div>
+      {f >= tailAt && (
+        <div style={{ position: "absolute", top: 1215, left: 50, right: 50, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 70, lineHeight: 1.08, color: C.ink, WebkitTextStroke: "8px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, tailAt, 8) }}>
+          It supplements 911.<br /><span style={{ color: C.calm }}>It never replaces it.</span>
         </div>
       )}
+      <div style={{ position: "absolute", top: 1480, left: 70, right: 70, textAlign: "center", padding: "18px 24px", borderRadius: 26, background: C.danger, fontFamily: OF.caption, fontWeight: 900, fontSize: 58, color: "#fff", boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${20 + 18 * Math.sin(f / 9)}px ${C.danger}88`, opacity: fadeIn(f, nine, 8), transform: `scale(${0.92 + 0.08 * fadeIn(f, nine, 8)})` }}>
+        In an emergency, call 911
+      </div>
+      <div style={{ position: "absolute", top: 1620, left: 70, right: 70, boxSizing: "border-box", padding: "16px 26px", borderRadius: 30, background: "rgba(8,26,24,.92)", border: `6px solid ${C.calm}`, fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.ink, textAlign: "center", lineHeight: 1.12, boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${16 + 14 * Math.sin(f / 11)}px ${C.calm}66`, opacity: fadeIn(f, rainnAt, 8) }}>
+        Support 24/7 · RAINN<br /><span style={{ color: C.calm, fontSize: 78 }}>1-800-656-4673</span>
+      </div>
+      <Grade vignette={0.4} grain={0.04} />
     </AbsoluteFill>
   );
 };

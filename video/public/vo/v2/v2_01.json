@@ -7,62 +7,62 @@
  "words": [
   {
    "word": "Tonight,",
-   "start": 0.078,
+   "start": 0.0,
    "end": 1.01
   },
   {
    "word": "Maya",
-   "start": 1.087,
+   "start": 0.99,
    "end": 1.398
   },
   {
    "word": "won't",
-   "start": 1.476,
+   "start": 1.35,
    "end": 1.631
   },
   {
    "word": "be",
-   "start": 1.709,
+   "start": 1.65,
    "end": 1.748
   },
   {
    "word": "able",
-   "start": 1.786,
+   "start": 1.756,
    "end": 1.942
   },
   {
    "word": "to",
-   "start": 1.981,
+   "start": 1.93,
    "end": 2.019
   },
   {
    "word": "call",
-   "start": 2.097,
+   "start": 2.067,
    "end": 2.252
   },
   {
    "word": "for",
-   "start": 2.33,
+   "start": 2.25,
    "end": 2.408
   },
   {
    "word": "help.",
-   "start": 2.485,
+   "start": 2.455,
    "end": 3.226
   },
   {
    "word": "Her",
-   "start": 3.343,
+   "start": 3.235,
    "end": 3.459
   },
   {
    "word": "phone",
-   "start": 3.615,
+   "start": 3.49,
    "end": 3.77
   },
   {
    "word": "will.",
-   "start": 3.848,
+   "start": 3.69,
    "end": 4.257
   }
  ],

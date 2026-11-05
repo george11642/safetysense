@@ -11,7 +11,7 @@ import { P } from "../palette";
 /** Root position for a character sitting on the bed edge (facing +Z). */
 export const BED_SEAT: V3 = [-1.1, 0.1, -0.42];
 
-export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: "cozy" | "alert"; fairyLights?: boolean }> = ({ lampOn = true, phoneLight = 0, mood = "cozy", fairyLights = true }) => {
+export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: "cozy" | "alert"; fairyLights?: boolean; posterArt?: boolean }> = ({ lampOn = true, phoneLight = 0, mood = "cozy", fairyLights = true, posterArt = false }) => {
   const frame = useCurrentFrame();
   const wall = flatMat(P.wallDorm, { rough: 0.95 });
   const wood = flatMat("#7a5640", { rough: 0.6 });
@@ -58,6 +58,17 @@ export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: 
         </mesh>
       </group>
       {/* posters */}
+      {posterArt && (
+        // additive (v2 r7): a framed travel poster (white mat, mesa silhouettes, title bars), not a flat colored card
+        <group position={[-1.4, 1.75, -2.145]} rotation={[0, 0, 0.04]}>
+          <mesh material={flatMat("#f4efe6")}><planeGeometry args={[0.63, 0.83]} /></mesh>
+          <mesh position={[0, -0.27, 0.004]} material={flatMat("#5b3a5e")}><planeGeometry args={[0.55, 0.2]} /></mesh>
+          {[[-0.12, 0.2], [0.1, 0.26]].map(([x, h], i) => (
+            <mesh key={i} position={[x, -0.17 + h / 2, 0.006]} material={flatMat(i ? "#7a4a6a" : "#8a5a72")}><planeGeometry args={[0.26 + 0.06 * i, h]} /></mesh>
+          ))}
+          <mesh position={[0, -0.36, 0.008]} material={flatMat("#f4efe6")}><planeGeometry args={[0.36, 0.035]} /></mesh>
+        </group>
+      )}
       <mesh position={[-1.4, 1.75, -2.14]} rotation={[0, 0, 0.04]} material={flatMat(P.accent)}>
         <planeGeometry args={[0.55, 0.75]} />
       </mesh>
@@ -85,9 +96,15 @@ export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: 
           <boxGeometry args={[0.06, 1.1, 1.0]} />
         </mesh>
         {/* plush */}
-        <mesh material={flatMat(P.warn)} position={[-0.6, 0.68, 0.3]} castShadow>
-          <icosahedronGeometry args={[0.09, 0]} />
-        </mesh>
+        {/* v3 r6: a real throw pillow (soft rounded cushion with a seam), not an icosahedron */}
+        <group position={[-0.62, 0.69, 0.28]} rotation={[0.25, 0.5, 0.15]}>
+          <mesh material={flatMat("#e9b35f", { rough: 0.9, flat: false })} scale={[0.17, 0.13, 0.06]} castShadow>
+            <sphereGeometry args={[1, 32, 20]} />
+          </mesh>
+          <mesh material={flatMat("#c99448", { rough: 0.9, flat: false })} scale={[0.172, 0.132, 0.012]}>
+            <torusGeometry args={[0.98, 0.04, 6, 40]} />
+          </mesh>
+        </group>
       </group>
       {/* desk + lamp + laptop */}
       <group position={[1.4, 0, -1.7]}>

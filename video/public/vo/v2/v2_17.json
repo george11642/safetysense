@@ -1,64 +1,49 @@
 {
  "id": "v2_17",
  "file": "vo/v2/v2_17.mp3",
- "durationSec": 3.929,
- "text": "What if someone takes her phone? Smashes it? Switches it off?",
- "spoken": "What if someone takes her phone? Smashes it? Switches it off?",
+ "durationSec": 3.025,
+ "text": "What if someone takes her phone? Smashes it?",
+ "spoken": "What if someone takes her phone? Smashes it?",
  "words": [
   {
    "word": "What",
-   "start": 0.078,
+   "start": 0.0,
    "end": 0.155
   },
   {
    "word": "if",
-   "start": 0.233,
+   "start": 0.06,
    "end": 0.311
   },
   {
    "word": "someone",
-   "start": 0.388,
+   "start": 0.358,
    "end": 0.699
   },
   {
    "word": "takes",
-   "start": 0.816,
+   "start": 0.65,
    "end": 0.932
   },
   {
    "word": "her",
-   "start": 1.01,
+   "start": 0.91,
    "end": 1.087
   },
   {
    "word": "phone?",
-   "start": 1.165,
+   "start": 1.135,
    "end": 1.873
   },
   {
    "word": "Smashes",
-   "start": 1.95,
+   "start": 1.775,
    "end": 2.416
   },
   {
    "word": "it?",
-   "start": 2.494,
+   "start": 2.35,
    "end": 2.884
-  },
-  {
-   "word": "Switches",
-   "start": 2.962,
-   "end": 3.273
-  },
-  {
-   "word": "it",
-   "start": 3.312,
-   "end": 3.35
-  },
-  {
-   "word": "off?",
-   "start": 3.506,
-   "end": 3.929
   }
  ],
  "charAlignment": {
@@ -114,23 +99,6 @@
    " ",
    "i",
    "t",
-   "?",
-   " ",
-   "S",
-   "w",
-   "i",
-   "t",
-   "c",
-   "h",
-   "e",
-   "s",
-   " ",
-   "i",
-   "t",
-   " ",
-   "o",
-   "f",
-   "f",
    "?"
   ],
   "character_start_times_seconds": [
@@ -185,24 +153,7 @@
    2.416,
    2.494,
    2.688,
-   2.807,
-   2.884,
-   2.962,
-   2.988,
-   3.014,
-   3.04,
-   3.066,
-   3.091,
-   3.117,
-   3.195,
-   3.273,
-   3.312,
-   3.331,
-   3.35,
-   3.506,
-   3.583,
-   3.661,
-   3.739
+   2.807
   ],
   "character_end_times_seconds": [
    0.01,
@@ -256,24 +207,7 @@
    2.494,
    2.688,
    2.807,
-   2.884,
-   2.962,
-   2.988,
-   3.014,
-   3.04,
-   3.066,
-   3.091,
-   3.117,
-   3.195,
-   3.273,
-   3.312,
-   3.331,
-   3.35,
-   3.506,
-   3.583,
-   3.661,
-   3.739,
-   4.438
+   2.884
   ]
  }
 }

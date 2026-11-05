@@ -21,21 +21,21 @@ export type Scene3DProps = {
 };
 
 /** ThreeCanvas preconfigured for the kit: soft shadows, ACES tone mapping, fog, sized to the composition. */
-export const Scene3D: React.FC<Scene3DProps> = ({ children, background = P.fogNight, fog = { color: P.fogNight, near: 8, far: 60 }, exposure = 1.05, style, width: wIn, height: hIn }) => {
+export const Scene3D: React.FC<Scene3DProps & { transparent?: boolean }> = ({ children, background = P.fogNight, fog = { color: P.fogNight, near: 8, far: 60 }, exposure = 1.05, style, width: wIn, height: hIn, transparent = false }) => {
   const vc = useVideoConfig();
   const width = wIn ?? vc.width;
   const height = hIn ?? vc.height;
   return (
-    <AbsoluteFill style={{ backgroundColor: background, ...style }}>
+    <AbsoluteFill style={{ backgroundColor: transparent ? "transparent" : background, ...style }}>
       <ThreeCanvas
         width={width}
         height={height}
         shadows={{ type: THREE.PCFSoftShadowMap }}
         dpr={1}
-        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: exposure, preserveDrawingBuffer: true }}
+        gl={{ antialias: true, alpha: transparent, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: exposure, preserveDrawingBuffer: true }}
         camera={{ fov: 35, near: 0.05, far: 400, position: [0, 1.6, 6] }}
       >
-        <color attach="background" args={[background]} />
+        {!transparent && <color attach="background" args={[background]} />}
         {fog && <fog attach="fog" args={[fog.color, fog.near, fog.far]} />}
         {children}
       </ThreeCanvas>
@@ -113,14 +113,36 @@ export const Tree: React.FC<{ position: V3; scale?: number; seed?: number; leaf?
 };
 
 /** Lit window grid on one face of a building, via a single InstancedMesh. */
+/** Additive (v2 r7): compositions listed here get detailed windows (frame + mullions, interior light gradient, a curtain
+ *  on some), via a shared canvas texture. Other compositions keep the flat panes. */
+export const WINDOW_DETAIL_COMPS = new Set<string>(["ReelV2"]);
+let _winTex: THREE.CanvasTexture | null = null;
+const winTex = () => {
+  if (_winTex) return _winTex;
+  const W = 64, H = 96;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d")!;
+  const gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, "#9a9a9a"); gr.addColorStop(0.6, "#ffffff"); gr.addColorStop(1, "#d8d8d8");
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.fillStyle = "rgba(0,0,0,.35)"; g.fillRect(4, 6, 22, H - 12); // drawn curtain / shade on the left pane
+  g.fillStyle = "#202020"; g.fillRect(0, 0, W, 5); g.fillRect(0, H - 6, W, 6); g.fillRect(0, 0, 4, H); g.fillRect(W - 4, 0, 4, H);
+  g.fillRect(W / 2 - 2, 0, 4, H); g.fillRect(0, H * 0.42, W, 3);
+  _winTex = new THREE.CanvasTexture(c);
+  _winTex.colorSpace = THREE.SRGBColorSpace;
+  return _winTex;
+};
+
 export const Windows: React.FC<{ w: number; h: number; position: V3; rotationY?: number; seed?: number; density?: number; cols?: number; rows?: number; warm?: string; cool?: string }> = ({
   w, h, position, rotationY = 0, seed = 1, density = 0.45, cols, rows, warm = P.windowWarm, cool = P.windowCool,
 }) => {
   const c = cols ?? Math.max(2, Math.floor(w / 1.4));
   const r = rows ?? Math.max(2, Math.floor(h / 1.6));
+  const detail = WINDOW_DETAIL_COMPS.has(useVideoConfig().id);
   const mesh = useMemo(() => {
     const geo = new THREE.PlaneGeometry(1, 1);
-    const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
+    const mat = new THREE.MeshBasicMaterial({ toneMapped: false, map: detail ? winTex() : null });
     const im = new THREE.InstancedMesh(geo, mat, c * r);
     const m = new THREE.Matrix4();
     const col = new THREE.Color();
@@ -135,14 +157,14 @@ export const Windows: React.FC<{ w: number; h: number; position: V3; rotationY?:
         im.setMatrixAt(i, m);
         const k = hash2i(x * 3 + seed, y * 5 + seed);
         if (lit) col.set(k > 0.75 ? cool : warm).multiplyScalar(0.55 + 0.6 * k);
-        else col.set("#1a1830");
+        else col.set(detail ? (k > 0.5 ? "#262438" : "#1c1a2c") : "#1a1830");
         im.setColorAt(i, col);
         i++;
       }
     }
     im.instanceMatrix.needsUpdate = true;
     return im;
-  }, [w, h, c, r, seed, density, warm, cool]);
+  }, [w, h, c, r, seed, density, warm, cool, detail]);
   return <primitive object={mesh} position={position} rotation={[0, rotationY, 0]} />;
 };
 const hash2i = (a: number, b: number) => hash(a * 12.9898 + b * 78.233);

@@ -2,79 +2,64 @@
  {
   "id": "v3_01",
   "file": "vo/v3/v3_01.mp3",
-  "durationSec": 5.334,
-  "text": "Ava is walking home. Someone comes up behind her. She can't reach her phone.",
-  "spoken": "Ava is walking home. Someone comes up behind her. She can't reach her phone.",
+  "durationSec": 4.959,
+  "text": "Someone's right behind Ava. She freezes. She can't reach her phone.",
+  "spoken": "Someone's right behind Ava. She freezes. She can't reach her phone.",
   "words": [
    {
-    "word": "Ava",
-    "start": 0.16,
-    "end": 0.48
+    "word": "Someone's",
+    "start": 0.24,
+    "end": 0.64
    },
    {
-    "word": "is",
-    "start": 0.56,
-    "end": 0.72
-   },
-   {
-    "word": "walking",
-    "start": 0.8,
-    "end": 1.12
-   },
-   {
-    "word": "home.",
-    "start": 1.2,
-    "end": 1.76
-   },
-   {
-    "word": "Someone",
-    "start": 2.133,
-    "end": 2.453
-   },
-   {
-    "word": "comes",
-    "start": 2.573,
-    "end": 2.693
-   },
-   {
-    "word": "up",
-    "start": 2.773,
-    "end": 2.853
+    "word": "right",
+    "start": 0.76,
+    "end": 0.88
    },
    {
     "word": "behind",
-    "start": 2.933,
-    "end": 3.173
+    "start": 0.96,
+    "end": 1.2
    },
    {
-    "word": "her.",
-    "start": 3.253,
-    "end": 3.493
+    "word": "Ava.",
+    "start": 1.28,
+    "end": 1.88
    },
    {
     "word": "She",
-    "start": 3.909,
-    "end": 4.069
+    "start": 2.131,
+    "end": 2.291
+   },
+   {
+    "word": "freezes.",
+    "start": 2.371,
+    "end": 3.214
+   },
+   {
+    "word": "She",
+    "start": 3.534,
+    "end": 3.694
    },
    {
     "word": "can't",
-    "start": 4.149,
-    "end": 4.309
+    "start": 3.774,
+    "end": 3.934
    },
    {
     "word": "reach",
-    "start": 4.389,
-    "end": 4.549
+    "start": 4.014,
+    "end": 4.174
    },
    {
     "word": "her",
-    "start": 4.629,
-    "end": 4.709
+    "start": 4.254,
+    "end": 4.334
    },
    {
     "word": "phone.",
-    "start": 4.789,
-    "end": 5.334
+    "start": 4.414,
+    "end": 4.959
    }
   ]
  },
@@ -1478,9 +1463,9 @@
  {
   "id": "v3_15",
   "file": "vo/v3/v3_15.mp3",
-  "durationSec": 11.0,
-  "text": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
-  "spoken": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
+  "durationSec": 12.094,
+  "text": "It only listens when you turn it on. While guarding, audio stays on your phone. No recordings are saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
+  "spoken": "It only listens when you turn it on. While guarding, audio stays on your phone. No recordings are saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
   "words": [
    {
     "word": "It",
@@ -1555,77 +1540,82 @@
    {
     "word": "phone.",
     "start": 4.931,
-    "end": 5.507
+    "end": 5.5
    },
    {
-    "word": "Nothing",
-    "start": 5.667,
-    "end": 5.987
+    "word": "No",
+    "start": 5.99,
+    "end": 6.23
    },
    {
-    "word": "is",
-    "start": 6.067,
-    "end": 6.147
+    "word": "recordings",
+    "start": 6.43,
+    "end": 6.79
+   },
+   {
+    "word": "are",
+    "start": 6.87,
+    "end": 6.95
    },
    {
     "word": "saved",
-    "start": 6.227,
-    "end": 6.547
+    "start": 7.03,
+    "end": 7.43
    },
    {
     "word": "unless",
-    "start": 6.707,
-    "end": 6.867
+    "start": 7.51,
+    "end": 7.83
    },
    {
     "word": "an",
-    "start": 6.907,
-    "end": 6.947
+    "start": 7.87,
+    "end": 7.91
    },
    {
     "word": "alert",
-    "start": 7.107,
-    "end": 7.267
+    "start": 7.99,
+    "end": 8.31
    },
    {
     "word": "fires.",
-    "start": 7.347,
-    "end": 8.21
+    "start": 8.79,
+    "end": 9.046
    },
    {
     "word": "Then",
-    "start": 8.25,
-    "end": 8.57
+    "start": 9.344,
+    "end": 9.664
    },
    {
     "word": "evidence",
-    "start": 8.65,
-    "end": 8.97
+    "start": 9.744,
+    "end": 10.064
    },
    {
     "word": "is",
-    "start": 9.05,
-    "end": 9.13
+    "start": 10.144,
+    "end": 10.224
    },
    {
     "word": "encrypted",
-    "start": 9.21,
-    "end": 9.85
+    "start": 10.304,
+    "end": 10.944
    },
    {
     "word": "before",
-    "start": 10.01,
-    "end": 10.17
+    "start": 11.104,
+    "end": 11.264
    },
    {
     "word": "it's",
-    "start": 10.21,
-    "end": 10.33
+    "start": 11.304,
+    "end": 11.424
    },
    {
     "word": "uploaded.",
-    "start": 10.77,
-    "end": 11.0
+    "start": 11.864,
+    "end": 12.094
    }
   ]
  },

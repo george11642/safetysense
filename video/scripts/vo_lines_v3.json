@@ -1,9 +1,9 @@
 [
  {
   "id": "v3_01",
-  "text": "Ava is walking home. Someone comes up behind her. She can't reach her phone.",
-  "take": "r1 splice",
-  "tts": "[tense] Ava is walking home. Someone comes up behind her. She can't reach her phone."
+  "text": "Someone's right behind Ava. She freezes. She can't reach her phone.",
+  "take": "r2 splice",
+  "tts": "[tense] Someone's right behind Ava. She freezes. She can't reach her phone."
  },
  {
   "id": "v3_02",
@@ -66,9 +66,9 @@
  },
  {
   "id": "v3_15",
-  "text": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
-  "tts": "It only listens when you turn it on. While guarding, audio stays on your phone. Nothing is saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
-  "take": "r1 splice"
+  "text": "It only listens when you turn it on. While guarding, audio stays on your phone. No recordings are saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
+  "tts": "It only listens when you turn it on. While guarding, audio stays on your phone. No recordings are saved unless an alert fires. Then evidence is encrypted before it's uploaded.",
+  "take": "r6 splice"
  },
  {
   "id": "v3_16",

@@ -12,57 +12,57 @@
   },
   {
    "word": "phone",
-   "start": 0.311,
+   "start": 0.27,
    "end": 0.544
   },
   {
    "word": "can",
-   "start": 0.621,
+   "start": 0.57,
    "end": 0.777
   },
   {
    "word": "detect",
-   "start": 0.932,
+   "start": 0.79,
    "end": 1.087
   },
   {
    "word": "a",
-   "start": 1.165,
+   "start": 1.13,
    "end": 1.243
   },
   {
    "word": "drug.",
-   "start": 1.437,
+   "start": 1.407,
    "end": 1.981
   },
   {
    "word": "But",
-   "start": 2.058,
+   "start": 1.915,
    "end": 2.136
   },
   {
    "word": "SafetySense",
-   "start": 2.214,
+   "start": 2.184,
    "end": 2.835
   },
   {
    "word": "notices",
-   "start": 2.99,
+   "start": 2.83,
    "end": 3.379
   },
   {
    "word": "what",
-   "start": 3.456,
+   "start": 3.31,
    "end": 3.534
   },
   {
    "word": "happens",
-   "start": 3.612,
+   "start": 3.57,
    "end": 3.922
   },
   {
    "word": "next.",
-   "start": 4.0,
+   "start": 3.87,
    "end": 4.481
   }
  ],

@@ -360,9 +360,40 @@ const laugh: AnimFn = (t, s) => {
   return pose({ ...b, smile: 0.95, mouth: 0.35 + 0.3 * bounce, neckNod: -0.18, neckTilt: 0.1, shrugL: 0.02 * bounce, shrugR: 0.02 * bounce, chestBend: -0.04 * bounce, blink: 0.55 });
 };
 
+/** Additive (v2 r8): visible tonic immobility. Shoulders hiked, elbows clamped in, forearms pulled up so both fists
+ *  lock against the sternum, chin tucked, knees locked, breath held; only a fine tremble moves. Holds. */
+const lockUp: AnimFn = (t, s) => {
+  const a = r(t, 0, 5);
+  const tr = 0.007 * Math.sin(t * 1.9 + s) + 0.005 * Math.sin(t * 3.7);
+  return pose({
+    rootZ: -0.04 * a, hipDrop: 0.008 * a, knL: 0.02, knR: 0.02, hipLout: 0.03, hipRout: 0.03,
+    spineBend: 0.03 * a, chestBend: 0.1 * a, chestTwist: tr,
+    shrugL: 0.1 * a + tr, shrugR: 0.1 * a - tr,
+    shLfwd: 0.42 * a, shRfwd: 0.42 * a, shLout: 0.1 - 0.16 * a, shRout: 0.1 - 0.16 * a, shLtwist: 0.55 * a, shRtwist: 0.55 * a,
+    elL: 0.12 + 1.75 * a, elR: 0.12 + 1.75 * a, wrL: 0.35 * a, wrR: 0.35 * a,
+    neckNod: 0.16 * a, neckTurn: tr * 2.5, neckTilt: 0.03,
+    eyesWide: 0.9 * a, brow: 0.85 * a, worry: 1.0 * a, mouth: 0.12 * a, smile: -0.5 * a, blink: 0, eyeX: 0.12 * a,
+  });
+};
+/** Additive (v2 r8): a startled flinch while turning to look back (shoulders jump, hands snap up toward the chest,
+ *  half a step back), then a tense guarded hold. */
+const flinchBack: AnimFn = (t, s) => {
+  const lb = lookBack(t, s);
+  const st = startle(t, s);
+  const o = mix(lb, st, 0.75);
+  return { ...o, spineTwist: lb.spineTwist, chestTwist: lb.chestTwist, neckTurn: lb.neckTurn, eyeX: lb.eyeX, neckNod: -0.08 * r(t, 0, 5) };
+};
+/** Additive (v2 r8): head-and-shoulders jolt (masked use: keeps whatever the arms are doing): shoulders jump, chest
+ *  pulls back, eyes fly wide, mouth opens. */
+const jolt: AnimFn = (t, s) => {
+  const hit = r(t, 0, 4), settle = r(t, 6, 20);
+  const k = hit * (1 - 0.4 * settle);
+  return pose({ ...idle(t, s), shrugL: 0.07 * k, shrugR: 0.07 * k, chestBend: -0.1 * k, neckNod: -0.14 * k, eyesWide: hit, brow: 0.9 * hit, worry: 0.9 * hit, mouth: 0.5 * k, smile: -0.4 * hit, blink: 0 });
+};
+
 export const ANIMS = {
   idle, walk, run, lookBack, startle, phoneUp, phoneRing, phoneCall, drink, woozy, stumble,
-  sitSlump, sit, collapse, lieSide, hug, wave, kneel, drive, talk, freeze, relief, laugh,
+  sitSlump, sit, collapse, lieSide, hug, wave, kneel, drive, talk, freeze, relief, laugh, lockUp, flinchBack, jolt,
 } satisfies Record<string, AnimFn>;
 export type AnimName = keyof typeof ANIMS;
 

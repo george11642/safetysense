@@ -7,37 +7,37 @@
  "words": [
   {
    "word": "Someone",
-   "start": 0.155,
+   "start": 0.0,
    "end": 0.466
   },
   {
    "word": "comes",
-   "start": 0.583,
+   "start": 0.43,
    "end": 0.699
   },
   {
    "word": "up",
-   "start": 0.738,
+   "start": 0.69,
    "end": 0.777
   },
   {
    "word": "behind",
-   "start": 0.854,
+   "start": 0.824,
    "end": 1.165
   },
   {
    "word": "her.",
-   "start": 1.243,
+   "start": 1.17,
    "end": 1.631
   },
   {
    "word": "She",
-   "start": 1.709,
+   "start": 1.5,
    "end": 1.786
   },
   {
    "word": "screams.",
-   "start": 1.864,
+   "start": 1.83,
    "end": 2.562
   }
  ],

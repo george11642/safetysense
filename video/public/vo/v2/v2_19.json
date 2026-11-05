@@ -12,62 +12,62 @@
   },
   {
    "word": "ride",
-   "start": 0.155,
+   "start": 0.125,
    "end": 0.388
   },
   {
    "word": "home.",
-   "start": 0.466,
+   "start": 0.41,
    "end": 1.126
   },
   {
    "word": "Ride",
-   "start": 1.204,
+   "start": 1.065,
    "end": 1.359
   },
   {
    "word": "Guard",
-   "start": 1.437,
+   "start": 1.407,
    "end": 1.592
   },
   {
    "word": "is",
-   "start": 1.67,
+   "start": 1.59,
    "end": 1.748
   },
   {
    "word": "on.",
-   "start": 1.825,
+   "start": 1.795,
    "end": 2.353
   },
   {
    "word": "The",
-   "start": 2.431,
+   "start": 2.365,
    "end": 2.509
   },
   {
    "word": "car",
-   "start": 2.625,
+   "start": 2.59,
    "end": 2.742
   },
   {
    "word": "turns",
-   "start": 2.819,
+   "start": 2.75,
    "end": 3.052
   },
   {
    "word": "the",
-   "start": 3.091,
+   "start": 3.03,
    "end": 3.13
   },
   {
    "word": "wrong",
-   "start": 3.208,
+   "start": 3.178,
    "end": 3.441
   },
   {
    "word": "way.",
-   "start": 3.79,
+   "start": 3.41,
    "end": 3.875
   }
  ],

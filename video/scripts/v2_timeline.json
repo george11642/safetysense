@@ -1,7 +1,7 @@
 {
  "format": "9:16, 1080x1920, 30 fps",
- "totalSec": 116.13,
- "voSec": 105.5,
+ "totalSec": 104.08,
+ "voSec": 89.25,
  "beats": [
   {
    "id": "v2_01",
@@ -12,1579 +12,1300 @@
    "words": [
     {
      "word": "Tonight,",
-     "start": 0.228,
+     "start": 0.15,
      "end": 1.16
     },
     {
      "word": "Maya",
-     "start": 1.237,
+     "start": 1.14,
      "end": 1.548
     },
     {
      "word": "won't",
-     "start": 1.626,
+     "start": 1.5,
      "end": 1.781
     },
     {
      "word": "be",
-     "start": 1.859,
+     "start": 1.8,
      "end": 1.898
     },
     {
      "word": "able",
-     "start": 1.936,
+     "start": 1.906,
      "end": 2.092
     },
     {
      "word": "to",
-     "start": 2.131,
+     "start": 2.08,
      "end": 2.169
     },
     {
      "word": "call",
-     "start": 2.247,
+     "start": 2.217,
      "end": 2.402
     },
     {
      "word": "for",
-     "start": 2.48,
+     "start": 2.4,
      "end": 2.558
     },
     {
      "word": "help.",
-     "start": 2.635,
+     "start": 2.605,
      "end": 3.376
     },
     {
      "word": "Her",
-     "start": 3.493,
+     "start": 3.385,
      "end": 3.609
     },
     {
      "word": "phone",
-     "start": 3.765,
+     "start": 3.64,
      "end": 3.92
     },
     {
      "word": "will.",
-     "start": 3.998,
+     "start": 3.84,
      "end": 4.407
-    }
-   ]
-  },
-  {
-   "id": "v2_02",
-   "file": "vo/v2/v2_02.mp3",
-   "startSec": 4.56,
-   "durationSec": 2.583,
-   "highlight": "midnight",
-   "words": [
-    {
-     "word": "This",
-     "start": 4.56,
-     "end": 4.715
-    },
-    {
-     "word": "is",
-     "start": 4.793,
-     "end": 4.871
-    },
-    {
-     "word": "Maya.",
-     "start": 4.948,
-     "end": 5.636
-    },
-    {
-     "word": "Walking",
-     "start": 5.791,
-     "end": 5.946
-    },
-    {
-     "word": "home",
-     "start": 6.024,
-     "end": 6.257
-    },
-    {
-     "word": "after",
-     "start": 6.335,
-     "end": 6.49
-    },
-    {
-     "word": "midnight.",
-     "start": 6.568,
-     "end": 7.143
     }
    ]
   },
   {
    "id": "v2_03",
    "file": "vo/v2/v2_03.mp3",
-   "startSec": 7.29,
+   "startSec": 4.76,
    "durationSec": 6.066,
    "highlight": "Walk Home",
    "words": [
     {
      "word": "One",
-     "start": 7.29,
-     "end": 7.523
+     "start": 4.76,
+     "end": 4.993
     },
     {
      "word": "tap:",
-     "start": 7.717,
-     "end": 8.206
+     "start": 5.05,
+     "end": 5.676
     },
     {
      "word": "Walk",
-     "start": 8.284,
-     "end": 8.439
+     "start": 5.635,
+     "end": 5.909
     },
     {
      "word": "Home",
-     "start": 8.517,
-     "end": 8.672
+     "start": 5.957,
+     "end": 6.142
     },
     {
      "word": "Guard",
-     "start": 8.75,
-     "end": 8.906
+     "start": 6.19,
+     "end": 6.376
     },
     {
      "word": "is",
-     "start": 8.983,
-     "end": 9.061
+     "start": 6.39,
+     "end": 6.531
     },
     {
      "word": "on.",
-     "start": 9.139,
-     "end": 9.671
+     "start": 6.579,
+     "end": 7.141
     },
     {
      "word": "It",
-     "start": 9.748,
-     "end": 9.826
+     "start": 7.12,
+     "end": 7.296
     },
     {
      "word": "listens",
-     "start": 9.904,
-     "end": 10.214
+     "start": 7.344,
+     "end": 7.684
     },
     {
      "word": "on",
-     "start": 10.253,
-     "end": 10.292
+     "start": 7.63,
+     "end": 7.762
     },
     {
      "word": "the",
-     "start": 10.37,
-     "end": 10.447
+     "start": 7.81,
+     "end": 7.917
     },
     {
      "word": "phone",
-     "start": 10.564,
-     "end": 10.68
+     "start": 8.004,
+     "end": 8.15
     },
     {
      "word": "only.",
-     "start": 10.758,
-     "end": 11.354
+     "start": 8.15,
+     "end": 8.824
     },
     {
      "word": "Nothing",
-     "start": 11.432,
-     "end": 11.665
+     "start": 8.745,
+     "end": 9.135
     },
     {
      "word": "is",
-     "start": 11.742,
-     "end": 11.898
+     "start": 9.13,
+     "end": 9.368
     },
     {
      "word": "saved",
-     "start": 12.053,
-     "end": 12.208
+     "start": 9.47,
+     "end": 9.678
     },
     {
      "word": "unless",
-     "start": 12.286,
-     "end": 12.519
+     "start": 9.69,
+     "end": 9.989
     },
     {
      "word": "something's",
-     "start": 12.674,
-     "end": 12.907
+     "start": 9.95,
+     "end": 10.377
     },
     {
      "word": "wrong.",
-     "start": 13.373,
-     "end": 13.356
-    }
-   ]
-  },
-  {
-   "id": "v2_04",
-   "file": "vo/v2/v2_04.mp3",
-   "startSec": 13.56,
-   "durationSec": 1.463,
-   "highlight": "behind her",
-   "words": [
-    {
-     "word": "Footsteps",
-     "start": 13.715,
-     "end": 14.181
-    },
-    {
-     "word": "behind",
-     "start": 14.259,
-     "end": 14.647
-    },
-    {
-     "word": "her.",
-     "start": 14.764,
-     "end": 15.023
+     "start": 10.45,
+     "end": 10.826
     }
    ]
   },
   {
    "id": "v2_05",
    "file": "vo/v2/v2_05.mp3",
-   "startSec": 15.12,
+   "startSec": 12.27,
    "durationSec": 2.562,
    "highlight": "screams",
    "words": [
     {
      "word": "Someone",
-     "start": 15.275,
-     "end": 15.586
+     "start": 12.27,
+     "end": 12.736
     },
     {
      "word": "comes",
-     "start": 15.703,
-     "end": 15.819
+     "start": 12.7,
+     "end": 12.969
     },
     {
      "word": "up",
-     "start": 15.858,
-     "end": 15.897
+     "start": 12.96,
+     "end": 13.047
     },
     {
      "word": "behind",
-     "start": 15.974,
-     "end": 16.285
+     "start": 13.094,
+     "end": 13.435
     },
     {
      "word": "her.",
-     "start": 16.363,
-     "end": 16.751
+     "start": 13.44,
+     "end": 13.901
     },
     {
      "word": "She",
-     "start": 16.829,
-     "end": 16.906
+     "start": 13.77,
+     "end": 14.056
     },
     {
      "word": "screams.",
-     "start": 16.984,
-     "end": 17.682
+     "start": 14.1,
+     "end": 14.832
     }
    ]
   },
   {
    "id": "v2_06",
    "file": "vo/v2/v2_06.mp3",
-   "startSec": 18.23,
+   "startSec": 15.38,
    "durationSec": 4.006,
    "highlight": "get off me",
    "words": [
     {
      "word": "Her",
-     "start": 18.23,
-     "end": 18.385
+     "start": 15.38,
+     "end": 15.535
     },
     {
      "word": "phone",
-     "start": 18.463,
-     "end": 18.696
+     "start": 15.583,
+     "end": 15.846
     },
     {
      "word": "hears",
-     "start": 18.774,
-     "end": 19.007
+     "start": 15.87,
+     "end": 16.157
     },
     {
      "word": "it.",
-     "start": 19.084,
-     "end": 19.427
+     "start": 16.17,
+     "end": 16.577
     },
     {
      "word": "A",
-     "start": 19.505,
-     "end": 19.582
+     "start": 16.6,
+     "end": 16.732
     },
     {
      "word": "scream.",
-     "start": 19.66,
-     "end": 20.503
+     "start": 16.78,
+     "end": 17.653
     },
     {
      "word": "The",
-     "start": 20.58,
-     "end": 20.658
+     "start": 17.65,
+     "end": 17.808
     },
     {
      "word": "words:",
-     "start": 20.736,
-     "end": 21.329
+     "start": 17.856,
+     "end": 18.479
     },
     {
      "word": "get",
-     "start": 21.407,
-     "end": 21.484
+     "start": 18.445,
+     "end": 18.634
     },
     {
      "word": "off",
-     "start": 21.562,
-     "end": 21.795
+     "start": 18.63,
+     "end": 18.945
     },
     {
      "word": "me.",
-     "start": 21.911,
-     "end": 22.236
+     "start": 18.91,
+     "end": 19.386
     }
    ]
   },
   {
    "id": "v2_07",
    "file": "vo/v2/v2_07.mp3",
-   "startSec": 22.39,
-   "durationSec": 8.742,
+   "startSec": 19.54,
+   "durationSec": 9.612,
    "highlight": "She doesn't have to",
    "words": [
     {
      "word": "Then",
-     "start": 22.39,
-     "end": 22.623
+     "start": 19.54,
+     "end": 19.773
     },
     {
      "word": "she",
-     "start": 22.74,
-     "end": 22.856
+     "start": 19.77,
+     "end": 20.006
     },
     {
      "word": "freezes.",
-     "start": 22.934,
-     "end": 23.789
+     "start": 20.054,
+     "end": 20.939
     },
     {
      "word": "In",
-     "start": 23.867,
-     "end": 24.022
+     "start": 21.03,
+     "end": 21.479
     },
     {
      "word": "one",
-     "start": 24.139,
-     "end": 24.255
+     "start": 21.28,
+     "end": 21.712
     },
     {
      "word": "study",
-     "start": 24.333,
-     "end": 24.566
+     "start": 21.75,
+     "end": 22.1
     },
     {
      "word": "of",
-     "start": 24.643,
-     "end": 24.799
+     "start": 22.07,
+     "end": 22.333
     },
     {
      "word": "298",
-     "start": 24.915,
-     "end": 25.808
+     "start": 22.31,
+     "end": 23.343
     },
     {
      "word": "survivors,",
-     "start": 25.886,
-     "end": 26.818
+     "start": 23.391,
+     "end": 24.402
     },
     {
      "word": "70%",
-     "start": 26.896,
-     "end": 27.75
+     "start": 24.25,
+     "end": 25.256
     },
     {
-     "word": "froze.",
-     "start": 27.789,
-     "end": 28.553
+     "word": "reported",
+     "start": 25.27,
+     "end": 25.722
+    },
+    {
+     "word": "freezing.",
+     "start": 25.71,
+     "end": 26.395
     },
     {
      "word": "She",
-     "start": 28.592,
-     "end": 28.747
+     "start": 26.54,
+     "end": 26.778
     },
     {
      "word": "can't",
-     "start": 28.825,
-     "end": 29.058
+     "start": 26.81,
+     "end": 27.088
     },
     {
      "word": "reach",
-     "start": 29.136,
-     "end": 29.213
+     "start": 27.13,
+     "end": 27.244
     },
     {
      "word": "her",
-     "start": 29.291,
-     "end": 29.369
+     "start": 27.27,
+     "end": 27.399
     },
     {
      "word": "phone.",
-     "start": 29.446,
-     "end": 30.131
+     "start": 27.447,
+     "end": 28.161
     },
     {
      "word": "She",
-     "start": 30.183,
-     "end": 30.235
+     "start": 28.045,
+     "end": 28.265
     },
     {
      "word": "doesn't",
-     "start": 30.312,
-     "end": 30.468
+     "start": 28.27,
+     "end": 28.498
     },
     {
      "word": "have",
-     "start": 30.545,
-     "end": 30.778
+     "start": 28.49,
+     "end": 28.809
     },
     {
      "word": "to.",
-     "start": 31.167,
-     "end": 31.132
+     "start": 28.745,
+     "end": 29.152
     }
    ]
   },
   {
    "id": "v2_08",
    "file": "vo/v2/v2_08.mp3",
-   "startSec": 31.83,
+   "startSec": 29.85,
    "durationSec": 3.196,
    "highlight": "live location",
    "words": [
     {
      "word": "Three",
-     "start": 31.83,
-     "end": 32.063
+     "start": 29.85,
+     "end": 30.083
     },
     {
      "word": "phones",
-     "start": 32.218,
-     "end": 32.529
+     "start": 30.208,
+     "end": 30.549
     },
     {
      "word": "ring.",
-     "start": 32.684,
-     "end": 33.084
+     "start": 30.52,
+     "end": 31.104
     },
     {
      "word": "Each",
-     "start": 33.162,
-     "end": 33.395
+     "start": 31.14,
+     "end": 31.415
     },
     {
      "word": "one",
-     "start": 33.473,
-     "end": 33.706
+     "start": 31.42,
+     "end": 31.726
     },
     {
      "word": "gets",
-     "start": 33.783,
-     "end": 33.861
+     "start": 31.72,
+     "end": 31.881
     },
     {
      "word": "her",
-     "start": 33.939,
-     "end": 34.016
+     "start": 31.9,
+     "end": 32.036
     },
     {
      "word": "live",
-     "start": 34.094,
-     "end": 34.249
+     "start": 32.06,
+     "end": 32.269
     },
     {
      "word": "location.",
-     "start": 34.327,
-     "end": 35.026
+     "start": 32.317,
+     "end": 33.046
     }
    ]
   },
   {
    "id": "v2_09",
    "file": "vo/v2/v2_09.mp3",
-   "startSec": 35.17,
-   "durationSec": 6.883,
+   "startSec": 33.2,
+   "durationSec": 7.208,
    "highlight": "live location",
    "words": [
     {
      "word": "90",
-     "start": 35.17,
-     "end": 35.481
+     "start": 33.2,
+     "end": 33.588
     },
     {
-     "word": "seconds,",
-     "start": 35.636,
-     "end": 36.398
+     "word": "seconds.",
+     "start": 33.63,
+     "end": 34.546
     },
     {
-     "word": "no",
-     "start": 36.476,
-     "end": 36.631
+     "word": "Nobody",
+     "start": 34.47,
+     "end": 35.012
     },
     {
-     "word": "safety",
-     "start": 36.709,
-     "end": 37.02
-    },
-    {
-     "word": "PIN.",
-     "start": 37.097,
-     "end": 37.541
+     "word": "cancels.",
+     "start": 34.95,
+     "end": 35.784
     },
     {
      "word": "A",
-     "start": 37.619,
-     "end": 37.696
+     "start": 35.94,
+     "end": 36.058
     },
     {
      "word": "dispatcher",
-     "start": 37.968,
-     "end": 38.24
+     "start": 36.17,
+     "end": 36.602
     },
     {
      "word": "calls.",
-     "start": 38.434,
-     "end": 38.907
+     "start": 36.69,
+     "end": 37.262
     },
     {
      "word": "If",
-     "start": 38.985,
-     "end": 39.062
+     "start": 37.26,
+     "end": 37.417
     },
     {
      "word": "she",
-     "start": 39.14,
-     "end": 39.218
+     "start": 37.41,
+     "end": 37.573
     },
     {
      "word": "can't",
-     "start": 39.295,
-     "end": 39.451
+     "start": 37.55,
+     "end": 37.806
     },
     {
      "word": "answer,",
-     "start": 39.606,
-     "end": 40.188
+     "start": 37.931,
+     "end": 38.544
     },
     {
      "word": "police",
-     "start": 40.227,
-     "end": 40.538
+     "start": 38.515,
+     "end": 38.893
     },
     {
      "word": "head",
-     "start": 40.616,
-     "end": 40.771
+     "start": 38.87,
+     "end": 39.126
     },
     {
      "word": "to",
-     "start": 40.81,
-     "end": 40.849
+     "start": 39.09,
+     "end": 39.204
     },
     {
      "word": "her",
-     "start": 40.926,
-     "end": 41.082
+     "start": 39.25,
+     "end": 39.437
     },
     {
      "word": "live",
-     "start": 41.198,
-     "end": 41.315
+     "start": 39.41,
+     "end": 39.67
     },
     {
      "word": "location.",
-     "start": 41.858,
-     "end": 42.053
-    }
-   ]
-  },
-  {
-   "id": "v2_10",
-   "file": "vo/v2/v2_10.mp3",
-   "startSec": 42.86,
-   "durationSec": 2.996,
-   "highlight": "Night Out",
-   "words": [
-    {
-     "word": "Saturday.",
-     "start": 42.86,
-     "end": 43.709
-    },
-    {
-     "word": "A",
-     "start": 43.787,
-     "end": 43.865
-    },
-    {
-     "word": "party.",
-     "start": 44.059,
-     "end": 44.541
-    },
-    {
-     "word": "Night",
-     "start": 44.619,
-     "end": 44.775
-    },
-    {
-     "word": "Out",
-     "start": 44.852,
-     "end": 45.008
-    },
-    {
-     "word": "Guard",
-     "start": 45.085,
-     "end": 45.241
-    },
-    {
-     "word": "is",
-     "start": 45.318,
-     "end": 45.396
-    },
-    {
-     "word": "on.",
-     "start": 45.474,
-     "end": 45.856
+     "start": 39.69,
+     "end": 40.408
     }
    ]
   },
   {
    "id": "v2_11",
    "file": "vo/v2/v2_11.mp3",
-   "startSec": 45.97,
+   "startSec": 42.96,
    "durationSec": 2.742,
    "highlight": "Someone spikes",
    "words": [
     {
      "word": "11:02.",
-     "start": 45.97,
-     "end": 46.558
+     "start": 42.96,
+     "end": 44.137
     },
     {
      "word": "Someone",
-     "start": 47.224,
-     "end": 47.535
+     "start": 44.075,
+     "end": 44.525
     },
     {
      "word": "spikes",
-     "start": 47.69,
-     "end": 47.923
+     "start": 44.57,
+     "end": 44.913
     },
     {
      "word": "her",
-     "start": 48.001,
-     "end": 48.079
+     "start": 44.89,
+     "end": 45.069
     },
     {
      "word": "drink.",
-     "start": 48.156,
-     "end": 48.712
-    }
-   ]
-  },
-  {
-   "id": "v2_12",
-   "file": "vo/v2/v2_12.mp3",
-   "startSec": 48.92,
-   "durationSec": 2.898,
-   "highlight": "tilt",
-   "words": [
-    {
-     "word": "11:20.",
-     "start": 48.998,
-     "end": 50.221
-    },
-    {
-     "word": "The",
-     "start": 50.299,
-     "end": 50.376
-    },
-    {
-     "word": "room",
-     "start": 50.454,
-     "end": 50.687
-    },
-    {
-     "word": "starts",
-     "start": 50.765,
-     "end": 51.075
-    },
-    {
-     "word": "to",
-     "start": 51.153,
-     "end": 51.231
-    },
-    {
-     "word": "tilt.",
-     "start": 51.347,
-     "end": 51.818
+     "start": 45.116,
+     "end": 45.702
     }
    ]
   },
   {
    "id": "v2_13",
    "file": "vo/v2/v2_13.mp3",
-   "startSec": 51.93,
+   "startSec": 45.82,
    "durationSec": 4.481,
    "highlight": "notices",
    "words": [
     {
      "word": "No",
-     "start": 51.93,
-     "end": 52.085
+     "start": 45.82,
+     "end": 45.975
     },
     {
      "word": "phone",
-     "start": 52.241,
-     "end": 52.474
+     "start": 46.09,
+     "end": 46.364
     },
     {
      "word": "can",
-     "start": 52.551,
-     "end": 52.707
+     "start": 46.39,
+     "end": 46.597
     },
     {
      "word": "detect",
-     "start": 52.862,
-     "end": 53.017
+     "start": 46.61,
+     "end": 46.907
     },
     {
      "word": "a",
-     "start": 53.095,
-     "end": 53.173
+     "start": 46.95,
+     "end": 47.063
     },
     {
      "word": "drug.",
-     "start": 53.367,
-     "end": 53.911
+     "start": 47.227,
+     "end": 47.801
     },
     {
      "word": "But",
-     "start": 53.988,
-     "end": 54.066
+     "start": 47.735,
+     "end": 47.956
     },
     {
      "word": "SafetySense",
-     "start": 54.144,
-     "end": 54.765
+     "start": 48.004,
+     "end": 48.655
     },
     {
      "word": "notices",
-     "start": 54.92,
-     "end": 55.309
+     "start": 48.65,
+     "end": 49.199
     },
     {
      "word": "what",
-     "start": 55.386,
-     "end": 55.464
+     "start": 49.13,
+     "end": 49.354
     },
     {
      "word": "happens",
-     "start": 55.542,
-     "end": 55.852
+     "start": 49.39,
+     "end": 49.742
     },
     {
      "word": "next.",
-     "start": 55.93,
-     "end": 56.411
+     "start": 49.69,
+     "end": 50.301
     }
    ]
   },
   {
    "id": "v2_14",
    "file": "vo/v2/v2_14.mp3",
-   "startSec": 56.53,
+   "startSec": 50.42,
    "durationSec": 6.206,
    "highlight": "You okay?",
    "words": [
     {
      "word": "11:31.",
-     "start": 56.53,
-     "end": 57.876
+     "start": 50.42,
+     "end": 51.766
     },
     {
      "word": "She",
-     "start": 57.953,
-     "end": 58.109
+     "start": 51.735,
+     "end": 51.999
     },
     {
      "word": "stumbles.",
-     "start": 58.186,
-     "end": 59.005
+     "start": 52.046,
+     "end": 52.895
     },
     {
      "word": "Then",
-     "start": 59.082,
-     "end": 59.238
+     "start": 52.875,
+     "end": 53.128
     },
     {
      "word": "she",
-     "start": 59.315,
-     "end": 59.393
+     "start": 53.11,
+     "end": 53.283
     },
     {
      "word": "goes",
-     "start": 59.432,
-     "end": 59.626
+     "start": 53.292,
+     "end": 53.516
     },
     {
      "word": "still.",
-     "start": 59.704,
-     "end": 60.308
+     "start": 53.53,
+     "end": 54.198
     },
     {
      "word": "Her",
-     "start": 60.946,
-     "end": 61.024
+     "start": 54.78,
+     "end": 54.914
     },
     {
      "word": "phone",
-     "start": 61.102,
-     "end": 61.335
+     "start": 54.962,
+     "end": 55.225
     },
     {
      "word": "asks:",
-     "start": 61.412,
-     "end": 62.036
+     "start": 55.17,
+     "end": 55.926
     },
     {
      "word": "You",
-     "start": 62.075,
-     "end": 62.113
+     "start": 55.845,
+     "end": 56.003
     },
     {
      "word": "okay?",
-     "start": 62.191,
-     "end": 62.736
-    }
-   ]
-  },
-  {
-   "id": "v2_15",
-   "file": "vo/v2/v2_15.mp3",
-   "startSec": 62.89,
-   "durationSec": 2.401,
-   "highlight": "",
-   "words": [
-    {
-     "word": "45",
-     "start": 62.89,
-     "end": 63.434
-    },
-    {
-     "word": "seconds.",
-     "start": 63.511,
-     "end": 64.443
-    },
-    {
-     "word": "No",
-     "start": 64.521,
-     "end": 64.676
-    },
-    {
-     "word": "answer.",
-     "start": 64.754,
-     "end": 65.291
+     "start": 56.01,
+     "end": 56.626
     }
    ]
   },
   {
    "id": "v2_16",
    "file": "vo/v2/v2_16.mp3",
-   "startSec": 65.39,
+   "startSec": 57.73,
    "durationSec": 3.502,
    "highlight": "I'm on my way",
    "words": [
     {
      "word": "Her",
-     "start": 65.39,
-     "end": 65.545
+     "start": 57.73,
+     "end": 57.885
     },
     {
      "word": "roommate's",
-     "start": 65.623,
-     "end": 66.011
+     "start": 57.933,
+     "end": 58.351
     },
     {
      "word": "phone",
-     "start": 66.089,
-     "end": 66.244
+     "start": 58.399,
+     "end": 58.584
     },
     {
      "word": "rings.",
-     "start": 66.322,
-     "end": 67.009
+     "start": 58.632,
+     "end": 59.349
     },
     {
      "word": "She",
-     "start": 67.087,
-     "end": 67.165
+     "start": 59.285,
+     "end": 59.505
     },
     {
      "word": "taps:",
-     "start": 67.242,
-     "end": 67.896
+     "start": 59.5,
+     "end": 60.236
     },
     {
      "word": "I'm",
-     "start": 67.973,
-     "end": 68.051
+     "start": 60.23,
+     "end": 60.391
     },
     {
      "word": "on",
-     "start": 68.129,
-     "end": 68.206
+     "start": 60.439,
+     "end": 60.546
     },
     {
      "word": "my",
-     "start": 68.284,
-     "end": 68.439
+     "start": 60.58,
+     "end": 60.779
     },
     {
      "word": "way.",
-     "start": 68.595,
-     "end": 68.892
+     "start": 60.76,
+     "end": 61.232
     }
    ]
   },
   {
    "id": "v2_17",
    "file": "vo/v2/v2_17.mp3",
-   "startSec": 69.69,
-   "durationSec": 3.929,
+   "startSec": 62.28,
+   "durationSec": 3.025,
    "highlight": "Smashes it",
    "words": [
     {
      "word": "What",
-     "start": 69.768,
-     "end": 69.845
+     "start": 62.28,
+     "end": 62.435
     },
     {
      "word": "if",
-     "start": 69.923,
-     "end": 70.001
+     "start": 62.34,
+     "end": 62.591
     },
     {
      "word": "someone",
-     "start": 70.078,
-     "end": 70.389
+     "start": 62.638,
+     "end": 62.979
     },
     {
      "word": "takes",
-     "start": 70.506,
-     "end": 70.622
+     "start": 62.93,
+     "end": 63.212
     },
     {
      "word": "her",
-     "start": 70.7,
-     "end": 70.777
+     "start": 63.19,
+     "end": 63.367
     },
     {
      "word": "phone?",
-     "start": 70.855,
-     "end": 71.563
+     "start": 63.415,
+     "end": 64.153
     },
     {
      "word": "Smashes",
-     "start": 71.64,
-     "end": 72.106
+     "start": 64.055,
+     "end": 64.696
     },
     {
      "word": "it?",
-     "start": 72.184,
-     "end": 72.574
-    },
-    {
-     "word": "Switches",
-     "start": 72.652,
-     "end": 72.963
-    },
-    {
-     "word": "it",
-     "start": 73.002,
-     "end": 73.04
-    },
-    {
-     "word": "off?",
-     "start": 73.196,
-     "end": 73.619
+     "start": 64.63,
+     "end": 65.164
     }
    ]
   },
   {
    "id": "v2_18",
    "file": "vo/v2/v2_18.mp3",
-   "startSec": 73.74,
-   "durationSec": 6.083,
+   "startSec": 65.5,
+   "durationSec": 3.815,
    "highlight": "raises the alarm itself",
    "words": [
     {
-     "word": "Her",
-     "start": 73.74,
-     "end": 73.895
-    },
-    {
-     "word": "phone",
-     "start": 73.973,
-     "end": 74.206
-    },
-    {
-     "word": "checks",
-     "start": 74.361,
-     "end": 74.517
-    },
-    {
-     "word": "in",
-     "start": 74.594,
-     "end": 74.672
-    },
-    {
-     "word": "with",
-     "start": 74.711,
-     "end": 74.75
-    },
-    {
-     "word": "our",
-     "start": 74.827,
-     "end": 74.983
-    },
-    {
-     "word": "server",
-     "start": 75.177,
-     "end": 75.371
-    },
-    {
-     "word": "every",
-     "start": 75.449,
-     "end": 75.682
-    },
-    {
-     "word": "minute.",
-     "start": 75.759,
-     "end": 76.301
-    },
-    {
      "word": "If",
-     "start": 76.34,
-     "end": 76.379
+     "start": 65.5,
+     "end": 65.869
     },
     {
      "word": "it",
-     "start": 76.456,
-     "end": 76.534
+     "start": 65.745,
+     "end": 66.024
     },
     {
      "word": "goes",
-     "start": 76.573,
-     "end": 76.767
+     "start": 66.033,
+     "end": 66.257
     },
     {
      "word": "dark,",
-     "start": 76.845,
-     "end": 77.427
+     "start": 66.25,
+     "end": 66.917
     },
     {
      "word": "the",
-     "start": 77.916,
-     "end": 77.994
+     "start": 67.34,
+     "end": 67.484
     },
     {
      "word": "server",
-     "start": 78.072,
-     "end": 78.382
+     "start": 67.53,
+     "end": 67.872
     },
     {
      "word": "raises",
-     "start": 78.576,
-     "end": 78.771
+     "start": 67.79,
+     "end": 68.261
     },
     {
      "word": "the",
-     "start": 78.809,
-     "end": 78.848
+     "start": 68.21,
+     "end": 68.338
     },
     {
      "word": "alarm",
-     "start": 79.004,
-     "end": 79.159
+     "start": 68.464,
+     "end": 68.649
     },
     {
      "word": "itself.",
-     "start": 79.237,
-     "end": 79.823
+     "start": 68.61,
+     "end": 69.315
     }
    ]
   },
   {
    "id": "v2_19",
    "file": "vo/v2/v2_19.mp3",
-   "startSec": 80.63,
+   "startSec": 70.37,
    "durationSec": 3.875,
    "highlight": "wrong way",
    "words": [
     {
      "word": "A",
-     "start": 80.63,
-     "end": 80.708
+     "start": 70.37,
+     "end": 70.448
     },
     {
      "word": "ride",
-     "start": 80.785,
-     "end": 81.018
+     "start": 70.495,
+     "end": 70.758
     },
     {
      "word": "home.",
-     "start": 81.096,
-     "end": 81.756
+     "start": 70.78,
+     "end": 71.496
     },
     {
      "word": "Ride",
-     "start": 81.834,
-     "end": 81.989
+     "start": 71.435,
+     "end": 71.729
     },
     {
      "word": "Guard",
-     "start": 82.067,
-     "end": 82.222
+     "start": 71.777,
+     "end": 71.962
     },
     {
      "word": "is",
-     "start": 82.3,
-     "end": 82.378
+     "start": 71.96,
+     "end": 72.118
     },
     {
      "word": "on.",
-     "start": 82.455,
-     "end": 82.983
+     "start": 72.165,
+     "end": 72.723
     },
     {
      "word": "The",
-     "start": 83.061,
-     "end": 83.139
+     "start": 72.735,
+     "end": 72.879
     },
     {
      "word": "car",
-     "start": 83.255,
-     "end": 83.372
+     "start": 72.96,
+     "end": 73.112
     },
     {
      "word": "turns",
-     "start": 83.449,
-     "end": 83.682
+     "start": 73.12,
+     "end": 73.422
     },
     {
      "word": "the",
-     "start": 83.721,
-     "end": 83.76
+     "start": 73.4,
+     "end": 73.5
     },
     {
      "word": "wrong",
-     "start": 83.838,
-     "end": 84.071
+     "start": 73.548,
+     "end": 73.811
     },
     {
      "word": "way.",
-     "start": 84.42,
-     "end": 84.505
+     "start": 73.78,
+     "end": 74.245
     }
    ]
   },
   {
    "id": "v2_20",
    "file": "vo/v2/v2_20.mp3",
-   "startSec": 84.62,
+   "startSec": 74.36,
    "durationSec": 3.915,
    "highlight": "cancel it",
    "words": [
     {
      "word": "Her",
-     "start": 84.62,
-     "end": 84.775
+     "start": 74.36,
+     "end": 74.515
     },
     {
      "word": "phone",
-     "start": 84.931,
-     "end": 85.086
+     "start": 74.59,
+     "end": 74.826
     },
     {
      "word": "asks:",
-     "start": 85.164,
-     "end": 85.801
+     "start": 74.79,
+     "end": 75.541
     },
     {
      "word": "You",
-     "start": 85.878,
-     "end": 85.956
+     "start": 75.54,
+     "end": 75.696
     },
     {
      "word": "okay?",
-     "start": 86.034,
-     "end": 86.697
+     "start": 75.71,
+     "end": 76.437
     },
     {
      "word": "The",
-     "start": 86.774,
-     "end": 86.852
+     "start": 76.47,
+     "end": 76.592
     },
     {
      "word": "driver",
-     "start": 87.046,
-     "end": 87.24
+     "start": 76.63,
+     "end": 76.98
     },
     {
      "word": "says:",
-     "start": 87.396,
-     "end": 87.84
+     "start": 76.91,
+     "end": 77.58
     },
     {
      "word": "cancel",
-     "start": 88.035,
-     "end": 88.229
+     "start": 77.535,
+     "end": 77.969
     },
     {
      "word": "it.",
-     "start": 88.306,
-     "end": 88.535
+     "start": 77.865,
+     "end": 78.275
     }
    ]
   },
   {
    "id": "v2_21",
    "file": "vo/v2/v2_21.mp3",
-   "startSec": 88.66,
+   "startSec": 78.4,
    "durationSec": 7.035,
    "highlight": "It isn't",
    "words": [
     {
      "word": "She",
-     "start": 88.66,
-     "end": 88.815
+     "start": 78.4,
+     "end": 78.555
     },
     {
      "word": "types",
-     "start": 88.893,
-     "end": 89.126
+     "start": 78.603,
+     "end": 78.866
     },
     {
      "word": "her",
-     "start": 89.204,
-     "end": 89.281
+     "start": 78.83,
+     "end": 79.021
     },
     {
      "word": "duress",
-     "start": 89.359,
-     "end": 89.67
+     "start": 79.069,
+     "end": 79.41
     },
     {
      "word": "PIN.",
-     "start": 89.747,
-     "end": 90.218
+     "start": 79.41,
+     "end": 79.958
     },
     {
      "word": "The",
-     "start": 90.296,
-     "end": 90.374
+     "start": 79.955,
+     "end": 80.114
     },
     {
      "word": "check-in",
-     "start": 90.49,
-     "end": 90.762
+     "start": 80.13,
+     "end": 80.502
     },
     {
      "word": "disappears,",
-     "start": 90.878,
-     "end": 91.772
+     "start": 80.55,
+     "end": 81.512
     },
     {
      "word": "like",
-     "start": 91.888,
-     "end": 92.005
+     "start": 81.485,
+     "end": 81.745
     },
     {
      "word": "everything's",
-     "start": 92.082,
-     "end": 92.471
+     "start": 81.67,
+     "end": 82.211
     },
     {
      "word": "fine.",
-     "start": 92.548,
-     "end": 93.192
+     "start": 82.258,
+     "end": 82.932
     },
     {
      "word": "It",
-     "start": 93.259,
-     "end": 93.414
+     "start": 82.9,
+     "end": 83.154
     },
     {
      "word": "isn't.",
-     "start": 93.492,
-     "end": 94.145
+     "start": 83.13,
+     "end": 83.885
     },
     {
      "word": "Dispatch",
-     "start": 94.378,
-     "end": 94.611
+     "start": 83.855,
+     "end": 84.351
     },
     {
      "word": "is",
-     "start": 94.689,
-     "end": 94.767
+     "start": 84.31,
+     "end": 84.507
     },
     {
      "word": "already",
-     "start": 94.922,
-     "end": 95.233
+     "start": 84.57,
+     "end": 84.973
     },
     {
      "word": "on",
-     "start": 95.31,
-     "end": 95.388
+     "start": 84.93,
+     "end": 85.128
     },
     {
      "word": "it.",
-     "start": 95.466,
-     "end": 95.695
+     "start": 85.0,
+     "end": 85.435
     }
    ]
   },
   {
    "id": "v2_22",
    "file": "vo/v2/v2_22.mp3",
-   "startSec": 96.14,
-   "durationSec": 6.28,
+   "startSec": 85.88,
+   "durationSec": 7.142,
    "highlight": "calls for you",
    "words": [
     {
      "word": "New",
-     "start": 96.14,
-     "end": 96.295
+     "start": 85.88,
+     "end": 86.035
     },
     {
      "word": "Mexico",
-     "start": 96.373,
-     "end": 96.839
+     "start": 86.083,
+     "end": 86.579
+    },
+    {
+     "word": "is",
+     "start": 86.47,
+     "end": 86.812
     },
     {
      "word": "still",
-     "start": 96.917,
-     "end": 97.227
+     "start": 86.81,
+     "end": 87.123
     },
     {
-     "word": "has",
-     "start": 97.305,
-     "end": 97.538
+     "word": "listed",
+     "start": 86.945,
+     "end": 87.589
+    },
+    {
+     "word": "with",
+     "start": 87.57,
+     "end": 88.055
     },
     {
      "word": "no",
-     "start": 97.616,
-     "end": 97.849
+     "start": 87.845,
+     "end": 88.365
     },
     {
      "word": "text-to-911.",
-     "start": 98.004,
-     "end": 99.36
+     "start": 88.413,
+     "end": 89.792
     },
     {
      "word": "When",
-     "start": 99.413,
-     "end": 99.464
+     "start": 89.885,
+     "end": 90.052
     },
     {
      "word": "you",
-     "start": 99.542,
-     "end": 99.62
+     "start": 90.03,
+     "end": 90.207
     },
     {
      "word": "can't",
-     "start": 99.697,
-     "end": 99.853
+     "start": 90.21,
+     "end": 90.44
     },
     {
      "word": "call,",
-     "start": 99.93,
-     "end": 100.576
+     "start": 90.488,
+     "end": 91.178
     },
     {
      "word": "SafetySense",
-     "start": 100.615,
-     "end": 101.236
+     "start": 91.06,
+     "end": 91.838
     },
     {
      "word": "calls",
-     "start": 101.314,
-     "end": 101.624
+     "start": 91.79,
+     "end": 92.227
     },
     {
      "word": "for",
-     "start": 101.702,
-     "end": 101.857
+     "start": 92.15,
+     "end": 92.46
     },
     {
      "word": "you.",
-     "start": 101.935,
-     "end": 102.42
-    }
-   ]
-  },
-  {
-   "id": "v2_23",
-   "file": "vo/v2/v2_23.mp3",
-   "startSec": 102.67,
-   "durationSec": 2.795,
-   "highlight": "can't",
-   "words": [
-    {
-     "word": "SafetySense.",
-     "start": 102.67,
-     "end": 103.759
-    },
-    {
-     "word": "Calls",
-     "start": 103.837,
-     "end": 104.148
-    },
-    {
-     "word": "for",
-     "start": 104.225,
-     "end": 104.303
-    },
-    {
-     "word": "help",
-     "start": 104.458,
-     "end": 104.614
-    },
-    {
-     "word": "when",
-     "start": 104.691,
-     "end": 104.769
-    },
-    {
-     "word": "you",
-     "start": 104.847,
-     "end": 104.924
-    },
-    {
-     "word": "can't.",
-     "start": 105.041,
-     "end": 105.465
+     "start": 92.49,
+     "end": 93.022
     }
    ]
   },
   {
    "id": "v2_24",
    "file": "vo/v2/v2_24.mp3",
-   "startSec": 105.67,
+   "startSec": 93.38,
    "durationSec": 3.293,
    "highlight": "never replaces it",
    "words": [
     {
      "word": "It",
-     "start": 105.67,
-     "end": 105.825
+     "start": 93.38,
+     "end": 93.535
     },
     {
      "word": "supplements",
-     "start": 105.903,
-     "end": 106.447
+     "start": 93.583,
+     "end": 94.157
     },
     {
      "word": "911.",
-     "start": 106.524,
-     "end": 107.488
+     "start": 94.15,
+     "end": 95.198
     },
     {
      "word": "It",
-     "start": 107.566,
-     "end": 107.721
+     "start": 95.19,
+     "end": 95.431
     },
     {
      "word": "never",
-     "start": 107.877,
-     "end": 108.11
+     "start": 95.45,
+     "end": 95.82
     },
     {
      "word": "replaces",
-     "start": 108.187,
-     "end": 108.653
+     "start": 95.83,
+     "end": 96.363
     },
     {
      "word": "it.",
-     "start": 108.731,
-     "end": 108.963
+     "start": 96.265,
+     "end": 96.673
     }
    ]
   },
   {
    "id": "v2_25",
    "file": "vo/v2/v2_25.mp3",
-   "startSec": 109.81,
+   "startSec": 97.27,
    "durationSec": 3.316,
    "highlight": "not your fault",
    "words": [
     {
      "word": "And",
-     "start": 110.121,
-     "end": 110.198
+     "start": 97.27,
+     "end": 97.658
     },
     {
      "word": "if",
-     "start": 110.276,
-     "end": 110.354
+     "start": 97.485,
+     "end": 97.814
     },
     {
      "word": "something",
-     "start": 110.431,
-     "end": 110.742
+     "start": 97.84,
+     "end": 98.202
     },
     {
      "word": "happened",
-     "start": 110.82,
-     "end": 111.13
+     "start": 98.18,
+     "end": 98.59
     },
     {
      "word": "to",
-     "start": 111.208,
-     "end": 111.286
+     "start": 98.58,
+     "end": 98.746
     },
     {
      "word": "you,",
-     "start": 111.402,
-     "end": 111.858
+     "start": 98.78,
+     "end": 99.318
     },
     {
      "word": "it's",
-     "start": 111.935,
-     "end": 112.091
+     "start": 99.26,
+     "end": 99.551
     },
     {
      "word": "not",
-     "start": 112.168,
-     "end": 112.324
+     "start": 99.32,
+     "end": 99.784
     },
     {
      "word": "your",
-     "start": 112.401,
-     "end": 112.557
+     "start": 99.78,
+     "end": 100.017
     },
     {
      "word": "fault.",
-     "start": 112.712,
-     "end": 113.126
+     "start": 100.04,
+     "end": 100.586
     }
    ]
   }

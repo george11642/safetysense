@@ -23,13 +23,21 @@ export const useSpring = (at: number, cfg: { damping?: number; stiffness?: numbe
  */
 export const Shot: React.FC<{
   from: number; to: number; name: string; inT?: number; outT?: number; kind?: "cut" | "fade" | "push"; premount?: number; children: React.ReactNode;
-}> = ({ from, to, name, inT = 8, outT = 8, kind = "fade", premount = 15, children }) => (
+  /** v3 r2: slow push-in across the shot (0.03 = 3% scale), so motion never fully stops on 2D sections. */
+  drift?: number;
+}> = ({ from, to, name, inT = 8, outT = 8, kind = "fade", premount = 15, children, drift = 0 }) => (
   <Sequence from={from} durationInFrames={to - from + Math.max(outT, 12)} name={name} premountFor={premount}>
     <ShotInner dur={to - from} inT={kind === "cut" ? 0 : inT} outT={0} kind={kind}>
-      {children}
+      {drift ? <Drift dur={to - from} amt={drift}>{children}</Drift> : children}
     </ShotInner>
   </Sequence>
 );
+
+const Drift: React.FC<{ dur: number; amt: number; children: React.ReactNode }> = ({ dur, amt, children }) => {
+  const f = useCurrentFrame();
+  const k = interpolate(f, [0, Math.max(1, dur)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.sin) });
+  return <AbsoluteFill style={{ transform: `scale(${1 + amt * k}) translate(${-6 * k}px, ${-4 * k}px)` }}>{children}</AbsoluteFill>;
+};
 
 const ShotInner: React.FC<{ dur: number; inT: number; outT: number; kind: string; children: React.ReactNode }> = ({ dur, inT, outT, kind, children }) => {
   const f = useCurrentFrame();
@@ -211,8 +219,12 @@ export const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProper
 );
 
 /* ------------------------------------------------------------------ ICONS */
-export type IconName = "pill" | "phoneOff" | "chatOff" | "mic" | "glass" | "words" | "key" | "fall" | "lock" | "shield" | "bolt" | "siri" | "lockscreen" | "tap" | "cloud" | "users" | "eye" | "face" | "pin" | "battery" | "list" | "phone" | "heart" | "server";
+export type IconName = "recOff" | "pill" | "phoneOff" | "chatOff" | "mic" | "glass" | "words" | "key" | "fall" | "lock" | "shield" | "bolt" | "siri" | "lockscreen" | "tap" | "cloud" | "users" | "eye" | "face" | "pin" | "battery" | "list" | "phone" | "heart" | "server" | "walk" | "moon" | "car";
 const ICONS: Record<IconName, React.ReactNode> = {
+  recOff: (<><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="3.6" fill="currentColor" /><path d="M4 4l16 16" /></>),
+  walk: (<><circle cx="13" cy="4" r="2" /><path d="M10.5 21l2-6-3-3 1.2-4.2 3 3H17M10.7 7.8 7 11v3M12.5 15l3.5 6" /></>),
+  moon: (<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />),
+  car: (<><path d="M3.5 16v-4l2.2-5h12.6l2.2 5v4z" /><circle cx="7.5" cy="16.5" r="1.8" /><circle cx="16.5" cy="16.5" r="1.8" /><path d="M3.5 12h17" /></>),
   pill: (<><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-35 12 12)" /><path d="m9.2 7.8 5.6 8.4" /></>),
   phoneOff: (<><rect x="6" y="2" width="12" height="20" rx="2.5" /><path d="M3 3l18 18" /></>),
   chatOff: (<><path d="M4 5h16v11H9l-5 4z" /><path d="M9 9h6M9 12h3" /><path d="M2.5 2.5l19 19" /></>),
@@ -239,15 +251,15 @@ const ICONS: Record<IconName, React.ReactNode> = {
   server: (<><rect x="3.5" y="4" width="17" height="7" rx="2" /><rect x="3.5" y="13" width="17" height="7" rx="2" /><path d="M7 7.5h.01M7 16.5h.01" /></>),
 };
 export const Icon: React.FC<{ name: IconName; size: number; color: string; stroke?: number }> = ({ name, size, color, stroke = 1.8 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }}>{ICONS[name]}</svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0, color }}>{ICONS[name]}</svg>
 );
 
 /* ------------------------------------------------------------------ CAPTIONS */
 type CW = { word: string; start: number; end: number; hi: boolean; beat: string };
 const normW = (x: string) => x.toLowerCase().replace(/[^a-z0-9'%-]/g, "");
 
-/** Per-beat caption nudge (s): v3_13's alignment runs ~120 ms ahead of the audio. */
-const CAPTION_OFFSET: Record<string, number> = { v3_13: 0.1 };
+/** Per-beat caption nudge (s). v3 r6: v3_13's old +0.1 s pushed the beat late (whisper: +190 ms median), so it is 0 now. */
+const CAPTION_OFFSET: Record<string, number> = {};
 
 /** Words of all beats; `hi` marks only the contiguous run that matches the beat's highlight phrase. */
 const captionWords = (hide: string[]): CW[] => {
@@ -306,7 +318,8 @@ const chunkPhrases = (words: CW[], maxWords = 6, maxChars = 38) => {
  * Premiere-style captions: phrase chunks, lower third, each word fades/rises in on its VO timestamp,
  * the beat's highlight phrase in the accent color. `hide` = beat ids whose captions are replaced by on-screen type.
  */
-export const Captions16: React.FC<{ hide?: string[]; cutoffs?: number[] }> = ({ hide = [], cutoffs = [] }) => {
+const HI = "#ff5a8c"; // brighter brand pink for caption keyword pops (the muted accent read as disabled grey)
+export const Captions16: React.FC<{ hide?: string[]; cutoffs?: number[]; mute?: [number, number][]; lift?: [number, number, number][] }> = ({ hide = [], cutoffs = [], mute = [], lift = [] }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps;
@@ -316,6 +329,14 @@ export const Captions16: React.FC<{ hide?: string[]; cutoffs?: number[] }> = ({ 
   const tailEnd = (c: { end: number }, i: number) => Math.min(c.end + 0.6, (chunks[i + 1]?.start ?? Infinity) - 0.06, Math.max(c.end, cutAfter(c.end)));
   const idx = chunks.findIndex((c, i) => t >= c.start - 0.06 && t < tailEnd(c, i));
   if (idx < 0) return null;
+  // mute = absolute frame ranges where an on-screen headline already says the same words (one reading channel)
+  if (mute.some(([a, b]) => frame >= a && frame < b)) return null;
+  // v3 r6: a chunk that STARTS inside a mute range never re-appears afterwards (its 0.6 s tail used to pop back in
+  // after the range ended, flashing a phrase that had already been spoken)
+  const chStartF = chunks[idx].start * fps;
+  if (mute.some(([a, b]) => chStartF >= a - 2 && chStartF < b)) return null;
+  let up = 0;
+  for (const [a, b, px] of lift) up = Math.max(up, px * Math.min(ez(frame, a - 8, a), 1 - ez(frame, b, b + 8)));
   const ch = chunks[idx];
   const next = chunks[idx + 1];
   const nextStart = next ? next.start - 0.06 : Infinity;
@@ -325,16 +346,16 @@ export const Captions16: React.FC<{ hide?: string[]; cutoffs?: number[] }> = ({ 
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 240, background: "linear-gradient(180deg, transparent, rgba(6,5,12,.5))" }} />
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 56, display: "flex", justifyContent: "center", opacity: outO }}>
-      <div style={{ maxWidth: 1240, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 13px", padding: "8px 30px 10px", borderRadius: 22, background: "rgba(8,7,14,.66)", backdropFilter: "blur(8px)", boxShadow: "0 8px 30px rgba(0,0,0,.35)" }}>
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 44 + up, display: "flex", justifyContent: "center", opacity: outO }}>
+      <div style={{ maxWidth: 1440, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 15px", padding: "6px 32px 8px", borderRadius: 22, background: "rgba(8,7,14,.66)", backdropFilter: "blur(8px)", boxShadow: "0 8px 30px rgba(0,0,0,.35)" }}>
         {ch.words.map((wd, i) => {
           const p = clamp01((t - wd.start + 0.08) / 0.14);
           const cur = t >= wd.start - 0.04 && t < wd.end + 0.05 ? 1 : 0;
           return (
             <span key={i} style={{
-              display: "inline-block", fontFamily: F.display, fontWeight: 700, fontSize: 52, letterSpacing: "-0.01em", lineHeight: 1.18,
-              color: wd.hi ? C.accent : "#ffffff", opacity: 0.6 + 0.4 * p, transform: `translateY(${(1 - p) * 8}px) scale(${1 + 0.06 * cur * p})`,
-              textShadow: `0 2px 0 rgba(0,0,0,.55), 0 4px 22px rgba(0,0,0,.85)${wd.hi && p > 0.5 ? `, 0 0 26px ${C.accent}66` : ""}`,
+              display: "inline-block", fontFamily: F.display, fontWeight: wd.hi ? 800 : 700, fontSize: wd.hi ? 70 : 60, letterSpacing: "-0.01em", lineHeight: 1.18,
+              color: wd.hi ? HI : "#ffffff", opacity: 0.6 + 0.4 * p, transform: `translateY(${(1 - p) * 8}px) scale(${1 + 0.06 * cur * p})`,
+              textShadow: `0 2px 0 rgba(0,0,0,.55), 0 4px 22px rgba(0,0,0,.85)${wd.hi && p > 0.5 ? `, 0 0 28px ${HI}99` : ""}`,
             }}>{wd.word}</span>
           );
         })}
@@ -373,7 +394,7 @@ export const LadderStrip: React.FC<{ keys: [number, LadderKey][]; show: [number,
             {i > 0 && <div style={{ width: 20, height: 3, background: done || active ? s.c : C.line, opacity: 0.8 }} />}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 999, background: active ? `${s.c}30` : "transparent", border: `1px solid ${active ? s.c : "transparent"}`, transform: `scale(${active ? 1 + 0.06 * (1 - pop) : 1})` }}>
               <div style={{ width: 14, height: 14, borderRadius: 99, background: active || done ? s.c : C.line, boxShadow: active ? `0 0 ${6 + 10 * pulse}px ${s.c}` : undefined }} />
-              <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 26, letterSpacing: "0.08em", textTransform: "uppercase", color: active ? s.c : done ? C.ink : C.muted }}>{s.t}</div>
+              <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 30, letterSpacing: "0.08em", textTransform: "uppercase", color: active ? s.c : done ? C.ink : C.muted }}>{s.t}</div>
             </div>
           </React.Fragment>
         );
@@ -383,7 +404,7 @@ export const LadderStrip: React.FC<{ keys: [number, LadderKey][]; show: [number,
 };
 
 /* ------------------------------------------------------------------ LETTERBOX / GRADE */
-export const Letterbox: React.FC<{ ratio?: number; inAt?: number; outAt?: number }> = ({ ratio = 2.39, inAt = 0, outAt }) => {
+export const Letterbox: React.FC<{ ratio?: number; inAt?: number; outAt?: number }> = ({ ratio = 2.1, inAt = 0, outAt }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const bar = (height - width / ratio) / 2;

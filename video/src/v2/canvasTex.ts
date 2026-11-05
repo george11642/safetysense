@@ -179,3 +179,32 @@ export const crackTex = () =>
   });
 
 export const PHONE_SCREEN = { w: 0.076, h: 0.164 }; // matches kit Phone screen (PW-0.006, PH-0.006)
+
+/** r4: duress / safety PIN pad (same pad for both PINs). Digits on the keys, no key is ever highlighted, and the dots only
+ *  count entries, so the PIN itself is never revealed. */
+export const pinpadTex = (filled: number) =>
+  make(`pin|${filled}`, W, H, (g) => {
+    const bg = g.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#1d1a30"); bg.addColorStop(1, "#0d0c16");
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#f2c14e"; g.font = `800 34px ${FONT}`; g.textAlign = "center";
+    g.fillText("You okay?", W / 2, 190);
+    g.fillStyle = "#f1eff8"; g.font = `700 30px ${FONT}`;
+    g.fillText("Enter your PIN", W / 2, 250);
+    for (let i = 0; i < 4; i++) {
+      const x = W / 2 - 96 + i * 64;
+      g.beginPath(); g.arc(x, 320, 16, 0, Math.PI * 2);
+      g.lineWidth = 4; g.strokeStyle = "#f1eff8"; g.stroke();
+      if (i < filled) { g.fillStyle = "#f1eff8"; g.fill(); }
+    }
+    const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", ""];
+    keys.forEach((k, i) => {
+      if (!k) return;
+      const cx = W / 2 + ((i % 3) - 1) * 150, cy = 470 + Math.floor(i / 3) * 150;
+      g.beginPath(); g.arc(cx, cy, 58, 0, Math.PI * 2);
+      g.fillStyle = "rgba(255,255,255,.1)"; g.fill();
+      g.fillStyle = "#f1eff8"; g.font = `600 56px ${FONT}`; g.fillText(k, cx, cy + 20);
+    });
+    g.fillStyle = "#a9a6c0"; g.font = `600 22px ${FONT}`;
+    g.fillText("Same pad for both PINs", W / 2, 1100);
+  });
