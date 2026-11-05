@@ -190,7 +190,8 @@ export const Server: React.FC = () => {
 
 // ---------------------------------------------------------------------------
 /** r4: the driver is a neutral silhouette (same near-black as the other threat figures): no skin tone anywhere. */
-const DRIVER = { ...GUY_HD, cast: "driverSil" as const, skin: "#16141d", hair: "#0d0c13", top: "#1b1a28", bottom: "#15141e", eyes: "#0d0c13", stubble: false };
+// r11: the driver is a real person seen from behind (skin, short dark hair, a maroon jacket), not a faceless mannequin
+const DRIVER = { ...GUY_HD, cast: "driver2" as const, skin: "#b9866a", hair: "#2a1d16", top: "#5a2a3a", bottom: "#1d1c28", eyes: "#2e1e14", stubble: true };
 const MAYA_SEAT: [number, number, number] = [-0.16, 0.05, -0.75]; // r3: rear middle, so a clean front shot fits between the front seats
 
 /** Rear-view mirror reflection: only the driver's eyes and brow band (no other face detail), dim skin tone falling
@@ -291,6 +292,24 @@ const PassingLights: React.FC = () => {
   );
 };
 
+/** r11: street lights streaking past the rear glass behind her (long warm/cool smears), so the car reads as moving. */
+const RearStreaks: React.FC = () => {
+  const f = useCurrentFrame();
+  return (
+    <group>
+      {Array.from({ length: 7 }).map((_, i) => {
+        const t = ((f * (0.022 + (i % 3) * 0.006) + i * 0.37) % 1);
+        return (
+          <mesh key={i} position={[-1.4 + 2.8 * t, 1.0 + 0.09 * (i % 4), -1.95 - 0.05 * (i % 2)]}>
+            <planeGeometry args={[0.55 + 0.25 * (i % 3), 0.018 + 0.01 * (i % 2)]} />
+            <meshBasicMaterial color={i % 2 ? "#ffcf8a" : "#9fd0ff"} transparent opacity={0.55 * Math.sin(Math.PI * t)} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+};
+
 /** Back seat of the rideshare: Maya rear right, the driver seen from behind. */
 const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eyes?: number; worry?: number; sweep?: number; dome?: number; mayaClips?: { anim: "sit" | "phoneUp"; start: number; mask?: "armR" }[] }> = ({ speed = 0.4, tension = 0, phone, eyes = 0.15, worry = 0, sweep = 0.6, dome = 0.35, mayaClips }) => (
   <>
@@ -299,8 +318,8 @@ const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eye
     {/* r9: her own seat belt (shoulder strap + buckle), so she is sitting IN a car */}
     <mesh position={[MAYA_SEAT[0] - 0.02, 0.98, MAYA_SEAT[2] + 0.13]} rotation={[0.12, 0, -0.62]}><boxGeometry args={[0.05, 0.6, 0.008]} /><meshStandardMaterial color="#141320" roughness={0.75} /></mesh>
     <mesh position={[MAYA_SEAT[0] + 0.15, 0.7, MAYA_SEAT[2] + 0.17]}><boxGeometry args={[0.05, 0.03, 0.02]} /><meshStandardMaterial color="#b9bccc" metalness={0.8} roughness={0.25} /></mesh>
-    <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} position={SEATS.driver} seed={2} faceFill={0} rim={{ color: "#6fd6c8", strength: 0.35 }} />
-    <Character look={MAYA} clips={mayaClips ?? [{ anim: "sit", start: 0 }]} position={MAYA_SEAT} holdR="phone" phoneScreen={phone} phoneGlow={0.6} seed={1} faceFill={0.45} act={0.6} ikOffR={[0.02, -0.06, 0.03]} face={worry > 0 ? { worry, brow: 0.5 * worry, smile: 0.1 - 0.4 * worry, eyesWide: 0.3 * worry } : undefined} />
+    <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} position={SEATS.driver} seed={2} faceFill={0.25} rim={{ color: "#ffc890", strength: 0.6 }} />
+    <Character look={MAYA} clips={mayaClips ?? [{ anim: "sit", start: 0 }]} position={MAYA_SEAT} holdR="phone" phoneScreen={phone} phoneGlow={0.45} seed={1} faceFill={0.3} act={0.6} ikOffR={[0.02, -0.06, 0.03]} face={worry > 0 ? { worry, brow: 0.5 * worry, smile: 0.1 - 0.4 * worry, eyesWide: 0.3 * worry } : undefined} />
     <RearMirrorHD eyes={eyes} />
     <PassingLights />
     {/* r10: tufted seat-back panels + a rear headrest behind her, so the back seat is upholstery, not a flat slab */}
@@ -312,8 +331,12 @@ const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eye
       <mesh position={[0, 1.36, 0.03]} scale={[0.15, 0.11, 0.07]}><sphereGeometry args={[1, 20, 14]} /><meshStandardMaterial color="#2b2a48" roughness={0.9} /></mesh>
       {[-0.06, 0.06].map((x) => <mesh key={x} position={[x, 1.22, 0.03]}><cylinderGeometry args={[0.007, 0.007, 0.12, 8]} /><meshStandardMaterial color="#9a9cb0" metalness={0.8} roughness={0.3} /></mesh>)}
     </group>
-    <ambientLight color="#7a70b8" intensity={0.55} />
-    <pointLight position={[-0.05, 1.45, -0.25]} color="#e6dcff" intensity={1.0} distance={1.6} decay={1.8} />
+    {/* r11: motivated light, no flat wash: low cool ambient, a warm sodium key from her right-side window, the phone's cool
+        fill from below (phoneGlow), and a soft rim from the rear glass; key/fill now separate across her face */}
+    <ambientLight color="#5a5290" intensity={0.28} />
+    <pointLight position={[0.42, 1.38, -0.5]} color="#ffb46a" intensity={1.5} distance={1.3} decay={1.8} />
+    <pointLight position={[-0.05, 1.45, -0.25]} color="#c8d4ff" intensity={0.35} distance={1.4} decay={1.8} />
+    <RearStreaks />
     <pointLight position={[-0.75, 1.3, -0.6]} color="#8fb8ff" intensity={1.4} distance={1.5} decay={1.8} />
     {/* r4: rim from the rear window so her silhouette separates from the dark cabin */}
     <pointLight position={[-0.2, 1.5, -1.35]} color="#a8c4ff" intensity={2.2} distance={1.6} decay={1.8} />
@@ -324,7 +347,7 @@ const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eye
 export const Ride: React.FC = () => {
   const f = useCurrentFrame();
   const F0 = S.ride;
-  const inside = TITLE + 30;
+  const inside = TITLE; // r11: straight from the chapter card into the back seat (the exterior box-car shot is gone)
   const phoneAt = W(19, "Ride", 1) - F0 - 6;
   const on = W(19, "on.") - F0;
   const wrong = W(19, "turns") - F0;
@@ -508,34 +531,38 @@ export const Duress: React.FC = () => {
           {/* top half: the driver's eyes in the mirror, unaware */}
           <div style={{ position: "absolute", left: 0, top: 0, width: 1080, height: 958, overflow: "hidden" }}>
             <Scene3D width={1080} height={958} fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
-              <BackSeat phone={sv("guard-ride")} tension={0.2} sweep={0.6} dome={0.1} eyes={0.12} />
-              <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={0.9} distance={1.4} decay={1.8} />
+              <BackSeat phone={sv("guard-ride")} tension={0.2} sweep={0.6} dome={0.3} eyes={0.12} />
+              <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={1.4} distance={1.4} decay={1.8} />
+              {/* r11: brighter, calm top panel (warm dash + street light on the driver) so calm-vs-alarm reads at a glance */}
+              <pointLight position={[0.1, 1.6, -0.1]} color="#ffd6a8" intensity={2.2} distance={1.8} decay={1.6} />
+              <ambientLight intensity={0.35} color="#9a90d8" />
+              <WindshieldFrame f={f} />
               <CameraRig rig={dolly(isnt, isnt + 120, [-0.5, 1.22, -0.42], [-0.42, 1.21, -0.28], [[0.32, 1.12, 0.6], [0.3, 1.13, 0.6]], 50)} handheld={0.003} near={0.03} />
             </Scene3D>
             <PanelLabel text="WHAT THE DRIVER SEES" sub="a calm screen" color={C.ink} at={isnt + 4} top={250} />
           </div>
-          {/* bottom half: X-ray layer under her calm screen */}
-          <div style={{ position: "absolute", left: 0, top: 1030, width: 1080, height: 890, overflow: "hidden", filter: "saturate(1.2)" }}>
-            <Scene3D width={1080} height={958} fog={{ color: "#1a0608", near: 10, far: 70 }} background="#1a0608">
-              <CarInterior speed={0.4} tension={0.6} sweep={0.3} dome={0.1} passengerSeat={false} plush detail />
-              {povPhone}
-              <pointLight position={[-0.1, 1.3, -0.3]} color={P.danger} intensity={2} distance={1} decay={2} />
-              <CameraRig rig={[camPov]} handheld={0.004} near={0.03} />
-            </Scene3D>
-            <AbsoluteFill style={{ background: `linear-gradient(180deg, ${C.danger}55, ${C.danger}22)`, mixBlendMode: "screen" }} />
-            <svg width="1080" height="958" style={{ position: "absolute", inset: 0, opacity: 0.25 }}>
-              {Array.from({ length: 40 }).map((_, i) => <line key={i} x1={0} y1={(i * 24 + f * 3) % 958} x2={1080} y2={(i * 24 + f * 3) % 958} stroke={C.danger} strokeWidth={2} />)}
+          {/* bottom half (r11): its OWN clean, designed panel, no second 3D render under a red wash (that read as a
+              ghosted crossfade): a crisp phone showing her calm screen on the left, the hidden dispatch feed on the right */}
+          <div style={{ position: "absolute", left: 0, top: 1030, width: 1080, height: 890, overflow: "hidden", background: "radial-gradient(ellipse at 30% 40%, #3a1016 0%, #1a0608 60%, #0e0406 100%)" }}>
+            <svg width="1080" height="890" style={{ position: "absolute", inset: 0, opacity: 0.18 }}>
+              {Array.from({ length: 24 }).map((_, i) => <line key={`h${i}`} x1={0} y1={i * 40} x2={1080} y2={i * 40} stroke={C.danger} strokeWidth={1} />)}
+              {Array.from({ length: 28 }).map((_, i) => <line key={`v${i}`} x1={i * 40} y1={0} x2={i * 40} y2={890} stroke={C.danger} strokeWidth={1} />)}
             </svg>
             <PanelLabel text="WHAT DISPATCH SEES" sub="hidden from the driver" color={C.danger} at={isnt + 4} top={24} />
-            <div style={{ position: "absolute", left: 60, right: 60, top: 370, ...glass, borderRadius: 30, padding: "18px 28px", borderColor: C.danger, background: "linear-gradient(180deg, rgba(239,106,92,.3), rgba(20,19,31,.94))", boxShadow: `0 0 60px ${C.danger}55`, opacity: fadeIn(f, isnt + 4, 6) }}>
-              <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 30, letterSpacing: 3, color: C.danger }}>HIDDEN · SILENT ALERT</div>
+            <div style={{ position: "absolute", left: 60, top: 170, opacity: fadeIn(f, isnt + 2, 6), transform: `rotate(-4deg) translateY(${(1 - fadeIn(f, isnt + 2, 8)) * 60}px)` }}>
+              <ScreenPhone src={sv("guard-ride")} width={270} glow={C.danger} />
+              <div style={{ position: "absolute", left: 0, right: 0, bottom: -52, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 26, letterSpacing: 2, color: C.ink, opacity: 0.85 }}>HER SCREEN: CALM</div>
+            </div>
+            <div style={{ position: "absolute", left: 380, right: 44, top: 190, ...glass, borderRadius: 30, padding: "20px 26px", borderColor: C.danger, background: "linear-gradient(180deg, rgba(239,106,92,.28), rgba(20,19,31,.95))", boxShadow: `0 0 60px ${C.danger}55`, opacity: fadeIn(f, isnt + 4, 6) }}>
+              <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 28, letterSpacing: 3, color: C.danger }}>SILENT ALERT · DURESS</div>
               {[["🚨", "Duress PIN used", isnt + 8], ["🎧", "Dispatch notified", dispatch], ["📍", "Live location shared", dispatch + 10]].map(([ic, t, at]) => (
-                <div key={t as string} style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, opacity: fadeIn(f, at as number, 6), transform: `translateX(${(1 - fadeIn(f, at as number, 6)) * 30}px)` }}>
-                  <span style={{ fontSize: 44 }}>{ic}</span>
-                  <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 44, color: C.ink }}>{t}</span>
-                  <span style={{ marginLeft: "auto", fontFamily: OF.caption, fontWeight: 900, fontSize: 44, color: C.danger }}>✓</span>
+                <div key={t as string} style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14, opacity: fadeIn(f, at as number, 6), transform: `translateX(${(1 - fadeIn(f, at as number, 6)) * 30}px)` }}>
+                  <span style={{ fontSize: 40 }}>{ic}</span>
+                  <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 38, color: C.ink }}>{t}</span>
+                  <span style={{ marginLeft: "auto", fontFamily: OF.caption, fontWeight: 900, fontSize: 40, color: C.danger }}>✓</span>
                 </div>
               ))}
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: "2px solid rgba(255,255,255,.12)", fontFamily: OF.caption, fontWeight: 800, fontSize: 27, color: C.ink, opacity: 0.8 * fadeIn(f, dispatch + 14, 8) }}>Flagged as duress: nothing on her screen changes</div>
             </div>
           </div>
           {/* r10: a deliberate divider band (dark, with thin rules) between the two panels; the word captions sit in it,

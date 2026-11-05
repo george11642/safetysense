@@ -488,6 +488,8 @@ export type GltfCharacterProps = CharacterProps & {
   /** v2 r10 (opt-in, off for v3): eye whites + iris, warmer skin, 15% smaller hands with curled fingers (a closed grip
    *  around a held phone / cup), and the smooth bob shell for casts that carry the "bobShell" extra. */
   toon?: boolean;
+  /** r11 (v2): saccade eye darts between blinks. */
+  darts?: boolean;
   /** 0..1 extra finger curl (e.g. a fist / clutch); held props always get a full grip in toon mode. */
   grip?: number;
 };
@@ -508,7 +510,7 @@ type Anchors = { phoneR: THREE.Group | null; cupR: THREE.Group | null; phoneL: T
 
 const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
   rig, cast, clips, pose: poseIn, frameOffset = 0, seed = 0, position = [0, 0, 0], rotationY = 0, holdR = "none", holdL = "none",
-  phoneScreen, phoneGlow = 0, faceFill = 0.35, face, act = 0, ikOffR, ikOffL, castShadow = true, toon = false, grip = 0, look,
+  phoneScreen, phoneGlow = 0, faceFill = 0.35, face, act = 0, ikOffR, ikOffL, castShadow = true, toon = false, darts = false, grip = 0, look,
 }) => {
   const frame = useCurrentFrame() + frameOffset;
   const anchors = useRef<Anchors>({ phoneR: null, cupR: null, phoneL: null, cupL: null, head: null, chest: null, face: null });
@@ -756,8 +758,15 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
   // r9 face rig values (same pose library as the body: blinks, brows, worry, wide eyes, mouth)
   const FP = useMemo(() => {
     const P0 = poseIn ?? evalClips(list, frame, seed);
-    return face ? { ...P0, ...face } : P0;
-  }, [poseIn, list, frame, seed, face]);
+    const out = face ? { ...P0, ...face } : P0;
+    // r11 (toon only, additive): saccade-style eye darts (hold ~1.3 s, jump) so eyes never read dead between blinks
+    if (darts && !(face && "eyeX" in face)) {
+      const seg = Math.floor((frame + seed * 17) / 40);
+      const dx = (noise1(seg * 0.731, seed + 9) - 0) * 0.35, dy = noise1(seg * 0.517, seed + 21) * 0.15;
+      return { ...out, eyeX: (out.eyeX ?? 0) + dx, eyeY: (out.eyeY ?? 0) + dy };
+    }
+    return out;
+  }, [poseIn, list, frame, seed, face, darts]);
   // secondary motion for the ponytail: lagged sway from the frame
   const sway = Math.sin(frame / 9 + seed) * 0.12 + noise1(frame / 25, seed + 3) * 0.1;
   return (

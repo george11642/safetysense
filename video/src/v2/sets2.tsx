@@ -253,32 +253,29 @@ const walkerShadowGeo = (stride: number) => {
   const q = Math.round(stride * 8) / 8;
   let g = shadowGeoCache.get(q);
   if (g) return g;
+  // r11: a slim, clearly human cast shadow (legs scissoring, arms hanging AT the sides, narrow shoulders, small head):
+  // no outstretched hand and no wide "bowling pin" mass near the lens
   const s = new THREE.Shape();
-  const a = 0.13 * q; // leg swing
-  // left leg (outer) up to hip, body, arm, shoulder, neck, head, then mirrored down the right side
-  s.moveTo(-0.2 - a, 0.0);
-  s.lineTo(-0.08 - a, 0.0);
-  s.lineTo(-0.02, 0.4);
-  s.lineTo(0.02, 0.4);
-  s.lineTo(0.08 + a, 0.0);
-  s.lineTo(0.2 + a, 0.0);
-  s.lineTo(0.16, 0.44);
-  s.lineTo(0.2, 0.5);
-  s.lineTo(0.32 - a * 0.6, 0.47); // right hand
-  s.lineTo(0.3 - a * 0.6, 0.53);
-  s.lineTo(0.22, 0.7);
-  s.lineTo(0.2, 0.8);
-  s.quadraticCurveTo(0.16, 0.84, 0.07, 0.85);
-  s.lineTo(0.06, 0.88);
-  s.quadraticCurveTo(0.12, 1.0, 0.0, 1.0);
-  s.quadraticCurveTo(-0.12, 1.0, -0.06, 0.88);
-  s.lineTo(-0.07, 0.85);
-  s.quadraticCurveTo(-0.16, 0.84, -0.2, 0.8);
-  s.lineTo(-0.22, 0.7);
-  s.lineTo(-0.3 + a * 0.6, 0.53);
-  s.lineTo(-0.32 + a * 0.6, 0.47);
-  s.lineTo(-0.2, 0.5);
-  s.lineTo(-0.16, 0.44);
+  const a = 0.09 * q; // leg swing
+  s.moveTo(-0.13 - a, 0.0);
+  s.lineTo(-0.06 - a, 0.0);
+  s.lineTo(-0.015, 0.42);
+  s.lineTo(0.015, 0.42);
+  s.lineTo(0.06 + a, 0.0);
+  s.lineTo(0.13 + a, 0.0);
+  s.lineTo(0.1, 0.44);
+  s.lineTo(0.13, 0.47); // right arm hangs beside the hip
+  s.lineTo(0.15 - a * 0.4, 0.5);
+  s.lineTo(0.16, 0.72);
+  s.quadraticCurveTo(0.15, 0.8, 0.06, 0.82);
+  s.lineTo(0.035, 0.86);
+  s.quadraticCurveTo(0.075, 0.97, 0.0, 0.975);
+  s.quadraticCurveTo(-0.075, 0.97, -0.035, 0.86);
+  s.lineTo(-0.06, 0.82);
+  s.quadraticCurveTo(-0.15, 0.8, -0.16, 0.72);
+  s.lineTo(-0.15 + a * 0.4, 0.5);
+  s.lineTo(-0.13, 0.47);
+  s.lineTo(-0.1, 0.44);
   s.closePath();
   g = new THREE.ShapeGeometry(s, 12);
   shadowGeoCache.set(q, g);
@@ -287,9 +284,14 @@ const walkerShadowGeo = (stride: number) => {
 /** A long, hard-edged human shadow cast forward along +Z by a light behind an unseen follower. `head` is where the
  *  shadow's head lies; the feet are `length` m behind it (-Z). Legs scissor with `stride` (walking). */
 export const FollowerShadow: React.FC<{ head: V3; length: number; width?: number; opacity?: number; stride?: number }> = ({ head, length, width = 0.9, opacity = 0.82, stride = 0 }) => (
-  <mesh geometry={walkerShadowGeo(stride)} position={[head[0], head[1] + 0.022, head[2] - length]} rotation={[-Math.PI / 2, 0, Math.PI]} scale={[width, length, 1]} renderOrder={3}>
-    <meshBasicMaterial color="#020108" transparent opacity={opacity} depthWrite={false} polygonOffset polygonOffsetFactor={-2} side={THREE.DoubleSide} />
-  </mesh>
+  <group>
+    {/* r11: soft penumbra (two wider, fainter copies) around a crisp core, so it reads as a designed cast shadow */}
+    {[[1.16, 1.025, 0.22], [1.07, 1.012, 0.3], [1, 1, 0.75]].map(([sw, sl, op], i) => (
+      <mesh key={i} geometry={walkerShadowGeo(stride)} position={[head[0], head[1] + 0.02 + i * 0.001, head[2] - length * sl]} rotation={[-Math.PI / 2, 0, Math.PI]} scale={[width * sw, length * sl, 1]} renderOrder={3 + i}>
+        <meshBasicMaterial color="#020108" transparent opacity={opacity * op} depthWrite={false} polygonOffset polygonOffsetFactor={-2 - i} side={THREE.DoubleSide} />
+      </mesh>
+    ))}
+  </group>
 );
 
 // ---------------------------------------------------------------------------

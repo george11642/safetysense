@@ -7,6 +7,10 @@ import React from "react";
 import type { CharacterProps } from "../kit3d/CharacterHD";
 import { GltfCharacter, GltfCharacterProps } from "../kit3d/gltf/GltfCharacter";
 
-export const Character: React.FC<CharacterProps & Pick<GltfCharacterProps, "grip">> = ({ faceFill = 0.35, ...props }) => (
-  <GltfCharacter act={0.5} toon {...props} faceFill={faceFill * 0.6} />
-);
+// r11: ONE Maya: her face fill is clamped to a narrow band in every shot (it ranged 0.4-0.7, which read as different skin
+// tones / different people across scenes), and every toon actor gets micro eye darts between blinks (GltfCharacter).
+export const Character: React.FC<CharacterProps & Pick<GltfCharacterProps, "grip">> = ({ faceFill = 0.35, ...props }) => {
+  const isMaya = (props.look as { cast?: string } | undefined)?.cast === "maya2";
+  const ff = isMaya ? Math.min(0.58, Math.max(0.48, faceFill)) : faceFill;
+  return <GltfCharacter act={0.5} toon darts {...props} faceFill={ff * 0.6} />;
+};

@@ -98,7 +98,8 @@ const riskAt = (f: number) => {
   return v;
 };
 /** r4: the running gag pays off: the 0 punches + glows at every escalation that did NOT need her to call. */
-const ESCALATIONS = [W(6, "get"), W(8, "ring."), W(9, "police"), NOANSWER, W(18, "raises"), W(21, "It")];
+// r11: only at the walk, the drink and the payoff (it read as HUD clutter on every scene)
+const ESCALATIONS = [W(9, "police"), NOANSWER, W(21, "It")];
 
 const glass: React.CSSProperties = {
   background: "linear-gradient(180deg, rgba(30,28,46,.9), rgba(16,15,26,.88))",
@@ -123,7 +124,7 @@ const Icon: React.FC<{ kind: Pill["icon"]; color: string; size: number }> = ({ k
 /** r9: the HUD steps out of the way on close-ups and stat beats (one caption + at most one callout per shot). */
 const HIDE: [number, number][] = [
   [S.freeze, S.contacts], // freeze close-ups + the 70% card
-  [S.dispatch, W(9, "If")], // dispatcher close-up
+  [S.dispatch, W(9, "If") - 3], // dispatcher close-up
 ];
 /** r9: the right-hand cluster is not sticky any more: the clock shows for ~2 s when the scene time changes (and during
  *  fast-forwards); the CALLS SHE MADE 0 counter pops in at each escalation that did not need her to call, then leaves. */
@@ -155,6 +156,13 @@ export const ReelHud: React.FC = () => {
     clock = `+${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
     ff = frame < T.ninety + 40;
     if (ff) clockChanged = frame - 3;
+    // r11: the relief beat fast-forwards to a plausible police arrival (+7:12), never "police at +1:38"
+    if (frame >= T.relief) {
+      const r = Math.round(interpolate(frame, [T.relief, T.relief + 16], [98, 432], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+      clock = `+${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
+      ff = frame < T.relief + 16;
+      if (ff) clockChanged = frame - 3;
+    }
   }
   const drain0 = T.youOkay + 10; // r5: the check-in's 45 s fast-forwards in the gap after "You okay?" (v2_15 cut)
   if (frame >= drain0 && frame < T.noAnswer) {

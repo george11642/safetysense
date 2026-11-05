@@ -113,7 +113,8 @@ export const ReelAudio: React.FC = () => {
     [W(21, "types"), sfx("keypad_pin"), 0.5],
     [W(21, "disappears,") - 2, sfx("whoosh_soft"), 0.22],
     [W(21, "It") - 3, sfx("glitch"), 0.24],
-    [W(21, "It") - 2, sfx("impact_hit"), 0.3],
+    [W(21, "It") - 2, sfx("impact_hit"), 0.42], // r11: a real sting on the "It isn't." reveal (full level)
+    [W(21, "It") - 1, sfx("whoosh_hard"), 0.22],
     [W(21, "Dispatch") - 4, sfx("alert_step"), 0.18],
     // close
     [S.montage + 2, sfx("whoosh_soft"), 0.3],
@@ -130,7 +131,7 @@ export const ReelAudio: React.FC = () => {
 
   // r6: transition SFX sit 4-5 dB lower so the gaps never hit at narration level; only the four chapter cards,
   // "She screams" and the phone smash keep full level.
-  const KEY = new Set([S.walk, S.party, S.phone, S.ride, scream, W(5, "She") - 1, W(17, "Smashes") - 1, W(22, "When") + 4, W(22, "When") - 34, W(22, "When") + 5]);
+  const KEY = new Set([W(21, "It") - 2, S.walk, S.party, S.phone, S.ride, scream, W(5, "She") - 1, W(17, "Smashes") - 1, W(22, "When") + 4, W(22, "When") - 34, W(22, "When") + 5]);
   const trim = (f: number, file: string) => (KEY.has(f) ? 1 : /whoosh|impact|glitch|sticker|alert_step|riser|ping|chime/.test(file) ? 0.58 : 0.8);
   const T = (s: number) => Math.round(s * FPS);
   const end = S.total;

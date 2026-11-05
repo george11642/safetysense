@@ -87,7 +87,7 @@ export const ColdOpen: React.FC = () => {
             <SidewalkCloseup center={[G[0], Y, G[2]]} size={5} />
             <WetPatch position={[G[0] + 0.35, Y + 0.008, G[2] - 0.35]} size={0.42} />
             <LightPool position={[G[0] - 0.1, Y + 0.02, G[2] - 0.2]} color={P.lampWarm} radius={1.6} opacity={0.22} />
-            <Phone position={G} rotation={[-Math.PI / 2, 0, 0.1]} screen={f < hookEnd ? lock : help} glow={1} />
+            <Phone position={G} rotation={[-Math.PI / 2, 0, 0.1]} screen={help} glow={1} />{/* r11: the stakes read on frame 0: red "Calling for help" from the first frame */}
             {f < hookEnd && <FollowerShadow head={[G[0] - 0.05, Y, G[2] - 0.25]} length={3.2} width={1.0} opacity={0.7 * prog(f, 2, 20)} />}
             <pointLight position={[G[0] - 0.5, Y + 2.4, G[2] - 0.9]} color={P.lampWarm} intensity={2.6} distance={5} decay={1.4} />
             <pointLight position={[G[0] + 1.2, Y + 1.2, G[2] + 1.4]} color="#9fb6ff" intensity={1.4} distance={4} decay={1.6} />
@@ -118,7 +118,7 @@ export const ColdOpen: React.FC = () => {
         </div>
       )}
       {face && <StickerTitle text="MAYA" at={maya + 3} sub="UNM STUDENT" size={110} x={0.74} y={0.34} rotate={-6} color={C.accent} />}
-      {f >= cutB && <CallingSticker f={f} pulseFrom={her} />}
+      {(f < hookEnd || f >= cutB) && <CallingSticker f={f} pulseFrom={f < hookEnd ? 0 : her} />}
       <Flash at={0} dur={5} color="#ffffff" max={0.2} />
       <Flash at={her} dur={6} color={C.calm} max={0.22} />
     </AbsoluteFill>
@@ -245,7 +245,7 @@ export const Walk: React.FC = () => {
               <LightPool position={[0.12, Y + 0.02, mz + 0.3]} color={P.lampWarm} radius={2.2} opacity={0.34} />
               <pointLight position={[0.3, 3.2, mz + 1.2]} color={P.lampWarm} intensity={6} distance={6} decay={1.4} />
               <Character look={MAYA} clips={mayaClips} position={[0.12, Y, mz]} faceFill={0.45} face={fear > 0 ? { worry: fear, eyesWide: 0.8 * fear, brow: 0.6 * fear, mouth: 0.15 * fear, smile: -0.3 * fear } : undefined} />
-              <FollowerShadow head={[0.02, Y, headZ]} length={shLen} width={1.35} opacity={shOp} stride={stride} />
+              <FollowerShadow head={[0.02, Y, headZ]} length={shLen} width={0.9} opacity={shOp} stride={stride} />
               {/* the unseen follower's light source, low and behind camera: throws the shadow forward */}
               <pointLight position={[0.0, 1.0, mz - 6]} color="#ffd9b0" intensity={4} distance={9} decay={1.4} />
               <pointLight position={[0.9, 2.0, mz - 2.6]} color="#9fb6ff" intensity={2.2} distance={5} decay={1.6} />
@@ -256,9 +256,10 @@ export const Walk: React.FC = () => {
               <Phone position={[drop[0], drop[1] + py, drop[2]]} rotation={[-Math.PI / 2 + spin * 0.3, spin * 0.2, 0.55 + spin]} screen={sv("guard-walk")} glow={0.9} />
               {/* r9: cause -> effect: her scream hits the phone's mic as red sound rings rippling out of it */}
               <ListenRings center={[drop[0], Y, drop[2]]} start={shotC + 6} every={7} life={24} maxR={1.4} y={Y + 0.016} color="#ff5a6a" />
-              {/* her shoes at the top edge of frame (she has turned toward the follower), the shadow across the slab */}
-              <Character look={MAYA} clips={[{ anim: "freeze", start: -2 }]} position={[0.12, Y, drop[2] + 0.85]} rotationY={Math.PI} seed={1} act={0} life={0.2} />
-              <FollowerShadow head={[0.05, Y, drop[2] + 0.55]} length={4.2} width={1.1} opacity={0.86} />
+              {/* r11: no body part near the lens any more (her calf read as a giant pink smear): the phone alone on the wet
+                  slab, the follower's long shadow lying across it */}
+              <FollowerShadow head={[0.05, Y, drop[2] + 0.55]} length={4.2} width={0.8} opacity={0.8} />
+              <WetPatch position={[drop[0] + 0.3, Y + 0.008, drop[2] - 0.25]} size={0.36} />
               <pointLight position={[drop[0] - 0.3, Y + 0.7, drop[2] - 0.5]} color="#ff1a1a" intensity={1.0 + 0.7 * (hit % 8 < 4 ? 1 : 0)} distance={1.8} decay={1.8} />
               <pointLight position={[drop[0] + 0.8, Y + 2.6, drop[2] + 0.4]} color={P.lampWarm} intensity={2.2} distance={5} decay={1.4} />
               <pointLight position={[drop[0], Y + 0.3, drop[2] + 0.1]} color="#bfe6ff" intensity={0.25} distance={0.7} decay={2} />
@@ -274,7 +275,7 @@ export const Walk: React.FC = () => {
               }],
               [shotC, (fr) => {
                 const k = prog(fr, shotC, shotC + 40, "out");
-                return { pos: [drop[0] - 0.05, Y + lerp(0.8, 0.46, k), drop[2] - lerp(0.6, 0.34, k)], look: [drop[0], Y + 0.02, drop[2] + 0.1], fov: 40, roll: deg(-8) };
+                return { pos: [drop[0] - 0.05+2.5, Y + 2.5, drop[2] - 2.5], look: [drop[0], Y + 0.02, drop[2] + 0.1], fov: 40, roll: deg(-8) };
               }],
             ])}
             handheld={0.008}
@@ -638,10 +639,10 @@ export const Dispatch: React.FC = () => {
   const f = useCurrentFrame();
   const F0 = S.dispatch;
   const desk = W(9, "A") - F0 - 2;
-  const mapAt = W(9, "If") - F0 + 2;
+  const mapAt = W(9, "If") - F0 - 3; // r11: cut before "If" (the caption line never straddles the cut)
   const noPin = W(9, "cancels.") - F0 - 6;
   const end = S.relief - F0;
-  const secs = Math.round(interpolate(f, [0, 40], [8, 98], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
+  const cd = Math.round(interpolate(f, [0, 40], [90, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
   const PH: [number, number, number] = [0.5, Y + 0.012, 1.6];
   const help = lockTex({ time: "12:06", title: "Calling for help", body: "3 contacts alerted · live location shared", tint: "#5cc7b2", alert: true });
   return (
@@ -662,15 +663,18 @@ export const Dispatch: React.FC = () => {
               <ListenRings center={PH} start={-40} every={14} life={40} maxR={2.4} y={Y + 0.016} />
               <pointLight position={[0.7, Y + 1.9, 1.5]} color="#ffe2cc" intensity={1.8} distance={3.2} decay={1.6} />
               {/* r10: the clock runs while the camera keeps moving (orbit + push), so the 90 s plays as cause -> effect */}
-              <CameraRig rig={orbit(0, desk, { center: [0.15, 1.0, 0.2], radius: 3.4, height: 0.55, from: 0.95, to: 0.2, fov: 36, lookOffset: [0, 0.05, 0] })} handheld={0.006} />
+              <CameraRig rig={orbit(0, desk, { center: [0.15, 1.0, 0.2], radius: 4.4, height: 0.55, from: 0.95, to: 0.2, fov: 36, lookOffset: [0, 0.38, 0] })} handheld={0.006} />
             </Scene3D>
           </div>
-          <div style={{ position: "absolute", left: 0, right: 0, top: 330, display: "flex", justifyContent: "center" }}>
-            <div style={{ ...glass, borderRadius: 30, padding: "14px 40px", fontFamily: OF.caption, fontWeight: 900, fontSize: 130, color: f < 40 ? C.warn : C.ink, fontVariantNumeric: "tabular-nums", borderColor: `${C.warn}88`, transform: `scale(${0.7 + 0.3 * fadeIn(f, 0, 5)})` }}>
-              +{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}
+          {/* r11: the counter sits ABOVE her head (top 8-15% of frame) and reads what the VO says: a 90 s cancel window
+              running out (1:30 -> 0:00); the stamp lands between counter and head, never on her */}
+          <div style={{ position: "absolute", left: 0, right: 0, top: 120, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 34, letterSpacing: 4, color: C.warn, textShadow: "0 3px 12px rgba(0,0,0,.8)", opacity: fadeIn(f, 0, 5) }}>TIME TO CANCEL</div>
+            <div style={{ ...glass, borderRadius: 26, padding: "6px 34px", fontFamily: OF.caption, fontWeight: 900, fontSize: 96, color: cd > 0 ? C.ink : C.warn, fontVariantNumeric: "tabular-nums", borderColor: `${C.warn}88`, transform: `scale(${0.7 + 0.3 * fadeIn(f, 0, 5)})` }}>
+              {Math.floor(cd / 60)}:{String(cd % 60).padStart(2, "0")}
             </div>
           </div>
-          <Stamp text="NOBODY CANCELS" at={noPin} out={desk - 4} y={0.44} size={76} color={C.warn} sub="CANCEL NEEDS HER SAFETY PIN" from={1.6} damping={11} shake={10} />
+          <Stamp text="NOBODY CANCELS" at={noPin} out={desk - 4} y={0.255} size={70} color={C.warn} sub="CANCEL NEEDS HER SAFETY PIN" from={1.6} damping={11} shake={10} />
         </>
       ) : f < mapAt ? (
         <>

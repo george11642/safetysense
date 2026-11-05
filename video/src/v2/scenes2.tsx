@@ -144,10 +144,13 @@ export const CupScene: React.FC = () => {
           </>
         ) : (
           <>
-            <Character look={MAYA} position={[-0.34, 0, -0.95]} rotationY={-2.5} seed={1} clips={[{ anim: "laugh", start: 0, offset: 5 }]} faceFill={0.4} />
+            {/* r11: re-blocked so we see her PROFILE (laughing toward her friend), not the back of her hair */}
+            <Character look={MAYA} position={[-0.42, 0, -0.95]} rotationY={-1.45} seed={1} clips={[{ anim: "laugh", start: 0, offset: 5 }]} faceFill={0.6} rim={{ color: "#ffd6f2", strength: 1.0 }} />
             <Character look={FRIEND_HD} position={[-1.3, 0, -1.55]} rotationY={0.95} seed={4} clips={[{ anim: "talk", start: 0, offset: 7 }]} />
             <Character look={{ ...LOOKS.hooded, top: "#211f30" }} position={STR} rotationY={-0.6} pose={strangerPose} seed={13} faceFill={0} rim={{ color: "#ff9ad8", strength: 0.7 }} />
-            {reach > 0.01 && <ReachingHand position={[hx, hy, hz]} rotation={[0, -0.75, -0.18]} curl={lerp(0.45, 0.2, reach)} />}
+            {reach > 0.01 && <ReachingHand position={[hx, hy, hz]} rotation={[0, -0.75, -0.18]} curl={lerp(0.45, 0.2, reach)} skin="#b98466" sleeve="#3a2d4c" />}
+            {/* r11: a soft key on the hand so it reads as a real hand in a flannel sleeve, not a dark glove */}
+            {reach > 0.01 && <pointLight position={[hx + 0.1, hy + 0.35, hz + 0.45]} color="#ffd8c8" intensity={1.3 * reach} distance={1.0} decay={1.8} />}
             {/* back-light: rim on the stranger and the arm from behind the counter */}
             <pointLight position={[0.95, 1.7, -1.9]} color="#ff9ad8" intensity={7} distance={2.6} decay={1.6} />
             <pointLight position={[cupPos[0] + 0.2, COUNTER_TOP + 0.5, cupPos[2] - 0.5]} color="#ffc6e8" intensity={1.4 * reach} distance={1.2} decay={1.8} />
@@ -333,13 +336,14 @@ export const HallwayScene: React.FC = () => {
         <Hallway pulse={0.7} />
         <pointLight position={[0.2, 1.9, -1.4]} color="#9fd8ff" intensity={3} distance={3} decay={1.6} />
         <pointLight position={[-0.4, 1.6, 1.6]} color="#ffe2cc" intensity={1.6} distance={3.5} decay={1.6} />
-        <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 1, worry: 0.2 } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
+        <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 0.75, worry: 0.25 } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
           clips={[{ anim: "woozy", start: 0, speed: 0.8 }, { anim: "stumbleCatch", start: stumble, fade: 4 }, { anim: "sitSlump", start: sit, fade: 14 }]} />
         <CameraRig rig={(fr) => {
-          const d = lerp(4.0, 2.0, prog(fr, 0, noAns + 10, "inOut"));
+          const d = lerp(4.0, 2.6, prog(fr, 0, noAns + 10, "inOut"));
           const low = prog(fr, sit, still + 20, "inOut");
-          // r5: drop to her eye level once she sits, from the side she faces, so her face (eyes closed) reads, not her hair
-          return { pos: [lerp(-0.6, -0.55, low), lerp(1.45, 0.42, low), lerp(d, 0.8, low)], look: [lerp(0.15, 0.5, low), lerp(1.15, 0.86, low), lerp(0.0, 0.05, low)], fov: 42 };
+          // r11: once she sits, a dignified MEDIUM SIDE shot at her seated eye level (head, shoulders, hands and phone on
+          // her lap, face partly visible); never a high angle down over her legs
+          return { pos: [lerp(-0.6, -1.25, low), lerp(1.45, 1.0, low), lerp(d, 1.55, low)], look: [lerp(0.15, 0.5, low), lerp(1.15, 0.82, low), lerp(0.0, 0.05, low)], fov: lerp(42, 36, low) };
         }} handheld={0.012} shakes={[[stumble + 2, 0.02], [noAns, 0.035]]} />
       </Scene3D>
       <Grade wash="#ef4fa0" washOpacity={0.08} vignette={0.75} />
@@ -356,6 +360,32 @@ export const HallwayScene: React.FC = () => {
       {/* r7: a red vignette pulse, not a flat full-frame fill */}
       <AbsoluteFill style={{ pointerEvents: "none", boxShadow: `inset 0 0 ${380 * Math.max(0, 1 - Math.abs(f - noAns - 2) / 10)}px ${C.danger}` }} />
     </AbsoluteFill>
+  );
+};
+
+// ---------------------------------------------------------------------------
+/** r11 (SPEC §4/§6.3): contacts do NOT need the app; they get a time-sensitive TEXT with a live link. iMessage-style
+ *  banner: Messages icon, sender, the SMS body with the link (matches the web live page that follows). */
+const SmsToast: React.FC<{ at: number }> = ({ at }) => {
+  const f = useCurrentFrame() - at;
+  if (f < 0) return null;
+  const k = Math.min(1, f / 7);
+  const e = 1 - (1 - k) ** 3;
+  return (
+    <div style={{ position: "absolute", left: 50, right: 50, top: 500, transform: `translateY(${(1 - e) * -320}px)`, opacity: e, background: "rgba(246,244,252,.95)", borderRadius: 38, padding: "24px 28px", display: "flex", gap: 22, alignItems: "flex-start", boxShadow: `0 20px 50px rgba(0,0,0,.45), 0 0 0 4px ${C.danger}`, fontFamily: OF.caption }}>
+      <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(180deg,#6af27a,#25c13f)", display: "grid", placeItems: "center", flex: "none" }}>
+        <svg width="50" height="46" viewBox="0 0 24 22"><path d="M12 1 C5.4 1 1 5.2 1 10 c0 2.8 1.5 5.2 3.9 6.8 L4 21 l4.6-2.6 c1.1.3 2.2.4 3.4.4 6.6 0 11-4.2 11-9 S18.6 1 12 1z" fill="#fff" /></svg>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, fontWeight: 800, color: "#6b6880" }}>
+          <span>MESSAGES · TIME SENSITIVE</span><span>now</span>
+        </div>
+        <div style={{ fontSize: 36, fontWeight: 900, color: "#14131f", marginTop: 4 }}>SafetySense (Maya)</div>
+        <div style={{ fontSize: 31, fontWeight: 800, color: "#2a2840", lineHeight: 1.22, marginTop: 2 }}>
+          Maya may need help. No answer to a check-in. <span style={{ color: "#1a6fe0", textDecoration: "underline" }}>Open her live location ›</span>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -387,7 +417,7 @@ export const Roommate: React.FC = () => {
             </Scene3D>
           </div>
           <Grade />
-          {f < page + 2 && <NotificationToast at={rings - 8} title="Maya may need help" body="Tap to see her live location" critical y={0.27} />}
+          {f < page + 2 && <SmsToast at={rings - 8} />}
           {f >= page && (
             <div style={{ position: "absolute", left: (1080 - LW) / 2, top: 495, transform: `translateY(${(1 - pageIn) * 900}px)` }}>
               <LivePage tapAt={tap} width={LW} />

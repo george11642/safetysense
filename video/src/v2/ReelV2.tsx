@@ -51,15 +51,17 @@ const hideCaptions = (f: number) =>
   TITLE_CARDS.some((t) => f >= t && f < t + TITLE) || (f >= S.contacts && f < B(8) - 1) || cancelBubble(f) || statCard(f) || endCard(f);
 const high = (f: number) =>
   (f >= W(5, "She") - 2 && f < S.detect) || // "She screams": the phone lies in the low band
-  (f >= W(7, "In") - 2 && f < W(7, "of") - 2) || // freeze close-up: her hand-to-mouth lockUp sits low
-  (f >= W(9, "A") - 2 && f < W(9, "If") + 2) || // dispatcher shot: caption in the dark band above her
-  (f >= S.cup && f < S.tilt) || // drink-spike close-up (counter + cup fill the bottom)
+  (f >= W(9, "A") - 2 && f < MAP_AT) || // dispatcher shot: caption in the dark band above her
   (f >= S.duress && f < W(21, "It")); // PIN pad
+/** r11: ONE caption y for the whole v2_09 map shot ("If she can't answer, police head to her live location."): bottom,
+ *  clear of the NO ANSWER stamp and the route; the dispatcher shot now ends before "If" so no chunk straddles the cut. */
+const MAP_AT = W(9, "If") - 3;
+const mapShot = (f: number) => f >= MAP_AT && f < S.relief;
 const splitDivider = (f: number) => f >= W(21, "It") && f < S.montage; // r10: the duress split puts captions on its divider
-const captionY = (f: number) => (splitDivider(f) ? 0.505 : high(f) ? HIGH : undefined);
+const captionY = (f: number) => (splitDivider(f) ? 0.505 : mapShot(f) ? 0.72 : high(f) ? HIGH : undefined);
 const backingAt = (f: number) => (f >= S.cup && f < S.tilt) || (f >= S.duress && f < W(21, "It"));
 export const _be = BE;
-const CUTS = [...SCENES.map((x) => x[0]), W(9, "A") - 2, W(9, "If") + 2, W(8, "ring.") - 2, W(8, "gets") - 4].sort((a, b) => a - b);
+const CUTS = [...SCENES.map((x) => x[0]), W(9, "A") - 2, MAP_AT, W(8, "ring.") - 2, W(8, "gets") - 4].sort((a, b) => a - b);
 
 export const ReelV2: React.FC = () => {
   const frame = useCurrentFrame();

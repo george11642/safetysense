@@ -79,6 +79,8 @@ export const CAST = {
   driver: { model: "casualM", colors: { LightBrown: "#24232f", LightBlue: "#16151e", Red_Dark: "#16151e" } },
   /** Follower: dark hoodie with the hood up, face in shadow. Never shown attacking. */
   hooded: { model: "hoodieM", colors: { Purple: "#1d1c2a", LightBlue: "#17161f", "Casual_Legs/Skin": "#17161f", White: "#141320", Hair: "#0e0d12", Eyebrows: "#0e0d12" }, extras: ["hood"], darkFace: true },
+  /** r11 (v2): the rideshare driver as a real person seen from behind: maroon jacket, dark jeans, the model's own skin + hair. */
+  driver2: { model: "casualM", colors: { LightBrown: "#5a2a3a", LightBlue: "#1d1c28", Red_Dark: "#1d1c28", Hair: "#2a1d16" } },
   /** Police officer: navy uniform, cap, badge. */
   officer: { model: "suitM", colors: { Suit: "#1f2c4f", Black: "#141826", White: "#33467a", Tie: "#141826" }, extras: ["policeCap", "badge"] },
 } satisfies Record<string, CastDef>;

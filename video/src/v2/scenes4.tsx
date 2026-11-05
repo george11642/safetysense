@@ -120,10 +120,13 @@ const ComfortPlate: React.FC<{ g0: number; blur?: number; dim?: number; inset?: 
           clips={touchAt === undefined ? [{ anim: "sit", start: -A }] : [{ anim: "sit", start: -A }, { anim: "hug", start: touchAt, mask: "armR", fade: 18 }]}
           ikOffR={[-0.58, 0.06, -0.28]} frameOffset={g0 - A} seed={6} faceFill={0.4} act={0.7} face={{ smile: 0.5 - 0.15 * touch, worry: 0.1 + 0.25 * touch }} />
         <CameraRig rig={inset ? pushIn(0, Z - A, [-0.72, 1.0, -0.35], [0.2, 0.05, 1], 3.0, 2.5, 30, "linear") : (fr) => {
-          const k = prog(fr, 0, Z - A, "glide");
-          const d = lerp(5.4, 3.5, k);
+          // r11: a continuous push (never settles into a hold) with a lateral parallax arc; the frame lifts as it pushes so
+          // their heads stay well clear of the tagline
+          const k = prog(fr, 0, Z - A, "linear");
+          const d = lerp(5.4, 3.55, 1 - (1 - k) ** 1.6);
+          const lift = 0.12 * k;
           const t: [number, number, number] = [-0.68, 0.98, -0.35];
-          return { pos: [t[0] + 0.3 * d - 0.5 + 0.7 * k, t[1] + 0.12 + 0.05 * Math.sin(fr / 40), t[2] + d], look: [t[0] + 0.05 * k, t[1] - 0.02, t[2]], fov: 32 };
+          return { pos: [t[0] + 0.3 * d - 0.5 + 0.8 * k, t[1] + 0.14 + lift + 0.05 * Math.sin(fr / 40), t[2] + d], look: [t[0] + 0.05 * k, t[1] + 0.02 + lift, t[2]], fov: 32 };
         }} frameOffset={g0 - A} handheld={0.004} />
       </Scene3D>
     </div>
@@ -272,24 +275,34 @@ export const Close: React.FC = () => {
   const words24 = ["It", "supplements", "911."].map((w, i) => ({ w, at: [sup, W(24, "supplements") - F0, W(24, "911.") - F0][i] }));
   const words24b = ["It", "never", "replaces", "it."].map((w, i) => ({ w, at: [never, W(24, "never") - F0, W(24, "replaces") - F0, W(24, "it", 2) - F0][i], hi: i > 0 }));
   const notFault = W(25, "it's") - F0;
+  const settleAt = WE(25, "fault.") - F0 + 36;
+  const shineAt = WE(25, "fault.") - F0 + 20;
   return (
     <AbsoluteFill style={{ background: C.bgDeep }}>
       {!cut && <AbsoluteFill><SafeWalk full /></AbsoluteFill>}
       {cut && <AbsoluteFill><ComfortPlate g0={F0 + plateAt} a0={F0 + plateAt} touchAt={ifAt - plateAt - 4} /></AbsoluteFill>}
       <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(13,11,22,.82) 0%, rgba(13,11,22,.15) 30%, rgba(13,11,22,0) 44%, rgba(13,11,22,0) 58%, rgba(13,11,22,.9) 64.5%, rgba(13,11,22,.96) 100%)" }} />
       <Drift />
-      <div style={{ position: "absolute", top: 230, left: 0, right: 0, display: "flex", justifyContent: "center", opacity: fadeIn(f, 0, 6) }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+      <div style={{ position: "absolute", top: 180, left: 0, right: 0, display: "flex", justifyContent: "center", opacity: fadeIn(f, 0, 6) }}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 24, overflow: "hidden", padding: "0 10px" }}>
+          {/* r11: a logo shine sweeps the lockup in the final hold (one deliberate motion beat) */}
+          <div style={{ position: "absolute", top: 0, bottom: 0, width: 160, left: `${lerp(-30, 120, prog(f, shineAt, shineAt + 24, "inOut"))}%`, background: "linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,0) 100%)", mixBlendMode: "overlay", pointerEvents: "none", zIndex: 2 }} />
           <Img src={staticFile("img/icon.png")} style={{ width: 120, height: 120, borderRadius: 28, boxShadow: `0 10px 40px ${C.accent}55` }} />
           <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 104, color: C.ink, letterSpacing: -1, textShadow: "0 6px 24px rgba(0,0,0,.6)" }}>SafetySense</span>
         </div>
       </div>
-      <div style={{ position: "absolute", top: 390, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 86, lineHeight: 1.02, color: C.accent, WebkitTextStroke: "9px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, Math.max(tagAt, plateAt + 2), 6) }}>
+      <div style={{ position: "absolute", top: 330, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 80, lineHeight: 1.02, color: C.accent, WebkitTextStroke: "9px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, Math.max(tagAt, plateAt + 2), 6) }}>
         Calls for help<br />when you can't.
       </div>
       {/* r9: one locked text slot UNDER the characters (never over their bodies); it types the VO line by line */}
+      {/* r11: in the final ~2 s the supplement line settles back in above the 911 pill (the last thing a judge reads) */}
+      {f >= settleAt && (
+        <div style={{ position: "absolute", top: 1418, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 42, color: C.ink, WebkitTextStroke: "6px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, settleAt, 10), transform: `translateY(${(1 - fadeIn(f, settleAt, 12)) * 16}px)` }}>
+          It supplements 911. <span style={{ color: C.calm }}>It never replaces it.</span>
+        </div>
+      )}
       {cut && (
-        <div style={{ position: "absolute", top: 1250, left: 40, right: 40, height: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 70, lineHeight: 1.08, color: C.ink, WebkitTextStroke: "8px #120f1e", paintOrder: "stroke fill" }}>
+        <div style={{ position: "absolute", top: 1250 - 50 * fadeIn(f, settleAt, 12), left: 40, right: 40, height: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 70, lineHeight: 1.08, color: C.ink, WebkitTextStroke: "8px #120f1e", paintOrder: "stroke fill" }}>
           {lineA ? (
             <>
               <WordReveal words={words24} size={70} stroke />
