@@ -3,8 +3,8 @@
 import React from "react";
 import { AbsoluteFill, Img, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame, Easing } from "remotion";
 import { C, F } from "../theme";
-import { Card, Chapter, Device, Headline, Icon, IconName, Kicker, RiseWords, Stage, Tag, ZoomCrop, clamp01, deviceH, deviceScreenW, ez, ezIO, useSpring } from "./ui";
-import { w } from "./timing";
+import { Cam, Card, Chapter, Device, Headline, Icon, IconName, Kicker, RiseWords, Stage, Tag, ZoomCrop, clamp01, deviceH, deviceScreenW, ez, ezIO, useSpring } from "./ui";
+import { bEnd, w } from "./timing";
 
 const useA = (from: number) => useCurrentFrame() + from;
 const S = (p: string) => staticFile(p);
@@ -103,13 +103,17 @@ export const HeroAlert: React.FC<{ from: number }> = ({ from }) => {
         <Card accent={C.danger} style={{ padding: 26, borderRadius: 46 }}>
           <div style={{ position: "relative" }}>
             <ZoomCrop src={S("v3/screens/alert-countdown-noreason.png")} imgW={1206} imgH={2622} crop={[30, 200, 1146, 1010]} w={930} radius={30} />
+            {/* v3 fix r1: night-walk clock (the capture said 2:05 PM) */}
+            <div style={{ position: "absolute", left: 640, top: 30, width: 268, height: 38, background: "#14131f", display: "flex", alignItems: "center", justifyContent: "flex-end", fontFamily: F.mono, fontWeight: 600, fontSize: 27, letterSpacing: "0.08em", color: C.warn }}>SENT 10:47 PM</div>
           </div>
         </Card>
       </div>
       <div style={{ position: "absolute", left: 110, top: 300 }}>
-        <div style={{ transform: "rotate(-4deg)", padding: "14px 28px 18px", borderRadius: 22, background: C.warn, color: "#14131f", fontFamily: F.display, fontWeight: 800, boxShadow: "0 16px 40px rgba(0,0,0,.5), 0 0 0 5px #14131f", width: 330 }}>
-          <div style={{ fontSize: 84, lineHeight: 1 }}>+45 S</div>
-          <div style={{ fontSize: 36, lineHeight: 1.1, marginTop: 6 }}>no answer to “You okay?”</div>
+        <div style={{ transform: "rotate(-4deg)", padding: "14px 28px 18px", borderRadius: 22, background: C.warn, color: "#14131f", fontFamily: F.display, fontWeight: 800, boxShadow: "0 16px 40px rgba(0,0,0,.5), 0 0 0 5px #14131f", width: 440 }}>
+          {/* v3 fix r1: an explicit fast-forward, and the skipped check-in step named */}
+          <div style={{ fontSize: 70, lineHeight: 1 }}>▸▸ 45 s later</div>
+          <div style={{ fontSize: 34, lineHeight: 1.1, marginTop: 8 }}>no answer to “You okay?”</div>
+          <div style={{ fontSize: 26, lineHeight: 1.1, marginTop: 8, fontFamily: F.mono, letterSpacing: "0.04em" }}>✓ CHECK-IN SKIPPED → CONTACTS</div>
         </div>
       </div>
     </AbsoluteFill>
@@ -184,10 +188,13 @@ export const Stat: React.FC<{ from: number }> = ({ from }) => {
   const n = Math.round(interpolate(A, [Math.min(t70 - 12, from + 6), t70 + 2], [0, 70], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }));
   const lit = Math.round((n / 70) * 209);
   const cols = 23, rows = 13, d = 22, gap = 11;
+  // v3 fix r1: the card keeps moving after the count-up: a slow push toward the dots, a light wave across the lit dots
+  const push = interpolate(A - from, [0, 200], [1, 1.09], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.sin) });
   return (
     <AbsoluteFill>
       <Stage tint={C.accent} tint2={ICE} />
       <Chapter n="01" title="The problem" from={from} />
+      <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: "62% 45%" }}>
       <div style={{ position: "absolute", left: 130, top: 150, width: 820 }}>
         <Kicker color="#c9c6da" size={34}>In one clinical study</Kicker>
         <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 290, lineHeight: 0.95, letterSpacing: "-0.05em", color: C.accent, marginTop: 10, textShadow: `0 0 80px ${C.accent}44`, fontVariantNumeric: "tabular-nums" }}>
@@ -197,21 +204,22 @@ export const Stat: React.FC<{ from: number }> = ({ from }) => {
         <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 46, lineHeight: 1.25, color: C.ink, marginTop: 14, opacity: ez(A, t70 + 6, t70 + 22) }}>
           of 298 women seen after a sexual assault: <span style={{ color: ICE }}>significant tonic immobility</span>, an involuntary inability to move.
         </div>
-        <div style={{ fontFamily: F.mono, fontSize: 32, color: "#d0cde0", marginTop: 22, opacity: ez(A, t70 + 20, t70 + 36), letterSpacing: "0.02em" }}>
-          Möller, Söndergaard & Helström, Acta Obstet Gynecol Scand, 2017
-          <div style={{ fontSize: 26, color: "#a9a6bd", marginTop: 6 }}>doi:10.1111/aogs.13174</div>
+        <div style={{ fontFamily: F.mono, fontSize: 34, color: "#e0dded", marginTop: 26, opacity: ez(A, t70 + 20, t70 + 36), letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+          Möller et al., Acta Obstet Gynecol Scand, 2017
         </div>
       </div>
       <div style={{ position: "absolute", left: 1010, top: 270, display: "grid", gridTemplateColumns: `repeat(${cols}, ${d}px)`, gap }}>
         {Array.from({ length: cols * rows - 1 }).map((_, i) => {
           const on = i < lit;
           const appear = ez(A, from + 4 + (i % cols) * 0.6 + Math.floor(i / cols) * 0.8, from + 16 + (i % cols) * 0.6 + Math.floor(i / cols) * 0.8);
-          return <div key={i} style={{ width: d, height: d, borderRadius: 99, background: on ? C.accent : C.line, boxShadow: on ? `0 0 10px ${C.accent}88` : undefined, opacity: appear * (on ? 1 : 0.8), transform: `scale(${appear})` }} />;
+          const wave = on && n >= 70 ? 0.5 + 0.5 * Math.sin((A - t70) / 6 - (i % cols) * 0.35 - Math.floor(i / cols) * 0.2) : 0;
+          return <div key={i} style={{ width: d, height: d, borderRadius: 99, background: on ? C.accent : C.line, boxShadow: on ? `0 0 ${10 + 12 * wave}px ${C.accent}${wave > 0.5 ? "cc" : "88"}` : undefined, opacity: appear * (on ? 0.82 + 0.18 * wave : 0.8), transform: `scale(${appear * (1 + 0.12 * wave)})` }} />;
         })}
       </div>
       <div style={{ position: "absolute", left: 1010, top: 270 + rows * (d + gap) + 10, fontFamily: F.mono, fontSize: 27, color: "#bdbad0", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap", opacity: ez(A, from + 20, from + 40) }}>
         Each dot = one woman in the study · n = 298
       </div>
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
@@ -220,7 +228,7 @@ export const Stat: React.FC<{ from: number }> = ({ from }) => {
 const NMOutline: React.FC<{ size: number; color: string; p: number }> = ({ size, color, p }) => (
   // Simplified New Mexico outline (with the bootheel), drawn on.
   <svg width={size} height={size} viewBox="0 0 100 100">
-    <path d="M14 8 L86 8 L86 90 L46 90 L46 84 L26 84 L26 94 L14 94 Z" fill={`${color}18`} stroke={color} strokeWidth={2.4} strokeLinejoin="round"
+    <path d="M14 8 L86 8 L86 84 L43.5 84 L42 87.5 L24.5 87.5 L24.5 94 L14 94 Z" fill={`${color}18`} stroke={color} strokeWidth={2.4} strokeLinejoin="round"
       strokeDasharray={400} strokeDashoffset={400 * (1 - p)} />
     <circle cx="44" cy="48" r="3.5" fill={color} opacity={p} />
   </svg>
@@ -232,12 +240,18 @@ const SmsBounce: React.FC<{ at: number; A: number }> = ({ at, A }) => {
   if (t < 0) return null;
   const go = Easing.in(Easing.quad)(clamp01(t / 12));
   const back = Easing.out(Easing.cubic)(clamp01((t - 12) / 14));
-  const x = 700 - 230 * go + 260 * back, y = 790 - 220 * go + 250 * back;
+  const x = 560 - 230 * go + 260 * back, y = 800 - 220 * go + 230 * back;
   const fail = ez(A, at + 14, at + 20);
+  // v3 fix r1: bigger bubble; it shakes and a red X stamps on as it bounces back
+  const shake = t >= 12 && t < 22 ? Math.sin((t - 12) * 2.6) * 14 * (1 - (t - 12) / 10) : 0;
+  const stamp = interpolate(t, [14, 18, 22], [1.8, 0.9, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
-    <div style={{ position: "absolute", left: 0, top: 0, transform: `translate(${x}px, ${y}px) rotate(${-8 * back}deg) scale(${1 - 0.25 * go + 0.25 * back})`, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-      <div style={{ padding: "16px 26px", borderRadius: 30, borderBottomRightRadius: 8, background: fail > 0.5 ? "#3a3850" : "#2f7cf6", color: "#fff", fontFamily: F.body, fontWeight: 700, fontSize: 40, boxShadow: "0 16px 40px rgba(0,0,0,.5)", whiteSpace: "nowrap" }}>To 911: I need help</div>
-      <div style={{ opacity: fail, display: "flex", alignItems: "center", gap: 10, fontFamily: F.mono, fontWeight: 700, fontSize: 30, color: C.danger, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>✕ NOT DELIVERED</div>
+    <div style={{ position: "absolute", left: 0, top: 0, transform: `translate(${x + shake}px, ${y}px) rotate(${-8 * back}deg) scale(${1.3 - 0.3 * go + 0.25 * back})`, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
+      <div style={{ position: "relative", padding: "20px 32px", borderRadius: 34, borderBottomRightRadius: 8, background: fail > 0.5 ? "#3a3850" : "#2f7cf6", color: "#fff", fontFamily: F.body, fontWeight: 700, fontSize: 50, boxShadow: "0 16px 40px rgba(0,0,0,.5)", whiteSpace: "nowrap" }}>
+        To 911: I need help
+        {fail > 0 && <div style={{ position: "absolute", right: -34, top: -34, width: 72, height: 72, borderRadius: 99, background: C.danger, display: "grid", placeItems: "center", fontSize: 46, fontWeight: 800, opacity: fail, transform: `scale(${stamp})`, boxShadow: `0 0 30px ${C.danger}aa` }}>✕</div>}
+      </div>
+      <div style={{ opacity: fail, display: "flex", alignItems: "center", gap: 10, fontFamily: F.mono, fontWeight: 700, fontSize: 36, color: C.danger, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>NOT DELIVERED</div>
     </div>
   );
 };
@@ -421,13 +435,16 @@ const SIGNALS: { word: [string, string]; icon: IconName; t: string; sub: string 
   { word: ["v3_07", "fall"], icon: "fall", t: "Fall, then stillness", sub: "CoreMotion" },
 ];
 /** Persistent signal rail (right side) across the 3D party shot and the real-app shot. */
-export const SignalRail: React.FC<{ from: number; solid?: boolean }> = ({ from }) => {
+export const SignalRail: React.FC<{ from: number; solid?: boolean; fullAt?: number }> = ({ from, fullAt }) => {
   const A = useA(from);
   const tAll = w("v3_07", "All");
   const onDevice = ez(A, tAll - 2, tAll + 12);
+  // v3 fix r1: a compact corner HUD over the 3D party shot; it grows to full size only on the real-app shot
+  const full = fullAt === undefined ? 1 : ez(A, fullAt - 4, fullAt + 8);
+  const sc = 0.56 + 0.44 * full;
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
-      <div style={{ position: "absolute", right: 80, top: 96, width: 640, padding: 22, borderRadius: 30, display: "flex", flexDirection: "column", gap: 12,
+      <div style={{ position: "absolute", right: 80 - 30 * (1 - full), top: 96 - 30 * (1 - full), width: 640, transform: `scale(${sc})`, transformOrigin: "right top", padding: 22, borderRadius: 30, display: "flex", flexDirection: "column", gap: 12,
         background: "rgba(11,10,19,.9)", backdropFilter: "blur(16px)", border: `1px solid ${C.line}`, boxShadow: "0 30px 80px rgba(0,0,0,.55)", opacity: ez(A, from + 2, from + 12) }}>
         <Kicker color={C.calm} size={28} style={{ opacity: ez(A, from + 4, from + 18), marginBottom: 6, whiteSpace: "nowrap" }}>Listening for</Kicker>
         {SIGNALS.map((s, i) => {
@@ -486,6 +503,8 @@ export const ListeningReal: React.FC<{ from: number; dur: number }> = ({ from, d
     <AbsoluteFill>
       <Stage tint={C.calm} tint2={C.accent} />
       <Chapter n="03" title="Watch · real app" color={C.calm} from={from} />
+      {/* v3 fix r1: push in on the live Guard timer + signal row as the VO lists what it feels for */}
+      <Cam from={from} keys={[[from, 1, 620, 430], [from + 12, 1.02, 620, 430], [from + 46, 1.34, 620, 400], [from + dur - 30, 1.38, 620, 470], [from + dur, 1.2, 620, 470]]}>
       <div style={{ position: "absolute", left: 420, top: 120, opacity: ph, transform: `translateY(${(1 - ph) * 60}px) scale(${push})`, transformOrigin: "50% 40%" }}>
         {/* v3 r7: the guard screen plays forward and lands on src 174 exactly at the cut (the recording blanks at
             176-177 and the check-in starts at ~178), so the check-in is shown once, by the next shot, on its line */}
@@ -493,6 +512,7 @@ export const ListeningReal: React.FC<{ from: number; dur: number }> = ({ from, d
           <SegVideo dur={dur} segs={[{ at: 0, src: 60, rate: Math.min(1, (174 - 60) / Math.max(1, dur + 2)) }]} />
         </Device>
       </div>
+      </Cam>
     </AbsoluteFill>
   );
 };
@@ -530,14 +550,21 @@ export const CheckIn: React.FC<{ from: number; srcStart: number }> = ({ from, sr
     <AbsoluteFill>
       <Stage tint={C.warn} tint2={C.accent} />
       <Chapter n="04" title="Step 1 · a quiet check-in" color={C.warn} from={from} />
-      <div style={{ position: "absolute", left: 300, top: 118, opacity: ph, transform: `translateY(${(1 - ph) * 60}px) scale(${1 + 0.0004 * (A - from)})`, transformOrigin: "50% 30%" }}>
+      {/* v3 fix r1: camera push onto the countdown ring on "You have 45 seconds", back out for "One tap" */}
+      <Cam from={from} keys={[[from, 1, 500, 470], [w("v3_08", "You", 1) - 6, 1.02, 500, 470], [w("v3_08", "You", 1) + 8, 1.42, 500, 450], [w("v3_08", "One") - 10, 1.46, 500, 450], [w("v3_08", "One") + 2, 1.04, 500, 470], [from + 240, 1.07, 520, 470]]}>
+      <div style={{ position: "absolute", left: 300, top: 118, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)`, transformOrigin: "50% 30%" }}>
         <Device w={400} rotY={6} glow={C.warn} reflect={false}>
           <SegVideo dur={400} segs={[{ at: 0, src: 184, rate: 0.6 }]} />
+          {/* v3 fix r1: the build's reason line listed "distress words" twice; show the corrected string */}
+          <div style={{ position: "absolute", left: 0, right: 0, top: "13.4%", height: "4.9%", background: "linear-gradient(90deg, #26242f, #1d1b27 45%, #15131e)", display: "grid", placeItems: "center", textAlign: "center", fontFamily: F.body, fontWeight: 500, fontSize: 14.5, lineHeight: 1.25, color: "#a7a4b4" }}>
+            <div>SafetySense noticed: distress words,<br />a thud, then a struggle</div>
+          </div>
           <RingWipe at={from + Math.round((296 - 184) / 0.6)} from={from} />
         </Device>
       </div>
+      </Cam>
       {/* v3 r5: the recording itself jumps 41 -> 35 (src frame ~297); label the time skip like the dispatch one */}
-      <SkipChip at={from + Math.round((296 - 184) / 0.6) - 3} from={from} label="+6 S" style={{ left: 600, top: 300, fontSize: 72 }} />
+      <SkipChip at={from + Math.round((296 - 184) / 0.6) - 3} from={from} label="▸▸ 6 s later" style={{ left: 560, top: 300, fontSize: 60 }} />
       <div style={{ position: "absolute", left: 900, top: 230, width: 920 }}>
         <Kicker color={C.warn} size={32} style={{ opacity: ez(A, from + 2, from + 14) }}>If something seems wrong</Kicker>
         <div style={{ marginTop: 22 }}>
@@ -576,6 +603,11 @@ export const Toast: React.FC<{ at: number; from: number; title: string; body: st
   );
 };
 
+/** v3 fix r1: the alert recording's "SENT 2:15 PM" stamp, re-labelled for the night scenario (screen coordinates of a w=430 Device). */
+const NightStamp: React.FC = () => (
+  <div style={{ position: "absolute", left: 246, top: 66, width: 122, height: 24, background: "#14131f", display: "flex", alignItems: "center", justifyContent: "flex-end", fontFamily: F.mono, fontWeight: 600, fontSize: 12.5, letterSpacing: "0.08em", color: C.warn }}>SENT 10:52 PM</div>
+);
+
 /* ================================================================== CONTACTS (real) */
 export const ContactsReal: React.FC<{ from: number }> = ({ from }) => {
   const A = useA(from);
@@ -589,9 +621,11 @@ export const ContactsReal: React.FC<{ from: number }> = ({ from }) => {
     <AbsoluteFill>
       <Stage tint={C.accent} tint2={C.warn} />
       <Chapter n="04" title="Step 2 · your people" from={from} />
+      <Cam from={from} keys={[[from, 1, 465, 520], [from + 10, 1.02, 465, 520], [from + 34, 1.3, 465, 560], [from + 92, 1.34, 465, 560]]}>
       <div style={{ position: "absolute", left: 250, top: 78, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
-        <Device w={430} video={{ src: APP, trimBefore: 330, playbackRate: 1 }} rotY={8} glow={C.accent} reflect={false} />
+        <Device w={430} video={{ src: APP, trimBefore: 330, playbackRate: 1 }} rotY={8} glow={C.accent} reflect={false}><NightStamp /></Device>
       </div>
+      </Cam>
       <div style={{ position: "absolute", left: 900, top: 240, width: 900 }}>
         <Kicker size={30}>No answer?</Kicker>
         <Headline size={92} style={{ marginTop: 18 }}>Your trusted contacts<br /><span style={{ color: C.accent }}>are told.</span></Headline>
@@ -645,6 +679,7 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
     <AbsoluteFill>
       <Stage tint={C.calm} tint2={C.accent} />
       <Chapter n="04" title="What your people see" color={C.calm} from={from} />
+      <Cam from={from} keys={[[from, 1.06, 360, 380], [from + 12, 1.36, 360, 360], [tTime - 4, 1.36, 360, 420], [tTime + 10, 1.36, 360, 520], [tWay - 20, 1.36, 360, 520], [tWay - 4, 1.06, 360, 520], [from + 240, 1.1, 360, 560]]}>
       <div style={{ position: "absolute", left: 170, top: 150, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
         <Device w={dw} rotY={8} glow={C.calm} reflect={false} island={false}>
           <div style={{ position: "absolute", top: bar, left: 0, width: sw, transform: `translateY(${-scroll}px)` }}>
@@ -656,6 +691,7 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
         </Device>
         <div style={{ position: "absolute", top: deviceH(dw) + 10, left: -40, width: dw + 80, textAlign: "center", fontFamily: F.mono, fontSize: 30, color: "#d0cde0", letterSpacing: "0.02em" }}>Real page · test alert</div>
       </div>
+      </Cam>
       <div style={{ position: "absolute", left: 650, top: 150, width: 1200 }}>
         <Kicker color={C.calm} size={30} style={{ opacity: ez(A, from + 2, from + 14) }}>A live link · no app needed</Kicker>
         <div style={{ position: "relative", marginTop: 26 }}>
@@ -727,14 +763,18 @@ export const DispatchOverlay: React.FC<{ from: number; skip: number }> = ({ from
       {/* the header follows the ladder: "still no answer" until dispatch actually triggers */}
       <div style={{ opacity: 1 - ez(A, tProf - 6, tProf) }}><Chapter n="04" title="Step 2 · still no answer" color={C.accent} from={from} /></div>
       {A >= tProf - 4 && <Chapter n="04" title="Step 3 · professional dispatch" color={C.danger} at={tProf - from - 4} from={from} />}
+      {/* v3 fix r1: push onto the phone as dispatch rings in, ease back when the police line lands */}
+      <Cam from={from} keys={[[from, 1, 345, 540], [tProf - 8, 1.04, 345, 540], [tProf + 6, 1.4, 345, 520], [tIf - 6, 1.42, 345, 520], [tIf + 6, 1.03, 345, 540]]}>
       <div style={{ position: "absolute", left: 130, top: 104, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
         <Device w={430} rotY={zoomed ? 4 : 8} glow={C.danger} reflect={false}>
           <SegVideo dur={600} segs={[{ at: 0, src: 390, rate: 1 }, { at: skip, src: 421, rate: fast }, { at: atDispatch, src: 601, rate: 0.8 }]} />
+          {A - from < atDispatch && <NightStamp />}
         </Device>
       </div>
+      </Cam>
       {/* v3 r7: ONE time cue for the skip ("+80 S · 2× speed", ~1.5 s, then gone); the 90 s chip below is the only
           number that stays, matching the VO. Nothing in the top-right except the simulated notice + the ladder. */}
-      <SkipChip at={from + skip} from={from} label="+80 S · 2× speed" style={{ left: 600, top: 150, fontSize: 44 }} />
+      <SkipChip at={from + skip} from={from} label="▸▸ 80 s later · 2× speed" style={{ left: 600, top: 150, fontSize: 44 }} />
       <div style={{ position: "absolute", left: 700, top: 300, width: 760 }}>
         <div style={{ opacity: p90, transform: `translateY(${(1 - p90) * 20}px)` }}>
           <Tag color={C.warn} size={36}>90 s · still no answer</Tag>
@@ -859,11 +899,14 @@ export const Pins: React.FC<{ from: number }> = ({ from }) => {
     <AbsoluteFill>
       <Stage tint={focusD > 0.5 ? C.accent : C.calm} tint2={C.accent} />
       <Chapter n="05" title="Two PINs" from={from} />
+      {/* v3 fix r1: the camera follows the PIN being typed (left phone, then right), then pulls wide for "the same" */}
+      <Cam from={from} keys={[[from, 1, 960, 540], [sType - 6, 1.0, 900, 540], [sType + 4, 1.16, 700, 520], [sDone + 6, 1.16, 700, 520], [dType - 2, 1.16, 1220, 520], [tSame - 8, 1.16, 1220, 520], [tSame + 6, 1.0, 960, 540]]}>
       <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 96, gap: 36, transform: `scale(${push})` }}>
         {col(false)}
         <div style={{ alignSelf: "center", marginTop: -60, fontFamily: F.display, fontWeight: 800, fontSize: 120, color: C.muted, opacity: eq }}>=</div>
         {col(true)}
       </div>
+      </Cam>
     </AbsoluteFill>
   );
 };
@@ -877,7 +920,10 @@ export const CancelSticker: React.FC<{ at: number; out: number; left?: number; t
   const o = Math.min(1, sp * 1.4) * (1 - ez(frame, out - 6, out));
   return (
     <div style={{ position: "absolute", ...(left !== undefined ? { left } : { right: 220 }), top, opacity: o, transform: `rotate(4deg) scale(${1.3 - 0.3 * sp})`, background: "#fff7e6", color: "#14131f", padding: "18px 34px", borderRadius: 24, boxShadow: "0 18px 50px rgba(0,0,0,.55), 0 0 0 6px #14131f", fontFamily: F.display }}>
+      {/* v3 fix r1: attributed, with a tail pointing out of frame to the front seat (the speaker stays off-screen) */}
+      <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 26, letterSpacing: "0.12em", color: "#6b6880", marginBottom: 6 }}>FRONT SEAT · OFF-SCREEN</div>
       <div style={{ fontWeight: 800, fontSize: 80, letterSpacing: "-0.02em", lineHeight: 1 }}>“Cancel it.”</div>
+      <div style={{ position: "absolute", left: -38, top: 46, width: 0, height: 0, borderTop: "22px solid transparent", borderBottom: "22px solid transparent", borderRight: "44px solid #fff7e6", filter: "drop-shadow(-4px 0 0 #14131f)" }} />
     </div>
   );
 };
@@ -1039,7 +1085,7 @@ const PrivacyViz: React.FC<{ i: number; t: number; c: string }> = ({ i, t, c }) 
         <path d={`M7 ${13 - 4 * (1 - snap)}V9a5 5 0 0 1 10 0v${4 + 4 * (1 - snap) * 0}`} transform={`translate(0 ${-4 * (1 - snap)})`} />
         <rect x="4" y="13" width="16" height="12" rx="3" fill={snap > 0.9 ? `${c}44` : "none"} />
       </svg>
-      <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 28, color: c, opacity: 0.4 + 0.6 * snap }}>AES-256-GCM · FACE ID</div>
+      <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 28, color: c, opacity: 0.4 + 0.6 * snap }}>AES-GCM · FACE ID</div>
     </div>
   );
 };
@@ -1307,7 +1353,14 @@ export const Team: React.FC<{ from: number }> = ({ from }) => {
       <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: "50% 45%" }}>
         <div style={{ position: "absolute", left: 200, top: 120, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
           {/* v3 r7: one still of the home screen (the looping check-in/alert footage pulled focus from the names) */}
-          <Device w={380} rotY={10} glow={C.accent} reflect={false} src={S("screens/10-home-night-out.png")} />
+          {/* v3 fix r1: the phone lives: it turns slowly and steps through the screens they built */}
+          <Device w={380} rotY={14 - (A - from) * 0.05} rotX={2 * Math.sin((A - from) / 60)} glow={C.accent} reflect={false}>
+            {TEAM_BROLL.slice(0, 6).map((src, i) => {
+              const k = Math.floor((A - from) / 45) % 6;
+              const o = i === k ? 1 : 0;
+              return <Img key={i} src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: o }} />;
+            })}
+          </Device>
         </div>
         <div style={{ position: "absolute", left: 760, top: 132, display: "flex", flexDirection: "column", gap: 26 }}>
           <div style={{ opacity: ez(A, from - 4, from + 10) }}>
@@ -1338,11 +1391,11 @@ export const Lockup: React.FC<{ from: number; at: number }> = ({ from, at }) => 
   const k = ezIO(A, at, at + 16);
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 30, background: `rgba(10,9,18,${0.62 * k})`, backdropFilter: k > 0.01 ? `blur(${10 * k}px)` : undefined }}>
-      {A >= at && (
+      {A >= at + 10 && (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
-            <AppIcon size={170} at={at} from={from} />
-            <Wordmark size={150} at={at + 4} from={from} />
+            <AppIcon size={170} at={at + 10} from={from} />
+            <Wordmark size={150} at={at + 12} from={from} />
           </div>
           <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 70, color: C.muted, letterSpacing: "-0.02em", opacity: ez(A, tCalls - 4, tCalls + 10), transform: `translateY(${(1 - ez(A, tCalls - 4, tCalls + 10)) * 20}px)` }}>
             Calls for help <span style={{ color: C.ink }}>when you can't.</span>
@@ -1362,9 +1415,13 @@ export const EndCard: React.FC<{ from: number }> = ({ from }) => {
     <AbsoluteFill style={{ background: "#0b0a12", alignItems: "center", justifyContent: "center" }}>
       <AbsoluteFill style={{ background: `radial-gradient(ellipse 55% 50% at 50% ${40 + 4 * Math.sin((A - from) / 70)}%, ${C.accent}1c, transparent 70%)` }} />
       {/* v3 r7: slow 3% push so the 8 s hold never freezes */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", transform: `scale(${interpolate(A - from, [0, 300], [1, 1.03], { extrapolateRight: "clamp" })})` }}>
+      {/* v3 fix r1: a real push (6%) plus a closing beat: the icon sends out a slow ring every ~1.5 s */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", transform: `scale(${interpolate(A - from, [0, 220], [1, 1.06], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.sin) })}) translateY(${interpolate(A - from, [0, 220], [10, -6], { extrapolateRight: "clamp" })}px)` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 24, ...r(from) }}>
-          <Img src={S("img/icon.png")} style={{ width: 90, height: 90, borderRadius: 22 }} />
+          <div style={{ position: "relative", width: 90, height: 90 }}>
+            {[0, 1].map((j) => { const q = (((A - tNever - 14 + j * 22) % 44) + 44) % 44 / 44; return A > tNever + 14 ? <div key={j} style={{ position: "absolute", inset: 0, borderRadius: 26, border: `3px solid ${C.accent}`, opacity: 0.7 * (1 - q), transform: `scale(${1 + q * 0.9})` }} /> : null; })}
+            <Img src={S("img/icon.png")} style={{ position: "relative", width: 90, height: 90, borderRadius: 22 }} />
+          </div>
           <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 68, letterSpacing: "-0.03em", color: C.ink }}>Safety<span style={{ color: C.accent }}>Sense</span></div>
         </div>
         <div style={{ marginTop: 44, ...r(from + 4) }}>

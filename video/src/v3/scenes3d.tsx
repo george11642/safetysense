@@ -76,7 +76,7 @@ const ListenRings: React.FC<{ center: V3; start: number; every?: number; color?:
 };
 
 /** A drinking glass that shatters at `start` (shards + flash). Deterministic. */
-const GlassBreak: React.FC<{ position: V3; start: number; scale?: number }> = ({ position, start, scale = 1 }) => {
+const GlassBreak: React.FC<{ position: V3; start: number; scale?: number; floor?: number }> = ({ position, start, scale = 1, floor = -0.045 }) => {
   const frame = useCurrentFrame();
   const t = frame - start;
   const shards = useMemo(() => Array.from({ length: 40 }).map((_, i) => {
@@ -100,7 +100,7 @@ const GlassBreak: React.FC<{ position: V3; start: number; scale?: number }> = ({
       {t < 6 && <Glow position={[0, 0.04, 0]} color="#ffffff" size={0.28 * (1 - t / 6)} opacity={0.8} />}
       {t < 4 && <pointLight position={[0, 0.15, 0.1]} color="#dfe8ff" intensity={1.0 * (1 - t / 4)} distance={1.0} />}
       {shards.map((s, i) => {
-        const y = Math.max(-0.045, 0.02 + s.vy * tt - 0.0016 * tt * tt);
+        const y = Math.max(floor, 0.02 + s.vy * tt - 0.0016 * tt * tt);
         return (
           <mesh key={i} geometry={s.g} position={[s.vx * tt, y, s.vz * tt]} rotation={[s.spin * tt, s.spin * tt * 0.8, 0]}>
             <meshStandardMaterial color="#e6eeff" roughness={0.05} metalness={0.3} transparent opacity={0.9} side={THREE.DoubleSide} emissive="#9fb2ff" emissiveIntensity={0.35} />
@@ -145,7 +145,8 @@ export const ColdOpen3D: React.FC = () => {
   } as Record<string, number | undefined>;
   Object.keys(face).forEach((k) => face[k] === undefined && delete face[k]);
   // the phone rides in her back jeans pocket (top third out, screen facing back), a denim pocket patch over the rest
-  const pocket: V3 = [AVA_X - 0.065, 0.9, zM - 0.118];
+  // v3 fix r1: the phone sits in her right jacket side pocket (top third out, screen lit), seen from the front 3/4
+  const pocket: V3 = [AVA_X - 0.2, 0.94, zM + 0.03];
   const det = frame >= CO_FREEZE + 2;
   const hz = hoodZ(frame);
   const shotD = frame >= CO_CANT;
@@ -156,10 +157,10 @@ export const ColdOpen3D: React.FC = () => {
         <Character look={AVA} position={[AVA_X, 0, zM]} seed={1} face={face as never} act={frame < CO_FREEZE ? 0.2 : 0}
           clips={[{ anim: "walk", start: 0 }, { anim: "freeze", start: CO_FREEZE, fade: 4 }]} />
         <group position={pocket}>
-          <Phone screen={SCR.alert} glow={det ? 1 : 0.1} buzz={det && frame % 10 < 5 ? 0.02 : 0} position={[0, 0.03, 0]} rotation={[0.06, Math.PI, 0.04]} scale={0.8} />
-          <mesh position={[0, -0.02, -0.007]} rotation={[0.06, 0, 0.04]}><boxGeometry args={[0.1, 0.105, 0.006]} /><meshStandardMaterial color="#34436e" roughness={0.9} /></mesh>
+          <Phone screen={SCR.alert} glow={det ? 1 : 0.1} buzz={det && frame % 10 < 5 ? 0.02 : 0} position={[-0.004, 0.04, 0.012]} rotation={[0.05, -Math.PI / 2 + 0.35, 0.05]} scale={0.8} />
+          <mesh position={[-0.012, -0.015, 0.012]} rotation={[0.05, -Math.PI / 2 + 0.35, 0.05]}><boxGeometry args={[0.12, 0.1, 0.012]} /><meshStandardMaterial color="#156a6c" roughness={0.9} /></mesh>
         </group>
-        {det && <pointLight position={[pocket[0], pocket[1] + 0.05, pocket[2] - 0.12]} color={C.accent} intensity={0.9 + 0.3 * Math.sin(frame / 2)} distance={0.9} decay={1.6} />}
+        {det && <pointLight position={[pocket[0] - 0.12, pocket[1] + 0.06, pocket[2] + 0.06]} color={C.accent} intensity={0.9 + 0.3 * Math.sin(frame / 2)} distance={0.9} decay={1.6} />}
         {(frame < CO_FREEZE || shotD) && <Character look={HOODIE} position={[HOOD_X, 0, hz]} rotationY={0.1} seed={3} act={0} faceFill={0} rim={{ color: "#8fa8ff", strength: 0.12 }}
           clips={[{ anim: "walk", start: 0, speed: 1.45 }, { anim: "idle", start: CO_FREEZE + 18, fade: 8 }]} />}
         {/* his long shadow (lamp behind him) reaches toward her heels: the threat closes in without showing his body */}
@@ -185,7 +186,9 @@ export const ColdOpen3D: React.FC = () => {
             [CO_FREEZE, pushIn(CO_FREEZE, CO_CANT, [AVA_X, 1.56, zStop], [0.12, 0.02, 1], 1.35, 1.1, 28)],
             // D: "She can't reach her phone." from her right side at hip height: the glow in her back pocket, the ring at
             // her feet, his silhouette cut by the left frame edge
-            [CO_CANT, dolly(CO_CANT, CO_CANT + 46, [AVA_X + 0.75, 1.15, zStop - 1.35], [AVA_X + 0.68, 1.1, zStop - 1.2], [[AVA_X - 0.06, 0.88, zStop - 0.1], [AVA_X - 0.06, 0.86, zStop - 0.1]], 34)],
+            // v3 fix r1: front 3/4 medium at chest height from her right: face, frozen arm and the lit pocket in one frame
+            // (never a low or rear angle on her body)
+            [CO_CANT, dolly(CO_CANT, CO_CANT + 52, [AVA_X - 1.15, 1.5, zStop + 1.25], [AVA_X - 1.0, 1.48, zStop + 1.08], [[AVA_X - 0.12, 1.2, zStop], [AVA_X - 0.14, 1.17, zStop]], 40)],
           ])}
         />
       </Scene3D>
@@ -323,7 +326,8 @@ export const PartyGuard3D: React.FC<{ dur: number }> = ({ dur }) => (
         clips={[{ anim: "idle", start: 0 }, { anim: "phoneUp", start: 0, offset: 8, mask: "upper" }]} />
       <Character look={LOOKS.friend} position={[-0.6, 0, 1.0]} rotationY={0.65} seed={4} life={1} clips={[{ anim: "talk", start: 0 }, { anim: "wave", start: 10, end: 40, fade: 6, mask: "armR" }]} />
       {/* close-up over her shoulder on the phone in her hand */}
-      <CameraRig handheld={0.004} rig={dolly(0, dur, [1.3, 1.55, 2.75], [1.12, 1.53, 2.45], [[0.22, 1.38, 0.9], [0.24, 1.4, 0.9]], 32)} />
+      {/* v3 fix r1: front 3/4 just under her eye line (her bowed head read as spiky hair from above the shoulder) */}
+      <CameraRig handheld={0.004} rig={dolly(0, dur, [0.75, 1.36, 2.6], [0.68, 1.36, 2.3], [[0.12, 1.3, 0.9], [0.14, 1.31, 0.9]], 34)} />
       <Rim target={[0.25, 1.3, 0.9]} from={[-2, 3, -3]} intensity={1.4} />
     </Scene3D>
     <Grade vignette={0.5} grain={0.05} />
@@ -333,17 +337,19 @@ export const PartyGuard3D: React.FC<{ dur: number }> = ({ dur }) => (
 /* ------------------------------------------------------------------ 4. PARTY: listening + a glass breaks */
 // v3 r5: the glass is knocked off the island's front edge and shatters on the FLOOR, shot low against the dark cabinet
 // front (readable size, no blown-out counter); the listening rings stay on the floor, so nothing slices through a body.
-const GX = -0.34, GZ0 = 0.46, GZ1 = 0.66; // v3 r6: off her phone hand's path (the hand passed through the glass)
+// v3 fix r1: the glass is bumped over ON the counter (right end, away from everyone) and breaks there, shot at
+// counter height with only the countertop, bottles and the back wall in frame (no low angle on anyone's body).
+const GX = 0.82, GZ0 = 0.22, GZ1 = 0.3;
 const GlassFall: React.FC<{ start: number }> = ({ start }) => {
   const frame = useCurrentFrame();
   const t = frame - start;
-  if (t >= 0) return <GlassBreak position={[GX, 0.02, GZ1]} start={start} scale={1.9} />;
-  const tip = clamp((t + 16) / 6), fall = clamp((t + 10) / 10);
-  const y = COUNTER_TOP + 0.005 - (COUNTER_TOP - 0.03) * fall * fall;
-  const z = GZ0 + (GZ1 - GZ0) * Math.min(1, tip * 0.45 + fall);
+  if (t >= 0) return <GlassBreak position={[GX - 0.06, COUNTER_TOP + 0.01, GZ1]} start={start} scale={1.5} floor={0.0} />;
+  // wobble, then tip over toward camera-left and hit the counter top on the break frame
+  const wob = clamp((t + 18) / 8), tip = clamp((t + 10) / 10);
+  const tt = tip * tip;
   return (
-    <group position={[GX, y, z]} scale={1.6}>
-      <group rotation={[1.2 * tip + 2.2 * fall, 0, 0.3 * fall]}><Glass /></group>
+    <group position={[GX - 0.06 * tt, COUNTER_TOP + 0.0, GZ0 + (GZ1 - GZ0) * tt]} scale={1.5}>
+      <group rotation={[0.25 * tt, 0, 0.12 * Math.sin(wob * Math.PI * 2) * (1 - tip) + 1.45 * tt]}><Glass /></group>
     </group>
   );
 };
@@ -362,8 +368,9 @@ export const PartyListen3D: React.FC<{ dur: number; breakAt: number }> = ({ dur,
         <CameraRig handheld={0.008} shakes={[[breakAt, 0.02]]}
           rig={cuts([
             [0, orbit(0, dur, { center: [0.75, 1.0, 0.75], radius: 3.4, height: 0.5, from: 0.3, to: 0.05, fov: 38, lookOffset: [0, 0.05, 0] })],
-            // cut in low on the island front: the glass drops past the dark cabinet and bursts on the floor
-            [breakAt - 16, dolly(breakAt - 16, breakAt + 24, [0.55, 0.75, 2.0], [0.5, 0.6, 1.85], [[GX, 0.7, GZ1 - 0.05], [GX, 0.25, GZ1]], 36)],
+            // v3 fix r1: insert at counter height looking along the countertop toward the bottles (+X): the glass
+            // wobbles, tips and bursts on the counter; nobody's body is in frame
+            [breakAt - 16, dolly(breakAt - 16, breakAt + 24, [GX - 0.62, 1.2, GZ1 + 0.42], [GX - 0.5, 1.15, GZ1 + 0.36], [[GX, COUNTER_TOP + 0.05, GZ1 - 0.04], [GX - 0.02, COUNTER_TOP + 0.04, GZ1 - 0.02]], 38)],
             // back out: her phone heard it, the friend reacts
             // v3 r7: wider, Ava's whole head + phone glow in the left two-thirds (the signal panel owns the right third)
             [breakAt + 24, dolly(breakAt + 24, dur, [1.75, 1.5, 3.6], [1.6, 1.48, 3.3], [[0.95, 1.2, 0.85], [0.95, 1.22, 0.85]], 38)],
@@ -431,9 +438,9 @@ const HomeKitchen: React.FC = () => {
       {[0, 1].map((i) => <mesh key={`l${i}`} position={[-0.66 + i * 0.09, 0.995, 0.23 + i * 0.03]} castShadow><sphereGeometry args={[0.04, 16, 12]} /><meshStandardMaterial color="#f2cf4a" roughness={0.5} /></mesh>)}
       <mesh position={[-0.3, 1.0, 0.6]} castShadow><cylinderGeometry args={[0.07, 0.055, 0.12, 20]} /><meshStandardMaterial color="#e9e4dc" roughness={0.6} /></mesh>
       {[0, 1, 2, 3, 4].map((i) => <mesh key={`p${i}`} position={[-0.3 + Math.cos(i * 1.3) * 0.04, 1.12, 0.6 + Math.sin(i * 1.3) * 0.04]} rotation={[Math.cos(i * 1.3) * 0.5, 0, Math.sin(i * 1.3) * 0.5]} castShadow><coneGeometry args={[0.035, 0.18, 6]} /><meshStandardMaterial color="#5c9b62" roughness={0.6} /></mesh>)}
-      <mesh position={[0.55, 0.952, 0.2]} rotation={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.03, 0.26]} /><meshStandardMaterial color="#5b6f8f" roughness={0.8} /></mesh>
-      {/* mug on the island */}
-      <mesh position={[0.45, 0.99, 0.45]} castShadow><cylinderGeometry args={[0.045, 0.04, 0.1, 20]} /><meshStandardMaterial color="#ef7b9b" /></mesh>
+      {/* v3 fix r1: book + mug moved to the island's far-left end (they clipped the phone close-up's right edge) */}
+      <mesh position={[-0.62, 0.952, 0.55]} rotation={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.03, 0.26]} /><meshStandardMaterial color="#5b6f8f" roughness={0.8} /></mesh>
+      <mesh position={[-0.7, 0.99, 0.15]} castShadow><cylinderGeometry args={[0.045, 0.04, 0.1, 20]} /><meshStandardMaterial color="#ef7b9b" /></mesh>
     </group>
   );
 };
@@ -456,9 +463,14 @@ export const MomPhone3D: React.FC<{ dur: number }> = ({ dur }) => {
         )}
         <CameraRig handheld={0.004} rig={cuts([
           // v3 r6: steep, close push-in on the lit-up phone (she is out of frame until she picks it up)
-          [0, dolly(0, PICK, [0.3, 1.5, 0.88], [0.22, 1.32, 0.72], [[0.15, 0.95, 0.4], [0.15, 0.955, 0.41]], 32)],
-          // she has it: push in on her face as she reads the alert
-          [PICK, pushIn(PICK, dur, [-0.15, 1.5, -0.35], [0.45, 0.05, 1], 1.9, 1.35, 32)],
+          // v3 fix r1: a motivated snap-zoom on the first ring (frames 6-12), then a slow creep
+          [0, (f) => {
+            const k = 0.75 * prog(f, 6, 12, "out") + 0.25 * prog(f, 12, PICK);
+            const a: V3 = [0.32, 1.55, 0.98], b: V3 = [0.2, 1.3, 0.68];
+            return { pos: [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k], look: [0.15, 0.955, 0.4], fov: 32 };
+          }],
+          // she has it: three-quarter front, just below her eye line, so her face (not the top of her head) reads
+          [PICK, dolly(PICK, dur, [0.62, 1.32, 1.05], [0.48, 1.35, 0.82], [[-0.12, 1.42, -0.3], [-0.13, 1.44, -0.32]], 34)],
         ])} />
       </Scene3D>
       <Grade vignette={0.5} grain={0.05} />
@@ -522,11 +534,13 @@ const CarInside: React.FC<{ dur: number }> = ({ dur }) => {
         <Character look={{ ...LOOKS.guy, top: "#1c1b26", jacket: "#16151e", hair: "#0e0d12", skin: "#4a3a34" }} position={SEATS.driver} seed={2} rim={{ color: "#9fb2ff", strength: 0.08 }} faceFill={0} rotationY={0} act={0}
           face={{ smile: -0.1, brow: -0.2 }}
           clips={[{ anim: "drive", start: 0 }]} />
-        <Character look={AVA} position={AVA_SEAT} seed={1} holdR={face ? "none" : "phone"} phoneScreen={SCR.pin} phoneGlow={face ? 0 : 0.6} faceFill={face ? 0.06 : 0.25} act={0.15}
-          ikOffR={[0.02, -0.12, 0.05]}
+        {/* v3 fix r1: in the close shot she keeps the phone in her own hand, low at her chest (eyes visible); the
+            separate hand prop read as a floating cylinder in her lap */}
+        <Character look={AVA} position={AVA_SEAT} seed={1} holdR="phone" phoneScreen={SCR.pin} phoneGlow={0.6} faceFill={face ? 0.2 : 0.25} act={0.15}
+          ikOffR={face ? [0.05, -0.27, 0.1] : [0.02, -0.12, 0.05]}
           face={{ worry: 0.85 * worry, brow: 0.45 * worry, eyesWide: 0.4 * worry, mouth: 0.06 * worry, smile: -0.25 * worry, eyeY: face ? -0.75 : -0.2, eyeX: face ? 0.15 : 0.3 }}
-          clips={face ? [{ anim: "sit", start: 0 }, { anim: "phoneUp", start: -20, mask: "head" }] : [{ anim: "sit", start: 0 }, { anim: "phoneUp", start: 0, offset: 14, mask: "upper" }]} />
-        {face && (
+          clips={[{ anim: "sit", start: 0 }, { anim: "phoneUp", start: 0, offset: 14, mask: "upper" }]} />
+        {false && face && (
           <>
             <PhoneInHand position={phonePos} toward={[(eyes[0] + camF[0]) / 2, (eyes[1] + camF[1]) / 2, (eyes[2] + camF[2]) / 2]} screen={SCR.pin} glow={0.45}
               skin={AVA.skin} sleeve={AVA.jacket} roll={-0.15} tap={tap} thumbAt={keys[kIdx]} />
@@ -646,7 +660,8 @@ const PhoneShatterV3: React.FC<{ start: number; position: V3; screen: string }> 
     const a = hash(i * 9.7) * Math.PI * 2, sp = 0.006 + hash(i * 6.1) * 0.014;
     return { g: gg, vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: 0.018 + hash(i * 4.4) * 0.03, spin: (hash(i * 8.8) - 0.5) * 0.6, ox: (hash(i * 1.3) - 0.5) * 0.05, oz: (hash(i * 2.7) - 0.5) * 0.1 };
   }), []);
-  const shardMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1b1e2c", roughness: 0.12, metalness: 0.85, side: THREE.DoubleSide, emissive: "#28304a", emissiveIntensity: 0.35 }), []);
+  // v3 fix r1: shards read as glass (translucent, glossy, a cool edge sheen), not flat black triangles
+  const shardMat = useMemo(() => new THREE.MeshPhysicalMaterial({ color: "#cfdcff", roughness: 0.04, metalness: 0.1, transmission: 0, transparent: true, opacity: 0.62, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide, emissive: "#6f86c8", emissiveIntensity: 0.28, depthWrite: false }), []);
   const trailMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#9fb2ff", transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }), []);
   // v3 r7: stronger gravity (shards land in ~10 frames instead of hanging), then they shrink away
   const at = (s: (typeof shards)[number], tt: number): V3 => [s.ox + s.vx * tt, Math.max(0.002, 0.01 + s.vy * tt - 0.0062 * tt * tt), s.oz + s.vz * tt];
@@ -655,7 +670,7 @@ const PhoneShatterV3: React.FC<{ start: number; position: V3; screen: string }> 
     <group position={position}>
       <group rotation={[-Math.PI / 2, 0, 0.3]} position={[0, 0.006, 0]}>
         {/* v3 r7: the screen dies on impact (black after a 6-frame glitch), matching the "no heartbeat" graphic */}
-        <Phone screen={t < 6 ? screen : undefined} screenColor="#050409" glow={t < 0 ? 0.8 : glitch ? 1 : 0} flash={glitch ? (t % 2 === 0 ? 1 : 0.3) : 0} flashColor="#ffffff" />
+        <Phone screen={t < 6 ? screen : undefined} screenColor="#050409" glow={t < 0 ? 0.8 : glitch ? 1 : 0} flash={glitch ? (t % 2 === 0 ? 0.6 : 0.2) : 0} flashColor="#ffe6c8" />
         {t >= 0 && (
           <mesh position={[0, 0, 0.0084]}>
             <planeGeometry args={[0.076, 0.164]} />
@@ -668,7 +683,9 @@ const PhoneShatterV3: React.FC<{ start: number; position: V3; screen: string }> 
         <planeGeometry args={[0.13, 0.22]} />
         <meshBasicMaterial color="#000" transparent opacity={0.55} depthWrite={false} alphaMap={contactShadowTex()} />
       </mesh>
-      {t >= 0 && t < 4 && <Glow position={[0, 0.05, 0]} color="#ffffff" size={0.7 * (1 - t / 4)} opacity={0.8} />}
+      {/* v3 fix r1: a short, warm impact glint (was a 4-frame white blow-out) */}
+      {t >= 0 && t < 3 && <Glow position={[0, 0.04, 0]} color="#ffd9a8" size={0.38 * (1 - t / 3)} opacity={0.75} />}
+      {t >= 0 && t < 3 && <pointLight position={[0, 0.12, 0.05]} color="#ffcf9a" intensity={1.4 * (1 - t / 3)} distance={0.8} />}
       {t >= 0 && shards.map((s, i) => {
         const tt = Math.min(t, 22);
         const p = at(s, tt);
@@ -768,6 +785,15 @@ const Restaurant: React.FC = () => {
         <Glow position={[0, 0.12, 0]} color="#ffb35a" size={0.35 * flick} opacity={0.7} />
         <pointLight position={[0, 0.16, 0]} color="#ffb070" intensity={1.4 * flick} distance={1.8} decay={1.5} castShadow />
       </group>
+      {/* v3 fix r1: depth: a neon sign on the back wall, string lights, and warm bokeh behind the booth */}
+      <group position={[-1.5, 1.85, -1.33]}>
+        <mesh><torusGeometry args={[0.2, 0.014, 8, 40]} /><meshBasicMaterial color="#ff6fa0" toneMapped={false} /></mesh>
+        <mesh position={[0, 0, 0.002]}><torusGeometry args={[0.13, 0.012, 8, 40, Math.PI * 1.3]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
+        <Glow color="#ff6fa0" size={0.9 * flick} opacity={0.45} />
+        <pointLight position={[0, 0, 0.3]} color="#ff6fa0" intensity={0.9} distance={2.4} decay={1.5} />
+      </group>
+      <Bokeh center={[-0.6, 2.1, -1.2]} spread={[3.2, 0.25, 0.1]} count={22} colors={["#ffd27a", "#ffb35a"]} size={[0.03, 0.06]} opacity={0.6} />
+      <Bokeh center={[0, 1.2, -1.25]} spread={[4.5, 0.8, 0.1]} count={16} colors={["#ffb35a", "#ff8f8f", "#9fb2ff"]} size={[0.08, 0.18]} opacity={0.25} />
       {/* background tables (dim) */}
       {[[-2.2, -0.6], [2.4, 0.2]].map(([x, z], i) => (
         <group key={`bt${i}`} position={[x, 0, z]}>
@@ -790,8 +816,11 @@ export const DateGlance3D: React.FC<{ dur: number }> = ({ dur }) => {
         {/* v3 r6: she sits angled toward camera so the locked look (rose top under the navy jacket) reads */}
         <Character look={AVA} position={[0.45, SEAT_Y, -0.15]} rotationY={-Math.PI / 2 + 0.55} holdR="phone" phoneScreen={SCR.home} phoneGlow={0.5} faceFill={0.3}
           ikOffR={[0.02, -0.1, 0.05]}
-          face={{ worry: 0.55 * glance, smile: 0.15 - 0.35 * glance, eyeY: -0.5 * glance, brow: 0.2 * glance }}
-          clips={[{ anim: "sit", start: 0 }, { anim: "phoneUp", start: 14, mask: "upper" }]} />
+          face={{ worry: 0.55 * glance, smile: 0.15 - 0.35 * glance, eyeY: -0.5 * glance, brow: 0.2 * glance, eyeX: track(frame, [[2, 0], [5, 0.8], [12, 0.8], [15, 0]]) }}
+          clips={[{ anim: "sit", start: 0 }, { anim: "lookBack", start: 3, end: 13, fade: 3, mask: "head" }, { anim: "phoneUp", start: 14, mask: "upper" }]} />
+        {/* v3 fix r1: other diners at the dim background tables (the room is not empty) */}
+        <Character look={LOOKS.friend} position={[-1.8, SEAT_Y, -0.6]} rotationY={-Math.PI / 2} seed={12} act={0.4} clips={[{ anim: "sit", start: 0 }, { anim: "talk", start: 0, mask: "upper" }]} />
+        <Character look={LOOKS.roommate} position={[2.0, SEAT_Y, 0.2]} rotationY={Math.PI / 2} seed={13} act={0.4} clips={[{ anim: "sit", start: 0 }]} />
         <Character look={LOOKS.guy} position={[-0.6, SEAT_Y, -0.15]} rotationY={Math.PI / 2 - 0.25} seed={8}
           clips={[{ anim: "sit", start: 0 }, { anim: "talk", start: 0, mask: "upper" }]} />
         <Rim target={[0.45, 1.1, -0.15]} from={[2.4, 2.6, -2.2]} color="#ffb98a" intensity={1.8} />
@@ -864,21 +893,25 @@ export const PoliceArrive3D: React.FC<{ dur: number }> = ({ dur }) => {
       <Scene3D fog={{ color: "#120f26", near: 6, far: 40 }} background="#120f26">
         <CampusNight dim={0.3} />
         {/* she faces 3/4 to camera (rose top + jacket visible), turned toward him */}
-        <Character look={AVA} position={[AVA_X, 0, z0]} rotationY={Math.PI - 0.95} seed={1} faceFill={0.35}
-          face={{ worry: 0.9 - 0.5 * relief, brow: 0.3, smile: -0.3 + 0.35 * relief, eyesWide: 0.4 * (1 - relief) }}
-          clips={[{ anim: "idle", start: 0 }]} />
-        <Character look={LOOKS.officer} position={[AVA_X - 0.3, 0, offZ]} rotationY={0.15} seed={9} faceFill={0.25}
-          face={{ smile: 0.15, brow: 0.2 }}
-          clips={[{ anim: "walk", start: 0 }, { anim: "idle", start: STOP, fade: 8 }, { anim: "talk", start: STOP + 4, fade: 8, mask: "upper" }]} />
-        {/* the (off-screen) cruiser's lights */}
-        <pointLight position={[2.6, 1.3, z0 - 3 + sweep]} color="#ff3b4e" intensity={blink ? 9 : 2} distance={9} decay={1.3} />
-        <pointLight position={[2.6, 1.3, z0 - 2 - sweep]} color="#3b6bff" intensity={blink ? 2 : 9} distance={9} decay={1.3} />
+        {/* v3 fix r1: she turns from the dark path toward the lights and the officer (relief), facing camera 3/4 */}
+        <Character look={AVA} position={[AVA_X, 0, z0]} rotationY={Math.PI - 0.3 - 0.55 * prog(frame, 6, 26, "inOut")} seed={1} faceFill={0.35}
+          face={{ worry: 0.9 - 0.6 * relief, brow: 0.3 - 0.2 * relief, smile: -0.3 + 0.45 * relief, eyesWide: 0.4 * (1 - relief) }}
+          clips={[{ anim: "idle", start: 0 }, { anim: "relief", start: 24, fade: 10, mask: "head" }]} />
+        {/* v3 fix r1: a neutral approach: arms relaxed at his sides (no reaching hand), cap + badge, front-lit face */}
+        <Character look={LOOKS.officer} position={[AVA_X - 0.3, 0, offZ]} rotationY={0.15} seed={9} faceFill={0.45} act={0}
+          face={{ smile: 0.25, brow: 0.15 }}
+          clips={[{ anim: "walk", start: 0 }, { anim: "idle", start: STOP, fade: 10 }]} />
+        <pointLight position={[AVA_X + 0.4, 1.8, offZ + 1.0]} color="#ffe0c4" intensity={1.1} distance={2.6} decay={1.5} />
+        {/* the (off-screen) cruiser's lights: a softer red/blue spill (no hot salmon skin) */}
+        <pointLight position={[2.6, 1.3, z0 - 3 + sweep]} color="#ff3b4e" intensity={blink ? 4.5 : 1.2} distance={9} decay={1.3} />
+        <pointLight position={[2.6, 1.3, z0 - 2 - sweep]} color="#3b6bff" intensity={blink ? 1.2 : 5.5} distance={9} decay={1.3} />
         <Glow position={[3.4, 1.2, z0 - 3]} color={blink ? "#ff3b4e" : "#3b6bff"} size={1.6} opacity={0.5} />
         {/* strong cool rims so both dark-clothed figures separate from the night set */}
         <Rim target={[AVA_X, 1.3, z0]} from={[-1.8, 3, z0 - 3]} color="#a9bcff" intensity={2.2} />
         <Rim target={[AVA_X - 0.3, 1.3, offZ]} from={[-2.2, 3, offZ - 2]} color="#a9bcff" intensity={1.8} />
         <pointLight position={[AVA_X + 1.0, 1.7, z0 + 0.4]} color="#ffd9b8" intensity={1.4} distance={2.8} decay={1.4} />
-        <CameraRig handheld={0.004} rig={dolly(0, dur, [AVA_X + 2.1, 1.45, z0 - 0.5], [AVA_X + 1.85, 1.43, z0 - 0.62], [[AVA_X - 0.35, 1.22, z0 - 0.75], [AVA_X - 0.35, 1.22, z0 - 0.85]], 36)} />
+        {/* v3 fix r1: eye-level two-shot from the front-side: both faces (and his cap) in frame, him coming toward camera */}
+        <CameraRig handheld={0.004} rig={dolly(0, dur, [AVA_X + 2.15, 1.62, z0 - 0.35], [AVA_X + 1.9, 1.6, z0 - 0.5], [[AVA_X - 0.3, 1.42, z0 - 0.8], [AVA_X - 0.3, 1.42, z0 - 0.9]], 36)} />
       </Scene3D>
       <Grade vignette={0.55} grain={0.05} />
     </>

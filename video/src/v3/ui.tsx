@@ -39,6 +39,24 @@ const Drift: React.FC<{ dur: number; amt: number; children: React.ReactNode }> =
   return <AbsoluteFill style={{ transform: `scale(${1 + amt * k}) translate(${-6 * k}px, ${-4 * k}px)` }}>{children}</AbsoluteFill>;
 };
 
+/** v3 fix r1: a virtual camera for 2D sections: keyed push-ins on the active UI element (scale around a focus point),
+ *  eased between keys, plus a slow breathing drift so the frame never sits still. keys: [absFrame, scale, fx, fy]. */
+export const Cam: React.FC<{ from: number; keys: [number, number, number, number][]; children: React.ReactNode }> = ({ from, keys, children }) => {
+  const A = useCurrentFrame() + from;
+  let s = keys[0][1], fx = keys[0][2], fy = keys[0][3];
+  for (let i = 0; i < keys.length - 1; i++) {
+    const [a, s0, x0, y0] = keys[i], [b, s1, x1, y1] = keys[i + 1];
+    if (A >= a && A <= b) {
+      const k = Easing.inOut(Easing.cubic)((A - a) / Math.max(1, b - a));
+      s = s0 + (s1 - s0) * k; fx = x0 + (x1 - x0) * k; fy = y0 + (y1 - y0) * k;
+      break;
+    }
+    if (A > b) { s = s1; fx = x1; fy = y1; }
+  }
+  const br = Math.sin(A / 50) * 0.006;
+  return <AbsoluteFill style={{ transform: `scale(${s + br})`, transformOrigin: `${fx}px ${fy}px` }}>{children}</AbsoluteFill>;
+};
+
 const ShotInner: React.FC<{ dur: number; inT: number; outT: number; kind: string; children: React.ReactNode }> = ({ dur, inT, outT, kind, children }) => {
   const f = useCurrentFrame();
   if (kind === "cut") return <AbsoluteFill>{children}</AbsoluteFill>;

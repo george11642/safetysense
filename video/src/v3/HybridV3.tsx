@@ -24,7 +24,7 @@ const B = {
   taken3d: W2("v3_04", "Phones") - 3, barriers: W2("v3_04", "And") - 3, meet: bStart("v3_05") - 1,
   modes: bStart("v3_06"), party: W2("v3_06", "Tap") - 5, triggers: W2("v3_06", "Action") + 14,
   listen3d: bStart("v3_07"), listenReal: W2("v3_07", "It") - 3, checkin: bStart("v3_08"),
-  mom: bStart("v3_09"), contacts: W2("v3_09", "automated") + 6, live: bStart("v3_10"), dispatch: bStart("v3_11"),
+  mom: bStart("v3_09"), contacts: W2("v3_09", "automated") + 6, mapLive: bStart("v3_10"), live: W2("v3_10", "location") + 8, dispatch: bStart("v3_11"),
   car: bEnd("v3_11") + 2, pins: bStart("v3_12") - 2, smash: bStart("v3_13") - 3, heart: W2("v3_13", "our") - 13,
   date: bStart("v3_14") - 3, fake: W2("v3_14", "fake") + 4, privacy: bStart("v3_15") - 4, arch: bStart("v3_16") - 3,
   team: bStart("v3_17") - 3, home: bEnd("v3_17") + 8, end: bStart("v3_19"),
@@ -78,8 +78,8 @@ const SoundTrack: React.FC = () => {
       ))}
       {/* music beds (-24 LUFS), ducked under the voice. Dynamic shape: tense open, hard dip under the problem stat,
           a lift into "Meet SafetySense", a thinner bed for privacy/architecture, a swell into the close. */}
-      <Music file="tension_loop.wav" from={0} to={f0("meet") + 6} env={[[0, 0], [20, 0.55], [CO_FREEZE, 0.7], [CO_FREEZE + 10, 0.3], [f0("flash") - 26, 0.3], [f0("flash") - 14, 0], [f0("hero") + 1, 0], [f0("hero") + 6, 0.5], [bEnd("v3_02"), 0.6], [f0("sting"), 1.0], [f0("problem"), 0.45], [f0("stat"), 0.3], [statEnd + 4, 0.4], [w("v3_04", "Drugs") - 2, 0.6], [f0("barriers") + 20, 0.5], [f0("meet") - 32, 0.75], [f0("meet") - 18, 0], [f0("meet") + 6, 0]]} />
-      <Music file="product_pulse_loop.wav" from={f0("meet") - 8} to={f0("team") + 30} env={[[f0("meet") - 8, 0], [f0("meet") + 4, 1.25], [f0("meet") + 70, 0.95], [f0("listen3d") - 10, 0.95], [f0("listen3d") + 12, 0.66], [POLICE_IN - 10, 0.66], [POLICE_IN - 1, 0.3], [POLICE_IN + 3, 0.7], [f0("pins"), 0.7], [f0("smash") - 10, 0.55], [SMASH_HIT - 10, 0.5], [SMASH_HIT - 1, 0.15], [SMASH_HIT + 4, 1.0], [f0("privacy"), 0.85], [f0("privacy") + 40, 0.55], [f0("arch") - 18, 0.85], [f0("arch") + 20, 0.55], [f0("team") - 10, 0.5], [f0("team") + 30, 0]]} />
+      <Music file="tension_loop.wav" from={0} to={f0("meet") + 6} env={[[0, 0], [20, 0.55], [CO_FREEZE - 16, 0.55], [CO_FREEZE - 12, 0.04], [CO_FREEZE - 1, 0.04], [CO_FREEZE, 0.7], [CO_FREEZE + 10, 0.3], [f0("flash") - 26, 0.3], [f0("flash") - 14, 0], [f0("hero") + 1, 0], [f0("hero") + 6, 0.5], [bEnd("v3_02"), 0.6], [f0("sting"), 1.0], [f0("problem"), 0.45], [f0("stat"), 0.3], [statEnd + 4, 0.4], [w("v3_04", "Drugs") - 2, 0.6], [f0("barriers") + 20, 0.5], [f0("meet") - 32, 0.75], [f0("meet") - 18, 0], [f0("meet") + 6, 0]]} />
+      <Music file="product_pulse_loop.wav" from={f0("meet") - 8} to={f0("team") + 30} env={[[f0("meet") - 8, 0], [f0("meet") + 4, 1.25], [f0("meet") + 70, 0.95], [f0("listen3d") - 10, 0.95], [f0("listen3d") + 12, 0.66], [POLICE_IN - 10, 0.66], [POLICE_IN - 1, 0.3], [POLICE_IN + 3, 0.7], [f0("pins"), 0.7], [f0("smash") - 10, 0.55], [SMASH_HIT - 18, 0.5], [SMASH_HIT - 14, 0.04], [SMASH_HIT - 1, 0.04], [SMASH_HIT + 4, 1.0], [f0("privacy"), 0.85], [f0("privacy") + 40, 0.55], [f0("arch") - 18, 0.85], [f0("arch") + 20, 0.55], [f0("team") - 10, 0.5], [f0("team") + 30, 0]]} />
       <Music file="resolve_pad.wav" from={f0("team") - 20} to={T} env={[[f0("team") - 20, 0], [f0("team") + 40, 0.9], [f0("home") - 10, 1.5], [f0("home") + 30, 1.45], [LOCKUP_AT, 1.1], [T - 75, 1.0], [T - 5, 0]]} />
 
       {/* cold open: quieter and darker (LRA): ambience + his footsteps closing in, a detection hit on the freeze,
@@ -178,7 +178,7 @@ const GuardOnBadge: React.FC = () => {
         <Tag color={C.calm} size={34} bg="rgba(13,12,22,.85)">Tap Start Guard · Guard on</Tag>
       </div>
       <div style={{ opacity: pb, transform: `translateY(${(1 - pb) * -14}px)` }}>
-        <Tag color={C.warn} size={30} bg="rgba(13,12,22,.85)">or press the Action Button · side of the phone</Tag>
+        <Tag color={C.warn} size={30} bg="rgba(13,12,22,.85)">or press the Action Button · starts an alert</Tag>
       </div>
     </AbsoluteFill>
   );
@@ -210,7 +210,7 @@ const SessionEnded: React.FC = () => {
   const p = ez(frame, 4, 14) * (1 - ez(frame, LOCKUP_AT - f0("home") - 6, LOCKUP_AT - f0("home") + 4));
   return (
     <AbsoluteFill style={{ alignItems: "center", paddingTop: 70 }}>
-      <div style={{ opacity: p }}><Tag color={C.calm} size={30} bg="rgba(13,12,22,.78)">Session ended · home safe</Tag></div>
+      <div style={{ opacity: p }}><Tag color={C.calm} size={30} bg="rgba(13,12,22,.78)">Another night · session ended · home safe</Tag></div>
     </AbsoluteFill>
   );
 };
@@ -222,7 +222,7 @@ const PoliceInsert: React.FC<{ dur: number }> = ({ dur }) => {
   return (
     <AbsoluteFill>
       <PoliceArrive3D dur={dur} />
-      <div style={{ position: "absolute", left: 80, top: 160 }}><Tag color={C.warn} size={36} bg="rgba(40,30,14,.92)">Simulated in this demo · Noonlight sandbox</Tag></div>
+      <div style={{ position: "absolute", left: 80, top: 70 }}><Tag color={C.warn} size={27} bg="rgba(40,30,14,.92)">Simulated · Noonlight sandbox · no real police</Tag></div>
     </AbsoluteFill>
   );
 };
@@ -246,10 +246,10 @@ const FlashCut: React.FC = () => {
 
 /* ------------------------------------------------------------------ COMPOSITION */
 /** 2D sections that get a slow push-in so motion never fully stops (3D shots already have camera moves). */
-const DRIFT = new Set<K>(["problem", "stat", "barriers", "modes", "triggers", "listenReal", "checkin", "contacts", "live", "pins", "heart", "fake", "privacy", "team", "end"]);
+const DRIFT = new Set<K>(["mapLive", "problem", "stat", "barriers", "modes", "triggers", "listenReal", "checkin", "contacts", "live", "pins", "heart", "fake", "privacy", "team", "end"]);
 export const HybridV3: React.FC = () => {
   const S = (k: K, kind: "cut" | "fade" | "push", node: React.ReactNode, inT = 8, outT = 8) => (
-    <Shot key={k} name={k} from={CUTS[k][0]} to={CUTS[k][1]} kind={kind} inT={inT} outT={outT} drift={DRIFT.has(k) ? 0.035 : 0}>{node}</Shot>
+    <Shot key={k} name={k} from={CUTS[k][0]} to={CUTS[k][1]} kind={kind} inT={inT} outT={outT} drift={DRIFT.has(k) ? 0.055 : 0}>{node}</Shot>
   );
   return (
     <AbsoluteFill style={{ background: "#000" }}>
@@ -271,7 +271,7 @@ export const HybridV3: React.FC = () => {
       {S("barriers", "cut", <Barriers from={f0("barriers")} />)}
 
       {/* MEET + ARM */}
-      {S("meet", "push", <Meet from={f0("meet")} />, 6, 10)}
+      {S("meet", "cut", <Meet from={f0("meet")} />)}
       {S("modes", "cut", <GuardModes from={f0("modes")} />)}
       {S("party", "cut", <><PartyGuard3D dur={len("party")} /><GuardOnBadge /></>)}
       {S("triggers", "cut", <Triggers from={f0("triggers")} />)}
@@ -279,12 +279,14 @@ export const HybridV3: React.FC = () => {
       {/* WATCH */}
       {S("listen3d", "cut", <PartyListen3D dur={len("listen3d")} breakAt={w("v3_07", "breaking") - f0("listen3d")} />)}
       {S("listenReal", "cut", <ListeningReal from={f0("listenReal")} dur={len("listenReal")} />)}
-      <Sequence from={f0("listen3d")} durationInFrames={CUTS.listenReal[1] - f0("listen3d")} name="signal rail"><SignalRail from={f0("listen3d")} /></Sequence>
+      <Sequence from={f0("listen3d")} durationInFrames={CUTS.listenReal[1] - f0("listen3d")} name="signal rail"><SignalRail from={f0("listen3d")} fullAt={f0("listenReal")} /></Sequence>
 
       {/* RESPOND */}
       {S("checkin", "cut", <CheckIn from={f0("checkin")} srcStart={Math.round((f0("checkin") - f0("listenReal")) * 0.8)} />)}
       {S("mom", "cut", <><MomPhone3D dur={len("mom")} /><Toast at={f0("mom") + 8} from={f0("mom")} title="SafetySense" body="SafetySense: Ava may need help (missed check-in). Live location and what to do: safetysense-live.vercel.app/a/…" /></>)}
       {S("contacts", "cut", <ContactsReal from={f0("contacts")} />)}
+      {/* v3 fix r1: a 1 s 3D cutaway on "They see your location" (her pin + her people on the map) between UI cards */}
+      {S("mapLive", "cut", <><DispatchMap3D dur={len("mapLive")} policeAt={99999} /><InsertTag text="Ava · live location" color={C.calm} /></>)}
       {S("live", "cut", <LiveLink from={f0("live")} />)}
       {S("dispatch", "cut", <><DispatchMap3D dur={len("dispatch")} policeAt={w("v3_11", "police") - f0("dispatch")} /><DispatchOverlay from={f0("dispatch")} skip={DISPATCH_SKIP} /></>)}
 
@@ -307,7 +309,7 @@ export const HybridV3: React.FC = () => {
 
       {/* PRIVACY + ARCHITECTURE + TEAM */}
       {S("privacy", "cut", <Privacy from={f0("privacy")} />)}
-      {S("arch", "push", <Architecture from={f0("arch")} />, 8, 0)}
+      {S("arch", "cut", <Architecture from={f0("arch")} />)}
       {S("team", "cut", <Team from={f0("team")} />)}
 
       {/* CLOSE */}
@@ -325,8 +327,12 @@ export const HybridV3: React.FC = () => {
         // v3 r6: every mute ends >= 20 frames after its line (and Captions16 never re-shows a chunk that started muted)
         mute={[[w("v3_03", "Most") - 2, w("v3_03", "But") - 2], [w("v3_03", "In") - 2, bEnd("v3_03") + 20], [w("v3_04", "And") - 2, bEnd("v3_04") + 20],
           [bStart("v3_05") - 2, bEnd("v3_05") + 12], [w("v3_06", "Start") - 2, w("v3_06", "for")],
-          [w("v3_08", "You") - 2, w("v3_08", "You", 1) - 2], [w("v3_08", "One") - 2, bEnd("v3_08") + 8], [w("v3_09", "automated") + 6, bEnd("v3_09") + 20], [w("v3_10", "And") - 2, bEnd("v3_10") + 20],
-          [w("v3_11", "Professional") - 2, w("v3_11", "If") - 2]]}
+          [w("v3_08", "You") - 2, w("v3_08", "You", 1) - 2], [w("v3_08", "One") - 2, bEnd("v3_08") + 8], [w("v3_09", "automated") + 6, w("v3_10", "They") - 2], [w("v3_10", "And") - 2, bEnd("v3_10") + 20],
+          [w("v3_11", "Professional") - 2, w("v3_11", "If") - 2],
+          // v3 fix r1: the privacy headlines already say each line (one reading channel)
+          [bStart("v3_15") - 2, bEnd("v3_15") + 20],
+          // the team cards carry the names + majors once they land
+          [w("v3_17", "George") - 2, bEnd("v3_17") + 20]]}
         // keep the tipped cup + glass flash clear of the caption pill
         lift={[[w("v3_07", "breaking") - 16, w("v3_07", "breaking") + 40, 175]]} />
       <SoundTrack />
