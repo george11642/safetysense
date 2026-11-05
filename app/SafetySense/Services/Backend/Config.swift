@@ -51,18 +51,26 @@ struct BackendRuntimeOptions: Sendable, Equatable {
 
     static let safe = BackendRuntimeOptions(allowRealCalls: false, dispatchPolicies: .default)
 
-    /// Reads the App Group switches. Unit tests can never place real calls.
+    /// Reads the switches. Unit tests can never place real calls, and neither can a Release
+    /// build: the only way to allow them is a Debug build from Xcode.
     static func current() -> BackendRuntimeOptions {
         let defaults = AppGroup.defaults
         let info = ProcessInfo.processInfo
-        let isTesting = info.environment["XCTestConfigurationFilePath"] != nil
-        var allow = defaults.bool(forKey: AppGroup.Keys.allowRealCalls)
-        if let i = info.arguments.firstIndex(of: "-ssAllowRealCalls"), i + 1 < info.arguments.count {
-            allow = ["1", "yes", "true"].contains(info.arguments[i + 1].lowercased())
-        }
         let settings = defaults.data(forKey: AppGroup.Keys.settings)
             .flatMap { try? JSONDecoder().decode(AppSettings.self, from: $0) }
-        return BackendRuntimeOptions(allowRealCalls: allow && !isTesting,
-                                     dispatchPolicies: settings?.dispatchPolicies ?? .default)
+        return BackendRuntimeOptions(
+            allowRealCalls: resolveAllowRealCalls(stored: defaults.bool(forKey: AppGroup.Keys.allowRealCalls),
+                                                  arguments: info.arguments,
+                                                  isTesting: info.environment["XCTestConfigurationFilePath"] != nil),
+            dispatchPolicies: settings?.dispatchPolicies ?? .default)
+    }
+
+    static func resolveAllowRealCalls(stored: Bool, arguments: [String], isTesting: Bool,
+                                      isReleaseBuild: Bool = BuildFlags.isRelease) -> Bool {
+        guard !isReleaseBuild, !isTesting else { return false }
+        if let i = arguments.firstIndex(of: "-ssAllowRealCalls"), i + 1 < arguments.count {
+            return ["1", "yes", "true"].contains(arguments[i + 1].lowercased())
+        }
+        return stored
     }
 }

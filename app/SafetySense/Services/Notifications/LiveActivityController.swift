@@ -1,6 +1,5 @@
 import ActivityKit
 import Foundation
-import WidgetKit
 import os
 
 /// Runs the Guard Live Activity (Lock Screen + Dynamic Island) for a session.
@@ -9,13 +8,17 @@ import os
 /// - On a check-in it lights the screen with an alert ("You okay?") and shows I'm okay / Need help
 ///   buttons (`CheckInOkayIntent` / `CheckInNeedHelpIntent`, which run in the app's process).
 /// - During an alert it shows the countdown to dispatch, then "Help is on the way".
-/// It also mirrors "guarding" into the App Group for the Guard control and refreshes the controls.
+/// - A contact's confirmed response replaces the status line ("Maya is on the way.").
+/// It also mirrors "guarding" for the Guard control and refreshes the controls.
 @MainActor
 final class LiveActivityController: LiveActivityControllerProtocol {
     private var activity: Activity<GuardActivityAttributes>?
     private var currentLevel = 0
     private var levelStartedAt = Date.now
     private var nextCheckInAt: Date?
+    /// What should be showing, kept so the activity can be requested again if it's gone.
+    private var wanted: GuardActivityAttributes?
+    private var lastState: GuardActivityAttributes.ContentState?
     private let log = Logger(subsystem: "com.georgeteifel.SafetySense", category: "live-activity")
 
     init() {
@@ -34,7 +37,7 @@ final class LiveActivityController: LiveActivityControllerProtocol {
     }
 
     func start(session: GuardSession) async {
-        setGuardMirror(true)
+        WidgetMirror.setGuardActive(true)
         currentLevel = 0
         levelStartedAt = .now
         nextCheckInAt = session.nextCheckInAt
@@ -47,37 +50,64 @@ final class LiveActivityController: LiveActivityControllerProtocol {
             return
         }
         await endAll()
+        wanted = GuardActivityAttributes(modeRawValue: session.mode.rawValue,
+                                         modeDisplayName: session.mode.displayName,
+                                         startedAt: session.startedAt)
+        lastState = state
+        request()
+    }
 
+    func startForAlert() async {
+        guard !isActive else { return }
+        let session = GuardSession(mode: .everyday)
+        wanted = GuardActivityAttributes(modeRawValue: session.mode.rawValue, modeDisplayName: "Alert",
+                                         startedAt: session.startedAt)
+        currentLevel = 0
+        levelStartedAt = .now
+        lastState = GuardActivityAttributes.ContentState(level: 2, statusText: EscalationLevel.alert.statusLine,
+                                                         levelStartedAt: levelStartedAt)
+        request()
+    }
+
+    func refresh() async {
+        guard !isActive, wanted != nil else { return }
+        request()
+    }
+
+    /// iOS only allows this in the foreground or from a `LiveActivityIntent`, so a failure here
+    /// is expected; `refresh()` tries again when the app opens.
+    private func request() {
+        guard let wanted, let lastState else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             log.notice("Live Activities are turned off for SafetySense")
             return
         }
-        let attributes = GuardActivityAttributes(modeRawValue: session.mode.rawValue,
-                                                 modeDisplayName: session.mode.displayName,
-                                                 startedAt: session.startedAt)
         do {
-            activity = try Activity.request(attributes: attributes, content: content(for: state), pushType: nil)
+            activity = try Activity.request(attributes: wanted, content: content(for: lastState), pushType: nil)
         } catch {
             log.error("Couldn't start the Live Activity")
         }
     }
 
     func update(level: EscalationLevel, statusText: String, nextCheckInAt: Date?, deadline: Date?) async {
-        guard let activity else { return }
         let rose = level.rawValue > currentLevel
         if level.rawValue != currentLevel {
             currentLevel = level.rawValue
             levelStartedAt = .now
         }
-        if let nextCheckInAt { self.nextCheckInAt = nextCheckInAt }
+        self.nextCheckInAt = nextCheckInAt
         let state = GuardActivityAttributes.ContentState(level: level.rawValue, statusText: statusText,
                                                          nextCheckInAt: self.nextCheckInAt,
                                                          levelStartedAt: levelStartedAt, deadline: deadline)
+        lastState = state
+        guard let activity else { return }
         await Self.push(activity.id, content(for: state), alert: rose ? Self.alertConfiguration(for: level) : nil)
     }
 
     func end() async {
-        setGuardMirror(false)
+        WidgetMirror.setGuardActive(false)
+        wanted = nil
+        lastState = nil
         await endAll()
         activity = nil
         currentLevel = 0
@@ -127,10 +157,5 @@ final class LiveActivityController: LiveActivityControllerProtocol {
         for running in Activity<GuardActivityAttributes>.activities {
             await running.end(ActivityContent(state: final, staleDate: nil), dismissalPolicy: .immediate)
         }
-    }
-
-    private func setGuardMirror(_ on: Bool) {
-        AppGroup.defaults.set(on, forKey: AppGroup.Keys.widgetGuardActive)
-        ControlCenter.shared.reloadControls(ofKind: SafetySenseWidgetKind.guardControl)
     }
 }

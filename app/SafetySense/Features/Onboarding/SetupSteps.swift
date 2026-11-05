@@ -1,5 +1,8 @@
+@preconcurrency import AVFoundation
+import CoreMotion
 import SwiftUI
 import UIKit
+import UserNotifications
 
 // MARK: 4. Trusted contacts (required: at least one)
 
@@ -113,26 +116,29 @@ struct TriggersStepView: View {
 struct PermissionsStepView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     var next: () -> Void
 
     enum Permission: String, CaseIterable, Identifiable {
         case microphone, location, notifications, motion
         var id: String { rawValue }
 
-        var title: String {
+        @MainActor var title: String {
             switch self {
             case .microphone: "Microphone"
             case .location: "Location, Always"
-            case .notifications: "Time-Sensitive notifications"
+            case .notifications: NotificationUrgency.isSupported ? "Time-Sensitive notifications" : "Notifications"
             case .motion: "Motion & Fitness"
             }
         }
 
-        var reason: String {
+        @MainActor var reason: String {
             switch self {
             case .microphone: "Only during a Guard session you start, to notice a scream or your safe word. Sound stays on your iPhone."
             case .location: "So help can find you, even when your phone is locked. Shared only during a session or an alert."
-            case .notifications: "So a \u{201C}You okay?\u{201D} check-in reaches you, even in a Focus mode."
+            case .notifications: NotificationUrgency.isSupported
+                ? "So a \u{201C}You okay?\u{201D} check-in reaches you, even in a Focus mode."
+                : "So a \u{201C}You okay?\u{201D} check-in reaches you."
             case .motion: "To notice a hard fall or a sudden impact while you're guarded."
             }
         }
@@ -147,7 +153,8 @@ struct PermissionsStepView: View {
         }
     }
 
-    enum Status: Equatable { case notAsked, asking, granted, declined }
+    /// `partial` is location at While Using: it works, but not with the phone locked.
+    enum Status: Equatable { case notAsked, asking, granted, partial, declined }
 
     @State private var status: [Permission: Status] = [:]
 
@@ -157,7 +164,12 @@ struct PermissionsStepView: View {
             VStack(spacing: SSSpacing.sm) {
                 ForEach(Permission.allCases) { p in row(p) }
             }
-            if status.values.contains(.declined) {
+            if status[.location] == .partial {
+                Text("While Using stops when your phone locks. For help to find you then, open iOS Settings, tap Location and choose Always.")
+                    .font(SSFont.caption).foregroundStyle(SSColor.warn)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if status.values.contains(.declined) || status[.location] == .partial {
                 Button {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                 } label: {
@@ -175,10 +187,13 @@ struct PermissionsStepView: View {
             }
         }
         .onAppear(perform: refresh)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refresh() }   // They may be back from iOS Settings.
+        }
     }
 
     private var allAnswered: Bool {
-        Permission.allCases.allSatisfy { [.granted, .declined].contains(status[$0] ?? .notAsked) }
+        Permission.allCases.allSatisfy { [.granted, .partial, .declined].contains(status[$0] ?? .notAsked) }
     }
 
     private func row(_ p: Permission) -> some View {
@@ -195,6 +210,8 @@ struct PermissionsStepView: View {
                 ProgressView().tint(SSColor.accent)
             case .granted:
                 Text("On").font(SSFont.callout.weight(.semibold)).foregroundStyle(SSColor.calm)
+            case .partial:
+                Text("While Using").font(SSFont.callout.weight(.semibold)).foregroundStyle(SSColor.warn)
             case .declined:
                 Text("Off").font(SSFont.callout.weight(.semibold)).foregroundStyle(SSColor.inkMuted)
             }
@@ -202,11 +219,35 @@ struct PermissionsStepView: View {
         .sensoryFeedback(.success, trigger: s) { _, new in new == .granted }
     }
 
+    /// Reads what iOS says now, which beats anything remembered here.
     private func refresh() {
+        guard model.services.flavor == .live else { return }
+        func apply(_ p: Permission, _ value: Status?) {
+            guard let value, status[p] != .asking else { return }
+            status[p] = value
+        }
         switch model.services.location.authorization {
-        case .always: status[.location] = .granted
-        case .denied: status[.location] = .declined
+        case .always: apply(.location, .granted)
+        case .whenInUse: apply(.location, .partial)
+        case .denied: apply(.location, .declined)
+        case .notDetermined: break
+        }
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted: apply(.microphone, .granted)
+        case .denied: apply(.microphone, .declined)
         default: break
+        }
+        switch CMMotionActivityManager.authorizationStatus() {
+        case .authorized: apply(.motion, .granted)
+        case .denied, .restricted: apply(.motion, .declined)
+        default: break
+        }
+        Task {
+            switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
+            case .notDetermined: break
+            case .denied: apply(.notifications, .declined)
+            default: apply(.notifications, .granted)
+            }
         }
     }
 
@@ -219,25 +260,29 @@ struct PermissionsStepView: View {
     private func ask(_ p: Permission) async {
         status[p] = .asking
         let services = model.services
-        let granted: Bool
+        let result: Status
         switch p {
         case .microphone:
-            granted = await services.audio.requestPermission()
+            result = await services.audio.requestPermission() ? .granted : .declined
+            if result == .granted, services.flavor == .live { Task { await model.prepareSpeech() } }
         case .location:
             // iOS needs "While Using" before it will offer "Always".
             let first = await services.location.requestWhenInUse()
             if first == .denied {
-                granted = false
+                result = .declined
             } else {
-                let result = await services.location.requestAlways()
-                granted = result == .always || result == .whenInUse
+                switch await services.location.requestAlways() {
+                case .always: result = .granted
+                case .whenInUse: result = .partial
+                case .denied, .notDetermined: result = .declined
+                }
             }
         case .notifications:
-            granted = await services.notifications.requestAuthorization()
+            result = await services.notifications.requestAuthorization() ? .granted : .declined
         case .motion:
-            granted = await services.motion.requestPermission()
+            result = await services.motion.requestPermission() ? .granted : .declined
         }
-        withAnimation(.smooth) { status[p] = granted ? .granted : .declined }
+        withAnimation(.smooth) { status[p] = result }
     }
 }
 

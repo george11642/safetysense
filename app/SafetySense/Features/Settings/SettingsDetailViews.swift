@@ -264,10 +264,27 @@ private struct PINChangeSheet: View {
 // MARK: Safe word
 
 struct SafeWordSettingsView: View {
+    @Environment(AppModel.self) private var model
+
+    /// A safe word only works once the speech model is on this iPhone.
+    private var speechNote: String? {
+        guard model.services.flavor == .live else { return nil }
+        switch model.speechReadiness {
+        case .ready: return "Speech recognition is ready on this iPhone."
+        case .downloading: return "Getting speech recognition ready. The older recognizer covers your safe word until then."
+        case .unavailable: return "Speech recognition isn't ready yet. SafetySense will try again next time it opens, and it still listens for sounds like a scream."
+        case .unknown: return nil
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SSSpacing.lg) {
                 SafeWordSetupView()
+                if let speechNote {
+                    Text(speechNote).font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(.vertical, SSSpacing.md)
         }

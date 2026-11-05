@@ -42,7 +42,7 @@ final class FakeCallNotifier: FakeCallNotifying {
         content.title = config.displayName
         content.body = "Incoming call"
         content.categoryIdentifier = Identifier.category
-        content.interruptionLevel = .timeSensitive
+        content.interruptionLevel = NotificationUrgency.level()
         content.relevanceScore = 1
         if let sound = Ringtone.installNotificationSound() {
             content.sound = UNNotificationSound(named: UNNotificationSoundName(sound))

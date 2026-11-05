@@ -3,12 +3,25 @@ import Foundation
 /// Callback every sensor uses to report a signal to the risk engine. Always called on the main actor.
 typealias RiskSignalHandler = @MainActor (RiskSignal) -> Void
 
+/// Whether the microphone is really listening, for the Guard screen and the Live Activity.
+enum ListeningState: Sendable, Equatable {
+    case listening
+    /// A call or Siri has the microphone; it should come back by itself.
+    case interrupted
+    /// It stopped and couldn't restart. Opening the app brings it back.
+    case paused
+}
+
 /// On-device audio guard: SoundAnalysis classifier + SpeechAnalyzer safe word / distress phrases,
 /// with a 30 s RAM-only ring buffer (SPEC 6.1, 11). Owned by the Guard Engine module.
 @MainActor
 protocol AudioGuardService: AnyObject {
     var isRunning: Bool { get }
     var onSignal: RiskSignalHandler? { get set }
+    /// Called whenever `ListeningState` changes during a session.
+    var onListeningChange: (@MainActor (ListeningState) -> Void)? { get set }
+    /// The app came to the foreground: restart listening if it stopped.
+    func resumeIfNeeded()
     /// Microphone + speech permission. Ask only when the user starts a listening session.
     func requestPermission() async -> Bool
     func start(mode: GuardMode, safeWord: String?) async throws
@@ -57,12 +70,17 @@ protocol LocationService: AnyObject {
     var lastFix: LocationFix? { get }
     var onSignal: RiskSignalHandler? { get set }
     var onFix: (@MainActor (LocationFix) -> Void)? { get set }
+    /// Called once when the session's destination is reached.
+    var onArrival: (@MainActor () -> Void)? { get set }
     func requestWhenInUse() async -> LocationAuthorization
     func requestAlways() async -> LocationAuthorization
     /// `destination` enables arrival / route checks for Walk and Ride.
     func start(mode: GuardMode, destination: LocationFix?) throws
     func stop()
     func currentFix() async -> LocationFix?
+    /// Keeps fixes coming for an alert, with or without a session, even in the background.
+    func startAlertTracking()
+    func stopAlertTracking()
 }
 
 /// Battery level 0...1 (nil when unknown). Kept tiny so tests can stub it.

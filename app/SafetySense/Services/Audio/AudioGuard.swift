@@ -49,6 +49,7 @@ final class AudioGuard: AudioGuardService {
 
     @ObservationIgnored var onSignal: RiskSignalHandler?
     @ObservationIgnored var onHealthChange: (@MainActor (Health) -> Void)?
+    @ObservationIgnored var onListeningChange: (@MainActor (ListeningState) -> Void)?
 
     @ObservationIgnored private let clock: any EngineClock
     @ObservationIgnored private let pipeline = AudioPipeline()
@@ -64,12 +65,15 @@ final class AudioGuard: AudioGuardService {
     @ObservationIgnored private var retryTimer: EngineTimer?
     @ObservationIgnored private var observers: [any NSObjectProtocol] = []
     @ObservationIgnored private var restartFailures = 0
+    @ObservationIgnored private var interruptedAt: Date?
     @ObservationIgnored private var speechTask: Task<Void, Never>?
     @ObservationIgnored private(set) var evidenceAlertID: UUID?
 
     static let watchdogInterval: TimeInterval = 3
     static let staleAfter: TimeInterval = 5
     static let maxRestartFailures = 5
+    /// iOS doesn't always send "interruption ended", so stop waiting for it after this long.
+    static let maxInterruption: TimeInterval = 120
 
     init(clock: any EngineClock = SystemEngineClock()) {
         self.clock = clock
@@ -105,7 +109,20 @@ final class AudioGuard: AudioGuardService {
         startSpeech()
     }
 
-    /// Downloads the on-device speech model ahead of time (call from onboarding).
+    /// After a call or a failed restart, recording usually can't start again from the background.
+    /// Once the app is open again it can, so try fresh with a clean failure count.
+    func resumeIfNeeded() {
+        guard isRunning else { return }
+        switch health {
+        case .paused, .interrupted:
+            restartFailures = 0
+            restartEngine()
+        case .idle, .listening, .recovering:
+            break
+        }
+    }
+
+    /// Downloads the on-device speech model ahead of time (called from onboarding and at launch).
     static func prepareSpeechAssets() async -> Bool {
         await SpeechKeywordListener.prepareAssets()
     }
@@ -164,7 +181,11 @@ final class AudioGuard: AudioGuardService {
 
     private func configureSession() throws {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .defaultToSpeaker])
+        // A2DP keeps music on AirPods in stereo while the phone's own mic listens.
+        try session.setCategory(.playAndRecord, mode: .measurement,
+                                options: [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP])
+        // Without this, iOS silences the quiet check-in haptic while the mic is on.
+        try session.setAllowHapticsAndSystemSoundsDuringRecording(true)
         try session.setActive(true)
     }
 
@@ -230,7 +251,11 @@ final class AudioGuard: AudioGuardService {
                 if self.engine?.isRunning != true || self.pipeline.secondsSinceLastBuffer > Self.staleAfter {
                     self.restartEngine()
                 }
-            case .interrupted, .recovering, .paused, .idle:
+            case .interrupted:
+                if let since = self.interruptedAt, self.clock.now.timeIntervalSince(since) > Self.maxInterruption {
+                    self.restartEngine()
+                }
+            case .recovering, .paused, .idle:
                 break
             }
             self.armWatchdog()
@@ -327,6 +352,13 @@ final class AudioGuard: AudioGuardService {
     private func setHealth(_ new: Health) {
         guard health != new else { return }
         health = new
+        interruptedAt = new == .interrupted ? clock.now : nil
         onHealthChange?(new)
+        switch new {
+        case .listening: onListeningChange?(.listening)
+        case .interrupted: onListeningChange?(.interrupted)
+        case .paused: onListeningChange?(.paused)
+        case .idle, .recovering: break
+        }
     }
 }

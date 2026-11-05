@@ -5,7 +5,10 @@ import Foundation
 @MainActor
 protocol EvidenceVaultProtocol: AnyObject {
     var clips: [EvidenceClip] { get }
+    /// An alert is capturing. It says nothing about whether audio is actually arriving.
     var isCapturing: Bool { get }
+    /// Audio has really reached the vault recently. What the Alert screen shows.
+    var isRecordingEvidence: Bool { get }
     var isUnlocked: Bool { get }
     /// Starts capture for an alert, seeding with the 30 s pre-alert buffer if provided.
     func startCapture(alertID: UUID, serverAlertID: String?, prebuffer: Data?) async throws

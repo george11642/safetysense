@@ -9,6 +9,7 @@ final class MockEscalationController: EscalationControllerProtocol {
     private(set) var level: EscalationLevel = .guarding
     private(set) var activeAlert: AlertRecord?
     private(set) var stepDeadline: Date?
+    var nextCheckInAt: Date? { level == .guarding ? session?.nextCheckInAt : nil }
 
     @ObservationIgnored var onChange: (@MainActor (EscalationLevel, AlertRecord?) -> Void)?
     /// Multiplies every timer (0.1 = 10x faster). Useful for demos and tests.

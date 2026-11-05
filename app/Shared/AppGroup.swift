@@ -1,15 +1,22 @@
 import Foundation
 
-/// App Group shared by the app and the widget extension.
-/// Anything both processes need to read (Live Activity state, queued intent commands)
-/// goes through `AppGroup.defaults` with a key from `AppGroup.Keys`.
+/// Where SafetySense keeps non-secret data.
+///
+/// - `AppGroup.defaults` is the **app's own** store (profile, contacts, settings, session). It is
+///   the group suite when this process is really entitled, and `.standard` otherwise.
+/// - Anything the widget extension must also see goes through `SharedStore`, never `defaults`.
+///   `UserDefaults(suiteName:)` succeeds even without the entitlement and quietly gives each
+///   process its own private plist, which is why availability is decided by the container URL.
 public enum AppGroup {
     public static let identifier = "group.com.georgeteifel.SafetySense"
 
-    /// Shared defaults. Falls back to `.standard` when the group container is unavailable
-    /// (for example an unsigned simulator build), so callers never crash.
+    /// True only when this process really has the group container (the entitlement is signed in).
+    public static let isContainerAvailable =
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier) != nil
+
+    /// The app's own defaults. See the type comment.
     public static var defaults: UserDefaults {
-        UserDefaults(suiteName: identifier) ?? .standard
+        isContainerAvailable ? (UserDefaults(suiteName: identifier) ?? .standard) : .standard
     }
 
     public enum Keys {
@@ -21,11 +28,11 @@ public enum AppGroup {
         public static let currentAlert = "ss.currentAlert"
         public static let alertHistory = "ss.alertHistory"
         public static let evidenceIndex = "ss.evidenceIndex"
-        /// JSON array of `SharedCommand` written by intents/widgets, drained by the app.
+        /// Pre-`SharedStore` queue (JSON array of `SharedCommand`). Only read to migrate it.
         public static let pendingCommands = "ss.pendingCommands"
-        /// Mirror of the escalation level for widgets (Int, `EscalationLevel.rawValue`).
+        /// `SharedStore`: mirror of the escalation level for widgets (`EscalationLevel.rawValue`).
         public static let widgetEscalationLevel = "ss.widget.escalationLevel"
-        /// Mirror for the Guard control toggle (Bool). Written by `LiveActivityController`.
+        /// `SharedStore`: mirror for the Guard control toggle. Written by `WidgetMirror`.
         public static let widgetGuardActive = "ss.widget.guardActive"
         /// Safety switch for the backend (Bool, default false). While false, every alert and
         /// session is sent with `dry_run: true`, so the server records it but calls and texts no one.
@@ -40,6 +47,11 @@ public enum AppGroup {
         /// JSON of the alert an intent created directly on the server while the in-app ladder
         /// wasn't running (`ExternalAlertRecord`). The app adopts it on next launch.
         public static let externalAlert = "ss.externalAlert"
+        /// Every key `AppGroup.defaults` owns, for `StorageMigration` and "delete everything".
+        public static let appLocal = [
+            profile, contacts, settings, onboardingComplete, currentSession, currentAlert, alertHistory,
+            evidenceIndex, heartbeatSessionID, heartbeatLastSentAt, backendOutbox, externalAlert,
+        ]
     }
 
     /// Keychain service + account names for secrets (PIN hashes, safe word, device secret).
@@ -50,5 +62,8 @@ public enum AppGroup {
         public static let safeWord = "safeWord"
         public static let deviceCredentials = "deviceCredentials"
         public static let evidenceKey = "evidenceKey"
+        /// Separate service for the widget-readable items in `SharedStore`, so a secret lookup
+        /// by account can never match one.
+        public static let sharedService = "com.georgeteifel.SafetySense.shared"
     }
 }

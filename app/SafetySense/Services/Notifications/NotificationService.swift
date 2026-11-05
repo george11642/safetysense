@@ -9,6 +9,9 @@ import os
 /// the app: "I'm okay" (asks for Face ID / passcode first, so someone else holding the phone
 /// can't answer for you) and "I need help" (never gated: asking for help should be one tap).
 /// Both reach the running escalation ladder through `SharedCommandBridge`.
+///
+/// The Time-Sensitive capability needs the developer portal, so a build without it falls back
+/// to ordinary notifications (see `NotificationUrgency`).
 @MainActor
 final class NotificationService: NSObject, NotificationServiceProtocol {
     enum Identifier {
@@ -27,6 +30,8 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
     /// Called when a check-in notification arrives while the app is open, so the in-app
     /// "You okay?" screen appears at the same moment. Set by `SystemBridge`.
     var onCheckInDue: (@MainActor () -> Void)?
+    /// Tapping a notification opens this screen. Set by `AppModel`.
+    var onOpenLink: (@MainActor (DeepLink) -> Void)?
 
     /// The session's check-in rhythm, so the next one can be lined up after each answer.
     private(set) var rhythm: (sessionID: UUID, interval: TimeInterval)?
@@ -40,6 +45,12 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         super.init()
         center.delegate = self
         center.setNotificationCategories(Self.categories)
+        Task { await refreshUrgency() }
+    }
+
+    /// Read once at launch and after permission changes. Scheduling stays synchronous.
+    private func refreshUrgency() async {
+        NotificationUrgency.current = await center.notificationSettings().timeSensitiveSetting
     }
 
     static var categories: Set<UNNotificationCategory> {
@@ -64,7 +75,9 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
 
     func requestAuthorization() async -> Bool {
         do {
-            return try await center.requestAuthorization(options: [.alert, .sound, .badge])
+            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
+            await refreshUrgency()
+            return granted
         } catch {
             log.error("Notification authorization failed")
             return false
@@ -114,7 +127,7 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         content.sound = .default
         content.categoryIdentifier = Identifier.statusCategory
         content.threadIdentifier = "ss.status"
-        content.interruptionLevel = timeSensitive ? .timeSensitive : .active
+        content.interruptionLevel = timeSensitive ? NotificationUrgency.level() : .active
         content.relevanceScore = timeSensitive ? 0.9 : 0.4
         add(UNNotificationRequest(identifier: "ss.status.\(UUID().uuidString)", content: content, trigger: nil))
     }
@@ -142,7 +155,7 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         first.sound = .default
         first.categoryIdentifier = Identifier.checkInCategory
         first.threadIdentifier = Identifier.checkInPrefix + sessionID.uuidString
-        first.interruptionLevel = .timeSensitive
+        first.interruptionLevel = NotificationUrgency.level()
         first.relevanceScore = 1
         first.userInfo = info
 
@@ -152,7 +165,7 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         followUp.sound = .default
         followUp.categoryIdentifier = Identifier.checkInCategory
         followUp.threadIdentifier = first.threadIdentifier
-        followUp.interruptionLevel = .timeSensitive
+        followUp.interruptionLevel = NotificationUrgency.level()
         followUp.relevanceScore = 1
         followUp.userInfo = info
 
@@ -203,8 +216,10 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         case Identifier.needHelpAction:
             SharedCommandBridge.submit(SharedCommand(kind: .checkInNeedHelp, source: .notification))
             await removeCheckIns(sessionID: sessionID)
+        case UNNotificationDefaultActionIdentifier:
+            onOpenLink?(.checkIn)
         default:
-            break   // Tapped the notification itself: the app opens on the check-in screen.
+            break
         }
     }
 
@@ -224,6 +239,19 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
     }
 }
 
+/// `.timeSensitive` where the capability is signed in, ordinary notifications where it isn't.
+@MainActor
+enum NotificationUrgency {
+    static var current: UNNotificationSetting = .enabled
+
+    static func level(for setting: UNNotificationSetting = current) -> UNNotificationInterruptionLevel {
+        setting == .notSupported ? .active : .timeSensitive
+    }
+
+    /// False when check-ins can't break through a Focus, so the app shouldn't promise that.
+    static var isSupported: Bool { current != .notSupported }
+}
+
 extension NotificationService: UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             didReceive response: UNNotificationResponse) async {
@@ -232,7 +260,9 @@ extension NotificationService: UNUserNotificationCenterDelegate {
             await Self.routeFakeCall(action: action)
             return
         }
-        let info = response.notification.request.content.userInfo
+        let content = response.notification.request.content
+        guard content.categoryIdentifier == Identifier.checkInCategory else { return }
+        let info = content.userInfo
         let sessionID = info[Identifier.sessionKey] as? String
         let interval = info[Identifier.intervalKey] as? TimeInterval
         await handleAction(action, sessionID: sessionID, interval: interval)

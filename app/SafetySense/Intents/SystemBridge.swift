@@ -20,6 +20,7 @@ enum SystemBridge {
             guard let escalation else { return false }
             return handle(command, escalation: escalation)
         }
+        SharedCommandBridge.awaitServerAlert = { await waitForServerAlert() }
 
         let notifications = services.notifications as? NotificationService
         notifications?.onCheckInDue = { [weak escalation] in escalation?.scheduledCheckInDue() }
@@ -70,6 +71,19 @@ enum SystemBridge {
         case .startGuard, .fakeCall:
             return false   // needs AppModel: waits in the queue, drained as soon as the app is up
         }
+    }
+
+    /// How long to keep the app awake for `alert/create` to answer.
+    static let serverWait: Duration = .seconds(12)
+
+    /// True once the server has the alert, so calls start even if iOS suspends the app next.
+    static func waitForServerAlert() async -> Bool {
+        let deadline = ContinuousClock.now + serverWait
+        while ContinuousClock.now < deadline {
+            if liveServerAlertID != nil { return true }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        return liveServerAlertID != nil
     }
 
     /// Server id of the live (non-drill) alert, once `alert/create` has answered.

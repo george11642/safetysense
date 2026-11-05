@@ -8,5 +8,10 @@
 	<array>
 		<string>group.com.georgeteifel.SafetySense</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.georgeteifel.SafetySense</string>
+		<string>$(AppIdentifierPrefix)com.georgeteifel.SafetySense.shared</string>
+	</array>
 </dict>
 </plist>

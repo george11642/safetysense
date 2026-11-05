@@ -97,7 +97,7 @@ struct HomeView: View {
 
     /// QA: `-ssHomeMode walk|night_out|date|ride` preselects a mode for screenshots.
     static var initialMode: GuardMode {
-        let args = ProcessInfo.processInfo.arguments
+        let args = LaunchOptions.qaArguments
         if let i = args.firstIndex(of: "-ssHomeMode"), i + 1 < args.count,
            let m = GuardMode(rawValue: args[i + 1].lowercased()) { return m }
         return .nightOut

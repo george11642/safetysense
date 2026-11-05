@@ -6,6 +6,7 @@ struct RideModeSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var ride = RideDetails()
     @State private var car = ""
+    @State private var destinationFix: LocationFix?
     @State private var minutes = 20
     @State private var isStarting = false
     @State private var started = 0
@@ -39,8 +40,8 @@ struct RideModeSetupView: View {
                                prompt: "ABC-1234", systemImage: "car.rear", capitalization: .characters, monospaced: true)
                     SetupField(label: "Driver", text: $ride.driverName, prompt: "Name in the app", systemImage: "person")
                     SetupField(label: "Car (optional)", text: $car, prompt: "Silver Camry", systemImage: "car")
-                    SetupField(label: "Going to", text: $ride.destinationName, prompt: "Home, a friend's place…",
-                               systemImage: "mappin.and.ellipse")
+                    DestinationField(label: "Going to", text: $ride.destinationName, fix: $destinationFix, prompt: "Home, a friend's place…",
+                                     isSearchEnabled: model.services.flavor == .live)
                 }
 
                 VStack(alignment: .leading, spacing: SSSpacing.sm) {
@@ -105,16 +106,18 @@ struct RideModeSetupView: View {
         var details = ride
         details.plate = details.plate.trimmingCharacters(in: .whitespaces)
         details.carDescription = car.isEmpty ? nil : car
-        let arrival = Date.now.addingTimeInterval(Double(minutes) * 60)
-        details.expectedArrival = arrival
+        details.expectedArrival = Date.now.addingTimeInterval(Double(minutes) * 60)
+        // Arrival check: give a few minutes' grace past the expected arrival.
+        let checkAfter = Double(minutes + 3) * 60
+        let picked = destinationFix
+        let place = details.destinationName.trimmingCharacters(in: .whitespaces)
+        let canSearch = model.services.flavor == .live
         Task {
-            await model.startGuard(mode: .ride, ride: details)
-            if model.currentSession != nil {
-                // Arrival check: give a few minutes' grace past the expected arrival.
-                let check = arrival.addingTimeInterval(3 * 60)
-                model.currentSession?.nextCheckInAt = check
-                if let id = model.currentSession?.id { model.services.notifications.scheduleCheckIn(at: check, sessionID: id) }
-            }
+            var fix = picked
+            if fix == nil, canSearch, !place.isEmpty { fix = await DestinationSearch.fix(forText: place) }
+            details.destinationLatitude = fix?.latitude
+            details.destinationLongitude = fix?.longitude
+            await model.startGuard(mode: .ride, ride: details, arrivalCheckAfter: checkAfter)
             isStarting = false
             started += 1
             dismiss()

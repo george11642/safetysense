@@ -25,21 +25,36 @@ final class SpeechKeywordListener {
     private var legacyFeed: LegacySpeechFeed?
     private var legacyTask: SFSpeechRecognitionTask?
     private var rotationTask: Task<Void, Never>?
+    private var upgradeTask: Task<Void, Never>?
     private var generation = 0
 
     /// Authorization for speech recognition. Required by the fallback recognizer.
     static func requestAuthorization() async -> Bool {
         let status = SFSpeechRecognizer.authorizationStatus()
         if status != .notDetermined { return status == .authorized }
-        return await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0 == .authorized) }
+        return await askForAuthorization()
+    }
+
+    /// Nonisolated with a `@Sendable` callback: the framework calls back on its own queue, and a
+    /// closure that inherited the main actor would trap there on the first run.
+    nonisolated private static func askForAuthorization() async -> Bool {
+        await withCheckedContinuation { continuation in
+            let handler: @Sendable (SFSpeechRecognizerAuthorizationStatus) -> Void = { status in
+                continuation.resume(returning: status == .authorized)
+            }
+            SFSpeechRecognizer.requestAuthorization(handler)
         }
+    }
+
+    private static func transcriberLocale() async -> Locale? {
+        let preferred = await SpeechTranscriber.supportedLocale(equivalentTo: Locale.current)
+        if let preferred { return preferred }
+        return await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "en-US"))
     }
 
     /// Installs the SpeechTranscriber model if needed. True when it's ready.
     static func prepareAssets() async -> Bool {
-        guard SpeechTranscriber.isAvailable,
-              let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale.current) else { return false }
+        guard SpeechTranscriber.isAvailable, let locale = await transcriberLocale() else { return false }
         let transcriber = SpeechTranscriber(locale: locale, transcriptionOptions: [], reportingOptions: [], attributeOptions: [])
         do {
             if let install = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
@@ -51,17 +66,32 @@ final class SpeechKeywordListener {
         }
     }
 
+    private static func assetsInstalled() async -> Bool {
+        guard SpeechTranscriber.isAvailable, let locale = await transcriberLocale() else { return false }
+        let transcriber = SpeechTranscriber(locale: locale, transcriptionOptions: [], reportingOptions: [], attributeOptions: [])
+        return await AssetInventory.status(forModules: [transcriber]) == .installed
+    }
+
+    /// A session never waits on a download: without the model it starts on the older recognizer,
+    /// which covers the safe word now, and moves to SpeechAnalyzer once the model has arrived.
     func start(pipeline: AudioPipeline) async {
         stop()
         generation += 1
         self.pipeline = pipeline
         let token = generation
-        if await startAnalyzer(pipeline: pipeline, token: token) {
+        if await Self.assetsInstalled(), await startAnalyzer(pipeline: pipeline, token: token) {
             backend = .speechAnalyzer
-        } else if token == generation, startRecognizer(pipeline: pipeline) {
-            backend = .onDeviceRecognizer
-        } else {
-            backend = .none
+            return
+        }
+        guard token == generation else { return }
+        backend = startRecognizer(pipeline: pipeline) ? .onDeviceRecognizer : .none
+        upgradeTask = Task { [weak self] in
+            guard await Self.prepareAssets(), let self, token == self.generation else { return }
+            self.stopRecognizer()
+            let upgraded = await self.startAnalyzer(pipeline: pipeline, token: token)
+            guard token == self.generation else { return }
+            self.backend = upgraded ? .speechAnalyzer
+                : (self.startRecognizer(pipeline: pipeline) ? .onDeviceRecognizer : .none)
         }
     }
 
@@ -74,22 +104,26 @@ final class SpeechKeywordListener {
             Task { await analyzer.cancelAndFinishNow() }
         }
         analyzer = nil
+        upgradeTask?.cancel()
+        upgradeTask = nil
+        stopRecognizer()
+        backend = .none
+    }
+
+    private func stopRecognizer() {
         rotationTask?.cancel()
         rotationTask = nil
         legacyTask?.cancel()
         legacyTask = nil
         legacyFeed = nil
         recognizer = nil
-        backend = .none
     }
 
     // MARK: SpeechAnalyzer (iOS 26)
 
     private func startAnalyzer(pipeline: AudioPipeline, token: Int) async -> Bool {
         guard SpeechTranscriber.isAvailable else { return false }
-        let preferred = await SpeechTranscriber.supportedLocale(equivalentTo: Locale.current)
-        let fallback = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "en-US"))
-        guard let locale = preferred ?? fallback else { return false }
+        guard let locale = await Self.transcriberLocale() else { return false }
         let transcriber = SpeechTranscriber(locale: locale, transcriptionOptions: [],
                                             reportingOptions: [.volatileResults], attributeOptions: [])
         do {

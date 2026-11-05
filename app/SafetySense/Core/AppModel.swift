@@ -26,6 +26,15 @@ enum MainTab: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// A Walk Home destination. `fix` is nil when it couldn't be found on the map.
+struct GuardDestination: Sendable, Equatable {
+    var name: String
+    var fix: LocationFix?
+}
+
+/// Whether the on-device speech model for the safe word is installed.
+enum SpeechReadiness: Sendable, Equatable { case unknown, downloading, ready, unavailable }
+
 /// Which full-screen experience sits on top of the tabs, derived from session + escalation state.
 enum GuardOverlay: Equatable, Sendable {
     case none, guardActive, checkIn, alertCountdown, alertActive
@@ -56,7 +65,18 @@ final class AppModel {
     var banner: String?
     /// Scripted demo signals (`-ssScenario`, Developer Settings). Observable for a caption overlay.
     var scenarioPlayer: DemoScenarioPlayer?
+    /// The microphone's real state during a session (nil when it isn't in use).
+    var listening: ListeningState?
+    /// The session's destination has been reached: Guard offers to end.
+    var hasArrived = false
+    /// Whether the on-device speech model is ready for the safe word.
+    var speechReadiness: SpeechReadiness = .unknown
     @ObservationIgnored private var commandObserver: (any NSObjectProtocol)?
+    @ObservationIgnored private var didLaunch = false
+    @ObservationIgnored private var launchFinished = false
+    @ObservationIgnored private var pendingLink: DeepLink?
+    /// Keeps Live Activity calls in order, since each one awaits ActivityKit.
+    @ObservationIgnored private var activityWork: Task<Void, Never>?
 
     init(services: ServiceContainer, store: SettingsStore, launch: LaunchOptions = LaunchOptions()) {
         self.services = services
@@ -116,18 +136,25 @@ final class AppModel {
 
     // MARK: Guard sessions
 
-    func startGuard(mode: GuardMode, sealedDate: SealedDateDetails? = nil, ride: RideDetails? = nil) async {
-        var session = GuardSession(mode: mode, checkInInterval: settings.checkInInterval(for: mode),
+    /// `arrivalCheckAfter`: Walk and Ride check once at the time you should have arrived, so the
+    /// ladder, the notification, the ring and the Live Activity all read the same clock.
+    func startGuard(mode: GuardMode, sealedDate: SealedDateDetails? = nil, ride: RideDetails? = nil,
+                    destination: GuardDestination? = nil, arrivalCheckAfter: TimeInterval? = nil) async {
+        var session = GuardSession(mode: mode, checkInInterval: arrivalCheckAfter ?? settings.checkInInterval(for: mode),
                                    listening: mode == .walk ? settings.listenDuringWalk : nil,
                                    sealedDate: sealedDate, ride: ride)
+        session.destinationName = destination?.name
+        session.destinationLatitude = destination?.fix?.latitude
+        session.destinationLongitude = destination?.fix?.longitude
+        hasArrived = false
         currentSession = session
         services.risk.reset()
         services.risk.configure(mode: mode, sensitivity: settings.sensitivity)
         services.escalation.begin(session: session, policies: settings.dispatchPolicies)
 
-        if session.listening { try? await services.audio.start(mode: mode, safeWord: store.safeWord) }
+        await startListening(session)
         if mode.usesMotion { try? services.motion.start(mode: mode) }
-        try? services.location.start(mode: mode, destination: ride?.destinationFix)
+        try? services.location.start(mode: mode, destination: session.destinationFix)
         if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
         await services.liveActivity.start(session: session)
 
@@ -145,8 +172,23 @@ final class AppModel {
         }
     }
 
+    private func startListening(_ session: GuardSession) async {
+        guard session.listening else {
+            listening = nil
+            return
+        }
+        do {
+            try await services.audio.start(mode: session.mode, safeWord: store.safeWord)
+            listening = .listening
+        } catch {
+            listening = .paused   // Permission or an audio failure: say so instead of showing "on".
+        }
+    }
+
     func endGuard() async {
         scenarioPlayer?.stop()
+        listening = nil
+        hasArrived = false
         // After a duress PIN the screen shows "cancelled" but help is still coming: keep the
         // mic (evidence) and location running so the hidden alert keeps updating.
         let duressActive = (services.escalation as? EscalationController)?.duressAlertID != nil
@@ -199,22 +241,15 @@ final class AppModel {
 
     /// Handles commands queued by intents (Action Button, Control, Live Activity buttons).
     func drainSharedCommands() {
-        for command in SharedCommandQueue.drain() {
+        for command in SharedCommandQueue.drain() where command.isFresh() {
             switch command.kind {
-            case .triggerAlert:
-                triggerSOS(command.source == .actionButton ? .actionButton : .manualSOS,
-                           reason: "SOS from \(command.source.rawValue)")
-            case .checkInOkay:
-                respondToCheckIn(okay: true)
-            case .checkInNeedHelp:
-                respondToCheckIn(okay: false)
+            case .triggerAlert, .checkInOkay, .checkInNeedHelp:
+                _ = SystemBridge.handle(command, escalation: services.escalation)
             case .startGuard:
                 guard !isGuarding else { continue }
                 let mode = command.mode.flatMap(GuardMode.init(rawValue:)) ?? .nightOut
                 Task { await startGuard(mode: mode) }
             case .fakeCall:
-                // A shortcut from a while ago shouldn't suddenly ring.
-                guard Date.now.timeIntervalSince(command.createdAt) < 300 else { continue }
                 scheduleFakeCall(callerName: command.callerName, delay: command.delaySeconds)
             }
         }
@@ -255,13 +290,18 @@ final class AppModel {
     /// Runs once the UI is up: re-links the server, adopts an alert an intent started while the
     /// app wasn't running, applies evidence retention and starts a scripted scenario if asked.
     func onLaunch() async {
+        guard !didLaunch else { return }
+        didLaunch = true
         if commandObserver == nil {
             // Siri / Shortcuts commands raised while the app is already open run right away.
             commandObserver = NotificationCenter.default.addObserver(
                 forName: SharedCommandQueue.didEnqueueNotification, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.drainSharedCommands() }
             }
+            // A Control or button that ran in the widget extension.
+            SharedCommandSignal.observe { Task { @MainActor [weak self] in self?.drainSharedCommands() } }
         }
+        if forcedScreen == nil { WidgetMirror.setGuardActive(currentSession != nil) }
         if let vault = services.vault as? SecureEvidenceVault { vault.purge(olderThan: settings.retentionDays) }
         if let external = ExternalAlertRecord.load() {
             ExternalAlertRecord.clear()
@@ -269,11 +309,74 @@ final class AppModel {
                 (services.escalation as? EscalationController)?.adopt(external.record)
             }
         }
-        if forcedScreen == nil { await resumeGuardIfNeeded() }
+        if forcedScreen == nil {
+            let persistedAlert = currentAlert
+            await resumeGuardIfNeeded()
+            adoptPersisted(persistedAlert)
+        }
         if hasCompletedOnboarding, forcedScreen == nil { await syncRegistration() }
         drainSharedCommands()
+        launchFinished = true
+        if let pendingLink {
+            self.pendingLink = nil
+            open(pendingLink)
+        }
+        if forcedScreen == nil, services.flavor == .live, hasCompletedOnboarding { Task { await prepareSpeech() } }
         if let name = launch.scenario, hasCompletedOnboarding, forcedScreen == nil {
             await playScenario(named: name, speed: launch.scenarioSpeed)
+        }
+    }
+
+    /// An alert that was running when iOS killed the app is still live on the server: show it
+    /// again and keep its countdown, location and evidence going.
+    private func adoptPersisted(_ alert: AlertRecord?) {
+        guard let alert, !alert.isDrill, alert.status == .active || alert.status == .dispatched,
+              alert.serverAlertID != nil, Date.now.timeIntervalSince(alert.startedAt) < 2 * 3600,
+              let escalation = services.escalation as? EscalationController else { return }
+        escalation.adopt(alert)
+    }
+
+    /// The app came to the foreground: catch up on everything that can't run in the background.
+    func appBecameActive() {
+        drainSharedCommands()
+        fakeCall.appBecameActive()
+        guard forcedScreen == nil else { return }
+        services.audio.resumeIfNeeded()
+        enqueueActivity { [services] in await services.liveActivity.refresh() }
+        if let escalation = services.escalation as? EscalationController, escalation.activeAlert != nil {
+            Task { await escalation.resumeEvidence() }
+        }
+    }
+
+    /// Downloads the speech model the safe word needs, ahead of the first session.
+    func prepareSpeech() async {
+        guard speechReadiness != .ready, speechReadiness != .downloading else { return }
+        speechReadiness = .downloading
+        speechReadiness = await AudioGuard.prepareSpeechAssets() ? .ready : .unavailable
+    }
+
+    // MARK: Deep links
+
+    /// Links only navigate. Any app can open one, so none of them can start a ladder early.
+    func open(_ link: DeepLink) {
+        guard launchFinished else {
+            pendingLink = link
+            return
+        }
+        switch link {
+        case .home:
+            selectedTab = .home
+        case .support:
+            selectedTab = .support
+        case .vault:
+            selectedTab = .vault
+        case .alert:
+            break   // An active alert already fills the screen.
+        case .checkIn:
+            // After a relaunch the check-in may be overdue while the ladder is only guarding.
+            if escalationLevel == .guarding, let next = currentSession?.nextCheckInAt, next <= .now {
+                services.escalation.scheduledCheckInDue()
+            }
         }
     }
 
@@ -287,9 +390,9 @@ final class AppModel {
         services.risk.reset()
         services.risk.configure(mode: session.mode, sensitivity: settings.sensitivity)
         escalation.begin(session: session, policies: settings.dispatchPolicies)
-        if session.listening { try? await services.audio.start(mode: session.mode, safeWord: store.safeWord) }
+        await startListening(session)
         if session.mode.usesMotion { try? services.motion.start(mode: session.mode) }
-        try? services.location.start(mode: session.mode, destination: session.ride?.destinationFix)
+        try? services.location.start(mode: session.mode, destination: session.destinationFix)
         if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
         if !services.liveActivity.isActive { await services.liveActivity.start(session: session) }
         if let id = session.serverSessionID { services.heartbeat.start(serverSessionID: id, interval: 60) }
@@ -331,18 +434,90 @@ final class AppModel {
         services.audio.onSignal = ingest
         services.motion.onSignal = ingest
         services.location.onSignal = ingest
+        services.audio.onListeningChange = { [weak self] state in self?.listeningChanged(state) }
+        services.location.onArrival = { [weak self] in self?.reachedDestination() }
+        if let escalation = services.escalation as? EscalationController {
+            escalation.onDuressTracking = { [weak self] on in
+                if on {
+                    self?.services.location.startAlertTracking()
+                } else if self?.currentSession == nil {
+                    self?.services.location.stopAlertTracking()
+                }
+            }
+        }
+        if let notifications = services.notifications as? NotificationService {
+            notifications.onOpenLink = { [weak self] link in self?.open(link) }
+        }
         services.escalation.onChange = { [weak self] level, alert in
             guard let self else { return }
             if let alert, alert.isDrill { self.lastDrill = alert; return }
+            let hadAlert = self.currentAlert != nil
             self.currentAlert = alert
-            AppGroup.defaults.set(level.rawValue, forKey: AppGroup.Keys.widgetEscalationLevel)
-            let deadline = self.services.escalation.stepDeadline
-            Task {
-                await self.services.liveActivity.update(level: level, statusText: level.statusLine,
-                                                        nextCheckInAt: self.currentSession?.nextCheckInAt,
-                                                        deadline: deadline)
+            if level == .guarding, let next = self.services.escalation.nextCheckInAt,
+               self.currentSession != nil, self.currentSession?.nextCheckInAt != next {
+                self.currentSession?.nextCheckInAt = next
             }
+            WidgetMirror.setEscalationLevel(level)
+            self.alertStateChanged(hasAlert: alert != nil, hadAlert: hadAlert)
+            self.pushLiveActivity(level: level, alert: alert)
         }
+    }
+
+    /// An alert needs a fix and a process that stays alive whether or not a session is running.
+    private func alertStateChanged(hasAlert: Bool, hadAlert: Bool) {
+        if hasAlert {
+            services.location.startAlertTracking()   // Safe to repeat; covers an adopted alert too.
+        } else if hadAlert {
+            let duress = (services.escalation as? EscalationController)?.duressAlertID != nil
+            if !duress { services.location.stopAlertTracking() }
+            if !isGuarding { enqueueActivity { [services] in await services.liveActivity.end() } }
+        }
+    }
+
+    private func pushLiveActivity(level: EscalationLevel, alert: AlertRecord?) {
+        let ladder = (services.escalation as? EscalationController)?.statusText ?? level.statusLine
+        let status = LiveStatusLine.text(level: level, alert: alert, ladderStatus: ladder, listening: listening)
+        let next = services.escalation.nextCheckInAt
+        let deadline = services.escalation.stepDeadline
+        enqueueActivity { [services] in
+            if level >= .alert, !services.liveActivity.isActive { await services.liveActivity.startForAlert() }
+            await services.liveActivity.update(level: level, statusText: status, nextCheckInAt: next, deadline: deadline)
+        }
+    }
+
+    private func enqueueActivity(_ work: @escaping @MainActor () async -> Void) {
+        let previous = activityWork
+        activityWork = Task {
+            await previous?.value
+            await work()
+        }
+    }
+
+    /// The Live Activity and the Guard screen say so, and a notification goes out once, because
+    /// someone relying on the mic won't otherwise know it stopped.
+    private func listeningChanged(_ state: ListeningState) {
+        let wasPaused = listening == .paused
+        guard currentSession?.listening == true else {
+            listening = nil
+            return
+        }
+        listening = state
+        if state == .paused, !wasPaused {
+            services.notifications.notify(title: "Listening paused",
+                                          body: "Open SafetySense to turn the microphone back on. Check-ins and your location are still on.",
+                                          timeSensitive: true)
+        }
+        pushLiveActivity(level: escalationLevel, alert: currentAlert)
+    }
+
+    /// Arriving doesn't end anything by itself: being at the door isn't the same as being safe,
+    /// so the arrival check stays armed until the person ends the session.
+    private func reachedDestination() {
+        guard isGuarding, !hasArrived else { return }
+        hasArrived = true
+        services.notifications.notify(title: "Looks like you're there",
+                                      body: "Open SafetySense to end your Guard when you're ready.",
+                                      timeSensitive: false)
     }
 
     // MARK: QA / previews
@@ -364,7 +539,7 @@ final class AppModel {
         case .fakeCallIncoming:
             // QA: `-ssFakeCallStyle slide` shows the lock-screen slider instead of buttons.
             var config = FakeCallConfig(callerName: "Mom")
-            let args = ProcessInfo.processInfo.arguments
+            let args = LaunchOptions.qaArguments
             if let i = args.firstIndex(of: "-ssFakeCallStyle"), i + 1 < args.count,
                let style = FakeCallAnswerStyle(rawValue: args[i + 1].lowercased()) { config.answerStyle = style }
             fakeCall.pinForPreview(.ringing(since: .now), config: config)

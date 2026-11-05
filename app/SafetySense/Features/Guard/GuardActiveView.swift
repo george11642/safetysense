@@ -19,6 +19,7 @@ struct GuardActiveView: View {
             VStack(spacing: SSSpacing.lg) {
                 topBar
                 elapsedRing
+                if model.hasArrived { arrivalCard }
                 nextCheckInCard
                 sensors
                 Card { RiskMeterView(assessment: assessment) }
@@ -97,10 +98,10 @@ struct GuardActiveView: View {
         Card {
             VStack(spacing: SSSpacing.xs) {
                 if let next = session?.nextCheckInAt {
-                    InfoRow(title: "Next check-in", systemImage: "clock") {
+                    InfoRow(title: session?.usesArrivalCheck == true ? "Arrival check" : "Next check-in", systemImage: "clock") {
                         Text(next, format: .dateTime.hour().minute())
                     }
-                    InfoRow(title: "Time left", systemImage: "hourglass") {
+                    InfoRow(title: session?.usesArrivalCheck == true ? "In" : "Time left", systemImage: "hourglass") {
                         Text(next, style: .relative).foregroundStyle(SSColor.inkMuted)
                     }
                 } else {
@@ -115,14 +116,35 @@ struct GuardActiveView: View {
         }
     }
 
+    private var arrivalCard: some View {
+        Card(tint: SSColor.calm) {
+            Label(session?.destinationName.map { "You've reached \($0)." } ?? "Looks like you're there.",
+                  systemImage: "mappin.circle.fill")
+                .font(SSFont.headline)
+                .foregroundStyle(SSColor.calm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// What the Mic cell says, from what the microphone is really doing.
+    private var micState: String {
+        switch model.listening {
+        case .interrupted: "Paused"
+        case .paused: "Stopped"
+        default: "On-device"
+        }
+    }
+
     private var sensors: some View {
         let listening = session?.listening == true
+        let micWorking = model.listening == nil || model.listening == .listening
         let motion = session?.mode.usesMotion == true
         let linked = session?.serverSessionID != nil
         return Card(padding: SSSpacing.sm) {
             HStack(spacing: 0) {
-                SensorCell(title: "Mic", state: listening ? "On-device" : "Off",
-                           systemImage: listening ? "mic.fill" : "mic.slash", isOn: listening, tint: SSColor.accent)
+                SensorCell(title: "Mic", state: listening ? micState : "Off",
+                           systemImage: listening && micWorking ? "mic.fill" : "mic.slash", isOn: listening,
+                           tint: micWorking ? SSColor.accent : SSColor.warn)
                 SensorCell(title: "Location", state: "On", systemImage: "location.fill", isOn: true)
                 SensorCell(title: "Motion", state: motion ? "On" : "Off", systemImage: "figure.walk.motion", isOn: motion)
                 SensorCell(title: "Server", state: linked ? "Linked" : "Offline", systemImage: "waveform.path.ecg", isOn: linked)
@@ -209,8 +231,19 @@ struct GuardActiveView: View {
             HoldToSOSButton(title: "Hold if you need help") {
                 model.triggerSOS(.manualSOS, reason: "SOS held during \(session?.mode.displayName ?? "Guard")")
             }
-            PrimaryButton("End session · \(biometry)", systemImage: biometry == "PIN" ? "lock" : "faceid", role: .secondary, isLoading: isEnding) {
-                Task { await requestEnd() }
+            switch session?.mode {
+            case .walk:
+                PrimaryButton("I made it · End Guard", systemImage: "checkmark", role: .calm, isLoading: isEnding) {
+                    Task { await requestEnd() }
+                }
+            case .ride:
+                PrimaryButton("I've arrived · End Guard", systemImage: "checkmark", role: .calm, isLoading: isEnding) {
+                    Task { await requestEnd() }
+                }
+            default:
+                PrimaryButton("End session · \(biometry)", systemImage: biometry == "PIN" ? "lock" : "faceid", role: .secondary, isLoading: isEnding) {
+                    Task { await requestEnd() }
+                }
             }
         }
     }

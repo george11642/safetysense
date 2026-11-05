@@ -11,14 +11,20 @@ enum DeveloperSettings {
     /// Double. Timer multiplier for the demo escalation controller (1 = real 45 s / 90 s).
     static let demoTimeScaleKey = "ss.dev.demoTimeScale"
 
-    nonisolated static var demoModeOnNextLaunch: Bool { AppGroup.defaults.bool(forKey: demoModeKey) }
-    nonisolated static var allowRealCalls: Bool { AppGroup.defaults.bool(forKey: allowRealCallsKey) }
+    /// Both are always false in a Release build, whatever is stored.
+    nonisolated static var demoModeOnNextLaunch: Bool {
+        !BuildFlags.isRelease && AppGroup.defaults.bool(forKey: demoModeKey)
+    }
+    nonisolated static var allowRealCalls: Bool {
+        !BuildFlags.isRelease && AppGroup.defaults.bool(forKey: allowRealCallsKey)
+    }
 
     nonisolated static func reset() {
         for key in [demoModeKey, allowRealCallsKey, demoTimeScaleKey] { AppGroup.defaults.removeObject(forKey: key) }
     }
 }
 
+#if DEBUG
 /// Developer section: demo mode, scenario launcher and the real-calls safety switch.
 struct DeveloperSettingsView: View {
     @Environment(AppModel.self) private var model
@@ -259,3 +265,4 @@ struct DemoScenarioView: View {
 #Preview("Scenarios") {
     NavigationStack { DemoScenarioView() }.environment(AppModel.preview()).preferredColorScheme(.dark)
 }
+#endif

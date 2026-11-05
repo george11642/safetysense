@@ -1,7 +1,7 @@
 import Foundation
 
 /// Heartbeats and alert locations that couldn't be sent (no signal, server hiccup). They're
-/// kept in the App Group so a background refresh or the next launch can deliver them.
+/// kept in the app's defaults so a background refresh or the next launch can deliver them.
 ///
 /// - Heartbeats are coalesced: only the newest one per session matters, because delivering it
 ///   tells the server "this phone is alive, and here's where it last was".
@@ -25,13 +25,13 @@ struct BackendOutbox: Sendable {
     private let key: String
     private let suiteName: String?
 
-    init(key: String = AppGroup.Keys.backendOutbox, suiteName: String? = AppGroup.identifier) {
+    init(key: String = AppGroup.Keys.backendOutbox, suiteName: String? = nil) {
         self.key = key
         self.suiteName = suiteName
     }
 
     private var defaults: UserDefaults {
-        suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
+        suiteName.flatMap(UserDefaults.init(suiteName:)) ?? AppGroup.defaults
     }
 
     func load(now: Date = .now) -> [Entry] {

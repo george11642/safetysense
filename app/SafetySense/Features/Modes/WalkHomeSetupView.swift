@@ -7,6 +7,7 @@ struct WalkHomeSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var destination = ""
+    @State private var destinationFix: LocationFix?
     @State private var minutes = 15
     @State private var followerID: UUID?
     @State private var listen = false
@@ -26,7 +27,8 @@ struct WalkHomeSetupView: View {
                 SetupHeader(mode: .walk, title: "Walk with someone watching",
                             subtitle: "Tell SafetySense where you're headed. If you don't make it by your ETA, it checks on you.")
 
-                SetupField(label: "Going to", text: $destination, prompt: "Dorm, car, bus stop…", systemImage: "mappin.and.ellipse")
+                DestinationField(label: "Going to", text: $destination, fix: $destinationFix, prompt: "Dorm, car, bus stop…",
+                                 isSearchEnabled: model.services.flavor == .live)
 
                 VStack(alignment: .leading, spacing: SSSpacing.sm) {
                     Text("About how long?").ssEyebrow()
@@ -139,15 +141,19 @@ struct WalkHomeSetupView: View {
     private func start() {
         isStarting = true
         if model.settings.listenDuringWalk != listen { model.settings.listenDuringWalk = listen }
-        let check = eta.addingTimeInterval(2 * 60)
+        let checkAfter = Double(minutes + 2) * 60
         let place = destination.trimmingCharacters(in: .whitespaces)
         let heads = follower
+        let picked = destinationFix
+        let canSearch = model.services.flavor == .live
         Task {
-            await model.startGuard(mode: .walk)
-            if model.currentSession != nil {
-                model.currentSession?.nextCheckInAt = check
-                if let id = model.currentSession?.id { model.services.notifications.scheduleCheckIn(at: check, sessionID: id) }
+            var target: GuardDestination?
+            if !place.isEmpty {
+                var fix = picked
+                if fix == nil, canSearch { fix = await DestinationSearch.fix(forText: place) }
+                target = GuardDestination(name: place, fix: fix)
             }
+            await model.startGuard(mode: .walk, destination: target, arrivalCheckAfter: checkAfter)
             isStarting = false
             started += 1
             if textFollower, let heads, let url = Self.headsUpURL(to: heads, destination: place, eta: eta) {

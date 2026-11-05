@@ -13,6 +13,7 @@ struct GuardLiveActivity: Widget {
             LockScreenGuardView(attributes: context.attributes, state: context.state, isStale: context.isStale)
                 .activityBackgroundTint(BrandPalette.night)
                 .activitySystemActionForegroundColor(BrandPalette.ink)
+                .widgetURL(DeepLink.forLevel(context.state.level).url)
         } dynamicIsland: { context in
             let style = GuardLevelStyle(level: context.state.level)
             return DynamicIsland {
@@ -65,6 +66,7 @@ struct GuardLiveActivity: Widget {
                     .accessibilityLabel("SafetySense \(style.title)")
             }
             .keylineTint(style.tint)
+            .widgetURL(DeepLink.forLevel(context.state.level).url)
         }
     }
 }
@@ -161,7 +163,7 @@ private struct LevelDetail: View {
                 Image(systemName: "clock")
                     .accessibilityHidden(true)
                 if let next = state.nextCheckInAt, next > .now {
-                    Text("Next check-in in \(Text(timerInterval: attributes.startedAt...next, countsDown: true).monospacedDigit())")
+                    Text("\(attributes.checkInLabel) in \(Text(timerInterval: attributes.startedAt...next, countsDown: true).monospacedDigit())")
                 } else {
                     Text("Guarding since \(Text(attributes.startedAt, style: .time))")
                 }
@@ -265,7 +267,7 @@ private struct TrailingTimer: View {
             Text(timerInterval: attributes.startedAt...next, countsDown: true)
                 .foregroundStyle(BrandPalette.muted)
                 .multilineTextAlignment(.trailing)
-                .accessibilityLabel("Next check-in")
+                .accessibilityLabel(attributes.checkInLabel)
         } else {
             Text(attributes.startedAt, style: .timer)
                 .foregroundStyle(state.level == 0 ? BrandPalette.muted : style.tint)

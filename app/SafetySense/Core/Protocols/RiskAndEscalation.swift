@@ -58,6 +58,8 @@ protocol EscalationControllerProtocol: AnyObject, Observable {
     var activeAlert: AlertRecord? { get }
     /// Deadline for the current step (check-in answer window or alert->dispatch countdown).
     var stepDeadline: Date? { get }
+    /// When the next scheduled check-in fires (nil when the mode has none or a step is active).
+    var nextCheckInAt: Date? { get }
     /// Called whenever the level or alert changes (AppModel persists + updates the Live Activity).
     var onChange: (@MainActor (EscalationLevel, AlertRecord?) -> Void)? { get set }
 

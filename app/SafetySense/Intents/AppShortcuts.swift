@@ -2,9 +2,17 @@ import AppIntents
 
 // OWNER: System Integration module. Siri phrases, Spotlight and the Action Button list.
 // "SafetySense Alert" is the shortcut to pick for the Action Button (Settings > Action Button >
-// Shortcut > SafetySense). Every phrase must contain the app name (an App Intents rule).
+// Shortcut > SafetySense). iOS doesn't tell an intent what ran it, so the Action Button and Siri
+// each get their own shortcut to log the right trigger. Every phrase must contain the app name
+// (an App Intents rule).
 struct SafetySenseShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: StartAlertIntent(source: .actionButton),
+            phrases: ["\(.applicationName) Action Button alert"],
+            shortTitle: "SafetySense Alert",
+            systemImageName: "shield.lefthalf.filled"
+        )
         AppShortcut(
             intent: StartAlertIntent(source: .siri),
             phrases: [
@@ -13,8 +21,8 @@ struct SafetySenseShortcuts: AppShortcutsProvider {
                 "Start a \(.applicationName) alert",
                 "Get help with \(.applicationName)",
             ],
-            shortTitle: "SafetySense Alert",
-            systemImageName: "shield.lefthalf.filled"
+            shortTitle: "Alert by Voice",
+            systemImageName: "mic.fill"
         )
         AppShortcut(
             intent: StartGuardIntent(),

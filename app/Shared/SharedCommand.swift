@@ -9,6 +9,15 @@ public struct SharedCommand: Codable, Sendable, Equatable, Identifiable {
         case checkInNeedHelp   // "Need help" from the Live Activity
         case startGuard        // "Start Guard" shortcut
         case fakeCall          // "SafetySense fake call" shortcut (SPEC 7.7)
+
+        /// How long a queued command still means what the person meant when they raised it.
+        public var maxQueuedAge: TimeInterval {
+            switch self {
+            case .triggerAlert, .checkInNeedHelp: 30 * 60
+            case .checkInOkay: 2 * 60
+            case .startGuard, .fakeCall: 5 * 60
+            }
+        }
     }
 
     public enum Source: String, Codable, Sendable {
@@ -39,6 +48,12 @@ public struct SharedCommand: Codable, Sendable, Equatable, Identifiable {
         self.delaySeconds = delaySeconds
     }
 
+    /// A command that waited too long in the queue is dropped, so nobody's contacts get an SOS
+    /// from hours ago the next time the app happens to open.
+    public func isFresh(at now: Date = .now) -> Bool {
+        now.timeIntervalSince(createdAt) < kind.maxQueuedAge
+    }
+
     /// Calm, human reason recorded on the alert (shown to contacts on the live page).
     public var alertReason: String {
         switch (kind, source) {
@@ -52,44 +67,85 @@ public struct SharedCommand: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
+/// Commands raised outside the app's process. Each command is its own item in `SharedStore`, so
+/// an enqueue is a single atomic write and two processes can never overwrite each other's commands.
 public enum SharedCommandQueue {
     /// Posted (in-process) whenever a command is queued, so a running app can drain at once
     /// instead of waiting for the next time it becomes active.
     public static let didEnqueueNotification = Notification.Name("SafetySense.sharedCommandEnqueued")
 
-    public static func enqueue(_ command: SharedCommand) {
-        let defaults = AppGroup.defaults
-        var queue = peek(defaults: defaults)
-        queue.append(command)
-        if let data = try? JSONEncoder().encode(queue) {
-            defaults.set(data, forKey: AppGroup.Keys.pendingCommands)
-        }
+    static let itemPrefix = "ss.cmd."
+
+    /// Sorts by creation time, then keeps every command unique.
+    static func itemKey(for command: SharedCommand) -> String {
+        let millis = Int64((command.createdAt.timeIntervalSince1970 * 1000).rounded())
+        return itemPrefix + String(format: "%014lld", millis) + "." + command.id.uuidString
+    }
+
+    public static func enqueue(_ command: SharedCommand, store: SharedStore = .shared) {
+        guard let data = try? JSONEncoder().encode(command) else { return }
+        store.set(data, forKey: itemKey(for: command))
+        SharedCommandSignal.post()
     }
 
     /// Returns and clears all queued commands, oldest first.
-    public static func drain() -> [SharedCommand] {
-        let defaults = AppGroup.defaults
-        let queue = peek(defaults: defaults)
-        defaults.removeObject(forKey: AppGroup.Keys.pendingCommands)
-        return queue
+    public static func drain(store: SharedStore = .shared) -> [SharedCommand] {
+        store.keys(withPrefix: itemPrefix).sorted().compactMap { key in
+            let data = store.data(forKey: key)
+            store.set(nil, forKey: key)
+            return data.flatMap { try? JSONDecoder().decode(SharedCommand.self, from: $0) }
+        }
     }
 
-    static func peek(defaults: UserDefaults) -> [SharedCommand] {
-        guard let data = defaults.data(forKey: AppGroup.Keys.pendingCommands),
-              let queue = try? JSONDecoder().decode([SharedCommand].self, from: data)
-        else { return [] }
-        return queue
+    /// One-time move of the old array-in-defaults queue.
+    public static func migrateLegacyQueue(from defaults: UserDefaults, store: SharedStore = .shared) {
+        guard let data = defaults.data(forKey: AppGroup.Keys.pendingCommands) else { return }
+        defaults.removeObject(forKey: AppGroup.Keys.pendingCommands)
+        let queue = (try? JSONDecoder().decode([SharedCommand].self, from: data)) ?? []
+        queue.forEach { enqueue($0, store: store) }
+    }
+}
+
+/// A Darwin notification, the one signal that crosses from the widget extension into a running
+/// app. It carries no data: the app answers by draining `SharedCommandQueue`.
+public enum SharedCommandSignal {
+    static let name = "com.georgeteifel.SafetySense.commandQueued"
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var handler: (@Sendable () -> Void)?
+
+    public static func post() {
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
+                                             CFNotificationName(name as CFString), nil, nil, true)
+    }
+
+    /// Installs the one handler for this process. It runs on an arbitrary thread.
+    public static func observe(_ newHandler: @escaping @Sendable () -> Void) {
+        let isFirst = lock.withLock {
+            defer { handler = newHandler }
+            return handler == nil
+        }
+        guard isFirst else { return }
+        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), nil,
+                                        { _, _, _, _, _ in SharedCommandSignal.fire() },
+                                        name as CFString, nil, .deliverImmediately)
+    }
+
+    private static func fire() {
+        lock.withLock { handler }?()
     }
 }
 
 /// Lets an intent hand a command straight to the running escalation ladder when it executes
 /// inside the app process (Live Activity buttons, notification actions, background App Intents).
 /// The app installs `handler` at launch (`SystemBridge.install`). In the widget extension the
-/// handler is nil, so the command goes to `SharedCommandQueue` and the app drains it on open.
+/// handler is nil, so the command goes to `SharedCommandQueue`, the Darwin signal wakes a running
+/// app, and otherwise the app drains it when it next opens.
 @MainActor
 public enum SharedCommandBridge {
     /// Returns true when the command was handled in-process.
     public static var handler: (@MainActor (SharedCommand) -> Bool)?
+    /// Keeps the intent alive until the server has the alert. True once it does.
+    public static var awaitServerAlert: (@MainActor () async -> Bool)?
 
     /// True when a live in-app ladder is listening (the intent is running in the app process).
     public static var isAppProcess: Bool { handler != nil }

@@ -36,6 +36,10 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
 
     private(set) var clips: [EvidenceClip] = []
     private(set) var isCapturing = false
+    private var captureStartedAt = Date.distantPast
+    private var lastChunkAt: Date?
+    /// A 5 s chunk, plus room for one to be late.
+    static let liveAudioWindow: TimeInterval = 12
     private(set) var isUnlocked = false
     private(set) var lastUploadError: String?
 
@@ -67,14 +71,23 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
 
     // MARK: EvidenceVaultProtocol
 
+    /// True only while live audio keeps arriving. The 30 s pre-alert buffer doesn't count, and
+    /// capture gets one chunk's grace to produce its first audio.
+    var isRecordingEvidence: Bool {
+        guard isCapturing else { return false }
+        return Date.now.timeIntervalSince(lastChunkAt ?? captureStartedAt) < Self.liveAudioWindow
+    }
+
     func startCapture(alertID: UUID, serverAlertID: String?, prebuffer: Data?) async throws {
         if let serverAlertID { serverIDs[alertID] = serverAlertID }
         guard !isCapturing else { return }
         activeAlertID = alertID
         nextSeq = (clips.filter { $0.alertID == alertID }.map(\.seq).max() ?? -1) + 1
         isCapturing = true
+        captureStartedAt = .now
+        lastChunkAt = nil
         if let prebuffer, !prebuffer.isEmpty {
-            try seal(prebuffer, duration: 30, startedAt: .now.addingTimeInterval(-30))
+            try seal(prebuffer, duration: 30, startedAt: .now.addingTimeInterval(-30), isLive: false)
         }
         if let microphone {
             microphone.onChunk = { [weak self] data, duration, startedAt in
@@ -159,12 +172,13 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
 
     // MARK: Sealing + upload
 
-    private func seal(_ plaintext: Data, duration: TimeInterval, startedAt: Date) throws {
+    private func seal(_ plaintext: Data, duration: TimeInterval, startedAt: Date, isLive: Bool = true) throws {
         guard let alertID = activeAlertID else { return }
         let seq = nextSeq
         nextSeq += 1
         let sealed = try AES.GCM.seal(plaintext, using: key(), authenticating: Self.aad(alertID: alertID, seq: seq))
         guard let ciphertext = sealed.combined else { return }
+        if isLive { lastChunkAt = .now }
         let fileName = "\(alertID.uuidString.prefix(8))-\(seq).ssenc"
         try ciphertext.write(to: directory.appending(path: fileName),
                              options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])

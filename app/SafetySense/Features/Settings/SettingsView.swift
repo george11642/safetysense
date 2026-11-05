@@ -159,9 +159,11 @@ struct SettingsView: View {
             .listRowBackground(SSColor.surface)
 
             Section {
+                #if DEBUG
                 NavigationLink { DeveloperSettingsView() } label: {
                     settingRow("Developer", value: model.services.flavor == .demo ? "Demo" : "Live", icon: "hammer")
                 }
+                #endif
             } footer: {
                 VStack(alignment: .leading, spacing: SSSpacing.xs) {
                     Text("SafetySense supplements 911 and never replaces it. If you're in danger right now, call 911.")

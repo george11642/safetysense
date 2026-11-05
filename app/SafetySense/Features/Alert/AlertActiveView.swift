@@ -233,7 +233,7 @@ struct AlertActiveView: View {
         if let alert { await model.ensureEvidenceCapture(for: alert) }
         var tick = 0
         while !Task.isCancelled {
-            capturing = model.services.vault.isCapturing
+            capturing = model.services.vault.isRecordingEvidence
             if let latest = model.services.location.lastFix, latest != fix {
                 withAnimation(.smooth) {
                     fix = latest

@@ -16,10 +16,13 @@ swift Tools/generate_icons.swift SafetySense/Resources/Assets.xcassets # regener
 - iOS 26.0+, Swift 6 language mode, `SWIFT_STRICT_CONCURRENCY=complete`. Builds have zero warnings, and they should stay that way.
 - Simulator builds sign ad hoc (`CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = "-"`). For a device build (the iPhone 16e), George sets `DEVELOPMENT_TEAM`.
 - Bundle IDs: `com.georgeteifel.SafetySense`, `.Widgets` and `com.georgeteifel.SafetySenseTests`. App Group: `group.com.georgeteifel.SafetySense`.
+- **Debug vs Release signing:** Debug uses the entitlements `project.yml` generates (App Group, time-sensitive, keychain groups). Release uses `SafetySense/TestFlight.entitlements` and `SafetySenseWidgets/TestFlight.entitlements`, which `Tools/testflight.sh` patches in after `xcodegen generate`, because only Josh can enable portal capabilities. **A Release entitlement must go in the TestFlight files; adding it to `project.yml` alone does nothing.** Today those files hold only `keychain-access-groups`, which needs no portal change.
+- **TestFlight builds** use `Tools/testflight.sh`. The build number defaults to a timestamp, or set `SS_BUILD`; it must increase or the upload is rejected. Never submit for App Review, release, or add external testers.
+- **Release builds have no developer surface:** `DeveloperSettingsView`, its Settings row, every `-ss` launch argument and the QA PIN 2580 are Debug-only, and `allowRealCalls` is always false, so every alert and session goes out `dry_run`.
 - Info.plist is generated from `project.yml`, so put new keys there. Don't edit `SafetySense/Info.plist` by hand.
 - **Known environment quirk (important for agents):** run from a Claude Code shell, `xcodebuild` hangs forever at `ExecuteExternalTool clang -v -E -dM`. The inherited environment makes SWBBuildService stop reading clang's output pipe, and the iOS Simulator MCP `build` tool hangs the same way. **Use `Tools/xcb.sh build|test`**, which runs xcodebuild under `env -i`, or prefix your own call with `env -i HOME=$HOME USER=$USER TMPDIR=$TMPDIR PATH=/usr/bin:/bin:/usr/sbin:/sbin`. In sandboxed shells it also needs the sandbox disabled. To use a different simulator, set `SS_DEST='platform=iOS Simulator,id=<udid>'`.
 
-### Launch arguments (QA, screenshots, demo video)
+### Launch arguments (QA, screenshots, demo video; Debug builds only)
 
 | Argument | Effect |
 |---|---|
@@ -37,9 +40,11 @@ app/
   project.yml                 XcodeGen spec (targets: SafetySense, SafetySenseWidgets, SafetySenseTests)
   Tools/generate_icons.swift  CoreGraphics icon generator (AppIcon + AppIconDiscreet)
   Shared/                     Compiled into BOTH app and widget extension
-    AppGroup.swift              group id, UserDefaults keys, Keychain account names
-    SharedCommand.swift         queue that intents/widgets write and the app drains
-    SharedIntents.swift         TriggerAlertIntent, CheckInOkayIntent, CheckInNeedHelpIntent
+    AppGroup.swift              group id, `AppGroup.defaults` (the app's own store), keys, Keychain account names
+    SharedStore.swift           what the app and widget really share: App Group or Keychain group
+    SharedCommand.swift         one-item-per-command queue, Darwin signal, in-process bridge
+    SharedIntents.swift         TriggerAlertIntent, CheckInOkayIntent, CheckInNeedHelpIntent, SetGuardIntent
+    DeepLink.swift              safetysense:// routes (home, checkin, alert, support, vault)
     GuardActivityAttributes.swift  Live Activity payload
     BrandPalette.swift          raw brand colors + Color(hex:)
   SafetySense/
@@ -65,8 +70,22 @@ Sensors (audio / motion / location) --onSignal--> RiskEngine.ingest --RiskAssess
                                                                                           v
                                  AppModel.currentAlert  ->  RootView overlay  +  LiveActivity.update  +  widget mirror
 EscalationController --> BackendClient (alert/create, escalate, cancel) --> Twilio calls/SMS, Noonlight sandbox or "simulated"
-Intents (Action Button / Control / Siri / Live Activity buttons) --> SharedCommandQueue --> AppModel.drainSharedCommands()
+Intents (Action Button / Control / Siri / Live Activity buttons) --> SystemBridge in the app process, or SharedCommandQueue + Darwin signal --> AppModel.drainSharedCommands()
 ```
+
+### Storage and sharing
+
+- **`AppGroup.defaults`** is the app's own store: profile, contacts, settings, session, alert. It is the group suite when `containerURL(forSecurityApplicationGroupIdentifier:)` is non-nil, otherwise `.standard`. Never use `UserDefaults(suiteName:)` as an availability check: it succeeds without the entitlement and gives each process a private plist.
+- **`SharedStore`** is for what the widget extension must see, and only that: queued commands and the widget mirrors (`WidgetMirror`). No contact details or secrets. It uses group defaults when the container exists, otherwise Keychain items in `<team>.com.georgeteifel.SafetySense.shared`.
+- **`SharedCommandQueue`** writes each command as its own item, so enqueue is one atomic write and processes can't overwrite each other. Commands expire (`Kind.maxQueuedAge`), so an old SOS never fires when the app next opens.
+- **Keychain order matters.** The first `keychain-access-groups` entry is the default for every `SecItemAdd`. The app's private group stays first, so PIN hashes, safe word, device secret and evidence key never land in the shared group. `SharedStoreTests` pins this in all four entitlement files.
+- **`StorageMigration.run()`** runs first at launch, on every launch. It moves the old private-suite plist into the current store, and `.standard` into the group the day the App Group is enabled, so nobody returns to onboarding. A key moves only if the destination lacks it.
+
+### Background launches
+
+An intent or a BGTask can launch the app with no scene, so `AppModel.onLaunch()` runs from `SafetySenseApp.init`, not a view's `.task`. It restores the session and adopts any alert that was running. Every alert starts `LocationGuard.startAlertTracking()`, classic updates that can start in the background under Always and keep the process alive for the alert's loops. A `LiveActivityIntent` (`StartAlertIntent`, `TriggerAlertIntent`) may start a Live Activity from the background; anything else retries in `AppModel.appBecameActive()`, which also resumes the mic and evidence stream.
+
+Alert intents run in the app's process with no unlock. "I'm okay" asks for authentication on every surface (Live Activity, notification, Siri), so someone else holding the phone can't answer for you. "Need help" is never gated. Deep links only navigate, because any app can open one.
 
 - **`AppModel`** (`@Observable @MainActor`) is the single UI state object. It holds `profile`, `contacts`, `settings`, `hasCompletedOnboarding`, `currentSession`, `currentAlert`, `selectedTab`, `banner` and `forcedScreen`. Every stored property persists through `SettingsStore` in `didSet`. It is injected with `.environment(model)`, and views read it with `@Environment(AppModel.self) private var model`.
 - **`model.overlay`** (`none / guardActive / checkIn / alertCountdown / alertActive`) comes from `services.escalation.level` plus `currentSession`. `RootView` shows it in a single `fullScreenCover` (`OverlayHost`).

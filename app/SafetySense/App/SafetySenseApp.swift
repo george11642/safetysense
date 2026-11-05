@@ -6,6 +6,7 @@ struct SafetySenseApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        if !LaunchOptions.isUnitTestHost { StorageMigration.run() }
         let launch = LaunchOptions.current
         // One fixed, wiped-on-launch suite for QA screens so repeated launches don't leave a
         // preferences file behind each time.
@@ -30,11 +31,15 @@ struct SafetySenseApp: App {
         } else if launch.skipOnboarding {
             if model.profile == nil { model.profile = SampleData.profile }
             if model.contacts.isEmpty { model.contacts = SampleData.contacts }
+            #if DEBUG
             // QA only: a known safety PIN so a skipped-onboarding run can still cancel an alert.
             if !store.hasSafetyPIN { store.setSafetyPIN("2580") }
+            #endif
             model.hasCompletedOnboarding = true
         }
         _model = State(initialValue: model)
+        // Not `.task` on a view: an intent can launch the app in the background, with no scene.
+        if !LaunchOptions.isUnitTestHost { Task { await model.onLaunch() } }
     }
 
     var body: some Scene {
@@ -43,13 +48,10 @@ struct SafetySenseApp: App {
                 .environment(model)
                 .preferredColorScheme(.dark)
                 .tint(SSColor.accent)
-                .task { if !LaunchOptions.isUnitTestHost { await model.onLaunch() } }
+                .onOpenURL { url in if let link = DeepLink(url: url) { model.open(link) } }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                model.drainSharedCommands()
-                model.fakeCall.appBecameActive()
-            }
+            if phase == .active { model.appBecameActive() }
         }
     }
 }

@@ -25,6 +25,22 @@ Last checked 2026-11-04 by the final verification pass (build, all tests, simula
 - **Sign-up limit while testing:** `register` now allows 5 sign-ups per network per hour. If several simulator re-installs (or your phone on the same Wi-Fi) hit a 429, clear it in the Supabase SQL editor with `delete from public.register_hits;`.
 - The Figma prototype is done: public ("Anyone · can view") and verified signed-out on 2026-11-04. Nothing to do.
 
+## System integration: what needs a real device (added 2026-11-05)
+
+Built and covered by unit tests, but the simulator can't prove these. Check them on the iPhone 16e with a TestFlight build:
+
+1. **Lock Screen control:** tap SafetySense Alert on a locked phone. It should run with no unlock, and the Live Activity should appear. If iOS runs it in the widget extension instead of the app, a "Tap to finish your alert" notification appears; that means the design needs another look.
+2. **App to widget sharing:** the Release Keychain group was tested in the simulator's app process only. Confirm the Guard control shows Guarding during a session.
+3. **First-run speech permission:** Allow on Microphone on a fresh install. The fix follows `SafeWordEnroller`, but the crash was inferred from the SDK, never reproduced.
+4. **Always location prompt:** choose Keep While Using. The row should show While Using within a few seconds, and Allow all should carry on.
+5. **Audio:** a locked session with the mic on and off, a phone call during a session (expect "Listening paused" and recovery on opening the app), AirPods music during Guard, and the check-in haptic while the mic is on.
+6. **Alert from a cold start:** Action Button with the app closed. Expect a location on the live link, and the Alert screen should only say evidence is recording if audio is really arriving.
+7. **Also still to do:** a 3+ minute stationary period, a false-positive pass against the under 1 per 10 hours target, a fast End then Start (CLMonitor reuse), a walk that reaches its destination, and a Live Activity on the 16e's Lock Screen (it has no Dynamic Island).
+
+**Josh, in the developer portal, whenever convenient:** enable the App Group and Time-Sensitive Notifications. Until then check-ins are ordinary notifications, so they don't break through a Focus, and onboarding says "Notifications". Once enabled, add both to the TestFlight entitlements files. Data migrates by itself.
+
+**Decisions to confirm:** `ITSAppUsesNonExemptEncryption` stays false because all encryption is Apple's (TLS, Keychain, CryptoKit). Arriving at a destination does not cancel the arrival check, since being at the door isn't the same as being safe. The privacy manifest declares name, phone, contacts, precise location and audio as collected for app functionality; match this if an App Store privacy label is ever filled in.
+
 ## What exists and where
 
 | Thing | Where | State |

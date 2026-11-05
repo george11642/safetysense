@@ -1,18 +1,23 @@
 import AppIntents
 import Foundation
+import UserNotifications
 
 // Intents compiled into BOTH the app and the widget extension (Controls and Live Activity
-// buttons need them in the extension). Each one goes through `SharedCommandBridge`: inside the
-// app process it reaches the escalation ladder at once; anywhere else it is queued for the app.
+// buttons need them in the extension). `LiveActivityIntent`s run in the app's process, which lets
+// them reach the escalation ladder at once and start a Live Activity from the background. Each one
+// goes through `SharedCommandBridge`, and if it ever runs in the extension it is queued for the app.
 // App-only intents (Action Button / Siri) live in SafetySense/Intents.
 
-/// Manual SOS from the Lock Screen / Control Center control. It opens SafetySense so the
-/// person sees what's happening (and can cancel with their PIN). The starting level follows the
-/// manual-SOS dispatch policy (default: straight to dispatch).
-public struct TriggerAlertIntent: AppIntent {
+/// Manual SOS from the Lock Screen / Control Center control. One tap, no unlock, and the app stays
+/// closed: asking for help should never wait on Face ID. The person sees the Live Activity and
+/// can cancel in the app with their PIN. The starting level follows the manual-SOS dispatch
+/// policy (default: straight to dispatch).
+public struct TriggerAlertIntent: LiveActivityIntent {
     public static let title: LocalizedStringResource = "SafetySense Alert"
     public static let description = IntentDescription("Starts SafetySense's alert so your people, and help, are on the way.")
-    public static var openAppWhenRun: Bool { true }
+    public static var openAppWhenRun: Bool { false }
+    public static var isDiscoverable: Bool { false }
+    public static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
 
     @Parameter(title: "Source", default: .shortcut)
     public var source: TriggerSourceEntity
@@ -25,7 +30,12 @@ public struct TriggerAlertIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult {
-        SharedCommandBridge.submit(SharedCommand(kind: .triggerAlert, source: source.commandSource))
+        let handled = SharedCommandBridge.submit(SharedCommand(kind: .triggerAlert, source: source.commandSource))
+        if handled {
+            _ = await SharedCommandBridge.awaitServerAlert?()
+        } else {
+            await SharedCommandFallback.nudge()
+        }
         return .result()
     }
 }
@@ -53,11 +63,14 @@ public enum TriggerSourceEntity: String, AppEnum, Sendable {
 }
 
 /// "I'm okay" button on the check-in Live Activity. Live Activity intents run in the app's
-/// process, so this resolves the check-in without opening the app.
+/// process, so this resolves the check-in without opening the app. It asks for Face ID or the
+/// passcode first, like the same button on the notification and in Siri: someone else holding
+/// the phone can't answer for you. "Need help" is never gated.
 public struct CheckInOkayIntent: LiveActivityIntent {
     public static let title: LocalizedStringResource = "I'm okay"
     public static let description = IntentDescription("Answers a SafetySense check-in.")
     public static var isDiscoverable: Bool { false }
+    public static var authenticationPolicy: IntentAuthenticationPolicy { .requiresAuthentication }
 
     public init() {}
 
@@ -73,6 +86,7 @@ public struct CheckInNeedHelpIntent: LiveActivityIntent {
     public static let title: LocalizedStringResource = "I need help"
     public static let description = IntentDescription("Starts the SafetySense alert from a check-in.")
     public static var isDiscoverable: Bool { false }
+    public static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
 
     public init() {}
 
@@ -103,6 +117,20 @@ public struct SetGuardIntent: SetValueIntent {
             SharedCommandBridge.submit(SharedCommand(kind: .startGuard, source: .controlCenter))
         }
         return .result()
+    }
+}
+
+/// If an alert intent ever runs where the ladder isn't (the extension), the command is safe in
+/// the queue but nothing has happened yet, so say so instead of staying quiet.
+enum SharedCommandFallback {
+    static func nudge() async {
+        let content = UNMutableNotificationContent()
+        content.title = "Tap to finish your alert"
+        content.body = "Open SafetySense so your people can be told. If you can, call 911."
+        content.sound = .default
+        content.interruptionLevel = .timeSensitive
+        try? await UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: "ss.status.pending-alert", content: content, trigger: nil))
     }
 }
 

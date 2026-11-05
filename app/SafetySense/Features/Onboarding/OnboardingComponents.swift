@@ -26,7 +26,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable, Sendable {
     var previous: OnboardingStep? { OnboardingStep(rawValue: rawValue - 1) }
 
     /// `-ssOnboardingStep <name|number>` for QA screenshots.
-    static func fromLaunchArguments(_ arguments: [String] = ProcessInfo.processInfo.arguments) -> OnboardingStep? {
+    static func fromLaunchArguments(_ arguments: [String] = LaunchOptions.qaArguments) -> OnboardingStep? {
         guard let i = arguments.firstIndex(of: "-ssOnboardingStep"), i + 1 < arguments.count else { return nil }
         let value = arguments[i + 1].lowercased()
         if let n = Int(value) { return OnboardingStep(rawValue: n) }

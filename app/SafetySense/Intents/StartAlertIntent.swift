@@ -7,8 +7,11 @@ import Foundation
 ///
 /// Inside the app process it hands the command to the live escalation ladder and waits until
 /// the server has the alert (so calls start even if iOS suspends the app right after). If the
-/// ladder isn't running, it creates the alert on the server directly.
-struct StartAlertIntent: AppIntent {
+/// ladder isn't running, it creates the alert on the server directly. As a `LiveActivityIntent`
+/// it may start the Live Activity from the background.
+///
+/// Dialogs can be spoken aloud, so they never say who is being told.
+struct StartAlertIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "SafetySense Alert"
     static let description = IntentDescription(
         "Starts SafetySense's alert without opening the app. Your trusted contacts are called and get your live location. SafetySense adds to 911; it doesn't replace it.")
@@ -24,37 +27,24 @@ struct StartAlertIntent: AppIntent {
         self.source = source
     }
 
-    /// How long to keep the app awake for `alert/create` to answer.
-    static let serverWait: Duration = .seconds(12)
-
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let command = SharedCommand(kind: .triggerAlert, source: source.commandSource)
 
         if let escalation = SystemBridge.escalation, SystemBridge.handle(command, escalation: escalation) {
-            let reached = await Self.waitForServerAlert()
-            return .result(dialog: reached ? "SafetySense is on it. Your people are being told."
-                                           : "SafetySense is on it and will keep trying. If you can, call 911.")
+            let reached = await SystemBridge.waitForServerAlert()
+            return .result(dialog: reached ? "SafetySense is on it."
+                                           : "SafetySense will keep trying. If you can, call 911.")
         }
 
         do {
             try await DirectAlertSender.send(command)
-            return .result(dialog: "SafetySense is on it. Your people are being told.")
+            return .result(dialog: "SafetySense is on it.")
         } catch {
             // Leave it for the app to pick up the moment it opens.
             SharedCommandQueue.enqueue(command)
             return .result(dialog: "SafetySense couldn't reach its server. If you can, call 911.")
         }
-    }
-
-    @MainActor
-    private static func waitForServerAlert() async -> Bool {
-        let deadline = ContinuousClock.now + serverWait
-        while ContinuousClock.now < deadline {
-            if SystemBridge.liveServerAlertID != nil { return true }
-            try? await Task.sleep(for: .milliseconds(250))
-        }
-        return SystemBridge.liveServerAlertID != nil
     }
 }
 

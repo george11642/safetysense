@@ -1,25 +1,29 @@
 import CryptoKit
 import Foundation
 
-/// Persistence for profile, contacts, settings and onboarding state (App Group UserDefaults)
+/// Persistence for profile, contacts, settings and onboarding state (`AppGroup.defaults`)
 /// plus secrets (Keychain): PIN hashes, safe word, device credentials.
 @MainActor
 final class SettingsStore {
     private let defaults: UserDefaults
     private let secrets: SecretStore
+    private let shared: SharedStore
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(defaults: UserDefaults = AppGroup.defaults, secrets: SecretStore = KeychainSecretStore()) {
+    init(defaults: UserDefaults = AppGroup.defaults, secrets: SecretStore = KeychainSecretStore(),
+         shared: SharedStore = .shared) {
         self.defaults = defaults
         self.secrets = secrets
+        self.shared = shared
     }
 
     /// Fresh, isolated store for tests / demo launches.
     static func ephemeral(name: String = "ss.ephemeral.\(UUID().uuidString)") -> SettingsStore {
         let d = UserDefaults(suiteName: name) ?? .standard
         d.removePersistentDomain(forName: name)
-        return SettingsStore(defaults: d, secrets: InMemorySecretStore())
+        return SettingsStore(defaults: d, secrets: InMemorySecretStore(),
+                             shared: SharedStore(backend: InMemorySharedBackend()))
     }
 
     // MARK: Codable values
@@ -105,15 +109,8 @@ final class SettingsStore {
 
     /// "Delete everything" (SPEC 11): wipes local state and secrets.
     func eraseAll() {
-        for key in [AppGroup.Keys.profile, AppGroup.Keys.contacts, AppGroup.Keys.settings,
-                    AppGroup.Keys.onboardingComplete, AppGroup.Keys.currentSession,
-                    AppGroup.Keys.currentAlert, AppGroup.Keys.alertHistory, AppGroup.Keys.evidenceIndex,
-                    AppGroup.Keys.pendingCommands, AppGroup.Keys.widgetEscalationLevel,
-                    AppGroup.Keys.widgetGuardActive, AppGroup.Keys.heartbeatSessionID,
-                    AppGroup.Keys.heartbeatLastSentAt, AppGroup.Keys.backendOutbox,
-                    AppGroup.Keys.externalAlert] {
-            defaults.removeObject(forKey: key)
-        }
+        AppGroup.Keys.appLocal.forEach { defaults.removeObject(forKey: $0) }
+        shared.eraseAll()
         for account in [AppGroup.KeychainAccounts.safetyPINHash, AppGroup.KeychainAccounts.duressPINHash,
                         AppGroup.KeychainAccounts.safeWord, AppGroup.KeychainAccounts.deviceCredentials,
                         AppGroup.KeychainAccounts.evidenceKey] {

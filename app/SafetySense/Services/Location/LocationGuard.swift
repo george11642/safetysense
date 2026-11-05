@@ -1,5 +1,6 @@
 @preconcurrency import CoreLocation
 import Foundation
+import UIKit
 
 /// CoreLocation guard (SPEC 6.1.4, 12): `CLLocationUpdate.liveUpdates` inside a
 /// `CLServiceSession` (+ `CLBackgroundActivitySession` so updates continue on the Lock
@@ -21,8 +22,14 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
     private var serviceSession: CLServiceSession?
     private var backgroundSession: CLBackgroundActivitySession?
     private var updatesTask: Task<Void, Never>?
-    private var monitorTask: Task<Void, Never>?
+    private var monitorEventsTask: Task<Void, Never>?
+    /// One for the app's lifetime: Apple allows a single live CLMonitor per name, so a quick End
+    /// then Start must reuse it. Sessions only add and remove its conditions.
     private var monitor: CLMonitor?
+    /// Condition changes run strictly in order, so a stop can't remove a new session's geofence.
+    private var conditionsWork: Task<Void, Never>?
+    private(set) var isTrackingAlert = false
+    private var promptWatcher: Task<Void, Never>?
     private var route = RouteMonitor(mode: .everyday, destination: nil)
     private var mode: GuardMode = .everyday
     private var destination: LocationFix?
@@ -35,6 +42,10 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
     static let plannedAreaID = "plannedArea"
     static let destinationRadius: CLLocationDistance = 150
     static let plannedAreaRadius: CLLocationDistance = 400
+    /// The app counts as past the Always prompt after it has been active this long: while a
+    /// system prompt is up, the app isn't active.
+    static let promptSettle: TimeInterval = 2
+    static let promptMaxWait: TimeInterval = 180
 
     init(calendar: Calendar = .current) {
         self.calendar = calendar
@@ -76,6 +87,24 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
         return await withCheckedContinuation { continuation in
             authWaiters.append(continuation)
             manager.requestAlwaysAuthorization()
+            watchAlwaysPrompt()
+        }
+    }
+
+    /// iOS shows the upgrade prompt only once and sends no callback when the answer is "Keep While
+    /// Using" or the prompt never appears, so nothing else would ever end the wait.
+    private func watchAlwaysPrompt() {
+        promptWatcher?.cancel()
+        promptWatcher = Task { [weak self] in
+            var settled: TimeInterval = 0
+            var waited: TimeInterval = 0
+            while !Task.isCancelled, settled < Self.promptSettle, waited < Self.promptMaxWait {
+                try? await Task.sleep(for: .milliseconds(500))
+                waited += 0.5
+                settled = UIApplication.shared.applicationState == .active ? settled + 0.5 : 0
+            }
+            guard !Task.isCancelled, let self else { return }
+            self.resolveWaiters(self.authorization)
         }
     }
 
@@ -86,6 +115,8 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
 
     private func resolveWaiters(_ status: LocationAuthorization) {
         guard status != .notDetermined else { return }
+        promptWatcher?.cancel()
+        promptWatcher = nil
         let waiters = authWaiters
         authWaiters.removeAll()
         waiters.forEach { $0.resume(returning: status) }
@@ -120,7 +151,7 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
                 // Updates end on stop or when authorization is withdrawn.
             }
         }
-        startMonitoring()
+        if let destination { addDestinationCondition(destination) }
     }
 
     func stop() {
@@ -128,15 +159,10 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
         isRunning = false
         updatesTask?.cancel()
         updatesTask = nil
-        monitorTask?.cancel()
-        monitorTask = nil
-        if let monitor {
-            Task {
-                await monitor.remove(Self.destinationID)
-                await monitor.remove(Self.plannedAreaID)
-            }
+        updateConditions { monitor in
+            await monitor.remove(Self.destinationID)
+            await monitor.remove(Self.plannedAreaID)
         }
-        monitor = nil
         serviceSession?.invalidate()
         serviceSession = nil
         backgroundSession?.invalidate()
@@ -146,7 +172,7 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
     func currentFix() async -> LocationFix? {
         if let lastFix, Date.now.timeIntervalSince(lastFix.timestamp) < 30 { return lastFix }
         guard authorization == .whenInUse || authorization == .always else { return lastFix }
-        let session = isRunning ? nil : CLServiceSession(authorization: .whenInUse)
+        let session = isRunning ? nil : CLServiceSession(authorization: authorization == .always ? .always : .whenInUse)
         defer { session?.invalidate() }
         let found: LocationFix? = await withTaskGroup(of: LocationFix?.self) { group in
             group.addTask {
@@ -169,6 +195,38 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
         }
         if let found { lastFix = found }
         return found ?? lastFix
+    }
+
+    // MARK: Alerts
+
+    /// Classic updates, because they can start from a background launch under Always and they
+    /// keep the process running for the alert's location and status loops.
+    func startAlertTracking() {
+        guard !isTrackingAlert, authorization == .always || authorization == .whenInUse else { return }
+        isTrackingAlert = true
+        manager.allowsBackgroundLocationUpdates = true
+        manager.pausesLocationUpdatesAutomatically = false
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.startUpdatingLocation()
+    }
+
+    func stopAlertTracking() {
+        guard isTrackingAlert else { return }
+        isTrackingAlert = false
+        manager.stopUpdatingLocation()
+        manager.allowsBackgroundLocationUpdates = false
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        let fix = Self.fix(from: location)
+        Task { @MainActor in self.handleAlertFix(fix) }
+    }
+
+    private func handleAlertFix(_ fix: LocationFix) {
+        guard isTrackingAlert else { return }
+        lastFix = fix
+        onFix?(fix)
     }
 
     // MARK: Updates
@@ -202,35 +260,48 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
 
     // MARK: Geofences (CLMonitor)
 
-    private func startMonitoring() {
-        let destination = self.destination
-        monitorTask = Task { [weak self] in
-            let monitor = await CLMonitor(Self.monitorName)
-            // Clear anything left from an earlier session.
-            for id in await monitor.identifiers { await monitor.remove(id) }
-            guard let self, self.isRunning else { return }
-            self.monitor = monitor
-            if let destination {
-                let center = CLLocationCoordinate2D(latitude: destination.latitude, longitude: destination.longitude)
-                await monitor.add(CLMonitor.CircularGeographicCondition(center: center, radius: Self.destinationRadius),
-                                  identifier: Self.destinationID, assuming: .unsatisfied)
-            }
+    /// Creates the monitor once and reads its events for the rest of the app's life.
+    private func sharedMonitor() async -> CLMonitor {
+        if let monitor { return monitor }
+        let created = await CLMonitor(Self.monitorName)
+        monitor = created
+        // Clear anything left from an earlier launch.
+        for id in await created.identifiers { await created.remove(id) }
+        monitorEventsTask = Task { [weak self] in
             do {
-                for try await event in await monitor.events {
-                    guard !Task.isCancelled else { break }
-                    self.handleMonitorEvent(identifier: event.identifier, state: event.state)
+                for try await event in await created.events {
+                    guard let self else { return }
+                    if self.isRunning { self.handleMonitorEvent(identifier: event.identifier, state: event.state) }
                 }
             } catch {}
+        }
+        return created
+    }
+
+    private func updateConditions(_ change: @escaping @Sendable (CLMonitor) async -> Void) {
+        let previous = conditionsWork
+        conditionsWork = Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            await change(await self.sharedMonitor())
+        }
+    }
+
+    private func addDestinationCondition(_ destination: LocationFix) {
+        let center = CLLocationCoordinate2D(latitude: destination.latitude, longitude: destination.longitude)
+        updateConditions { monitor in
+            await monitor.add(CLMonitor.CircularGeographicCondition(center: center, radius: Self.destinationRadius),
+                              identifier: Self.destinationID, assuming: .unsatisfied)
         }
     }
 
     /// Night Out and Date: the planned area is where the session started (or the venue).
     private func armPlannedArea(around fix: LocationFix) {
-        guard mode == .nightOut || mode == .date, let monitor else { return }
+        guard mode == .nightOut || mode == .date else { return }
         plannedAreaArmed = true
         let anchor = mode == .date ? (destination ?? fix) : fix
         let center = CLLocationCoordinate2D(latitude: anchor.latitude, longitude: anchor.longitude)
-        Task {
+        updateConditions { monitor in
             await monitor.add(CLMonitor.CircularGeographicCondition(center: center, radius: Self.plannedAreaRadius),
                               identifier: Self.plannedAreaID, assuming: .satisfied)
         }

@@ -9,7 +9,7 @@ public struct GuardActivityAttributes: Sendable {
     public struct ContentState: Codable, Hashable, Sendable {
         /// `EscalationLevel.rawValue`: 0 guarding, 1 check-in, 2 alert, 3 dispatch.
         public var level: Int
-        /// Short status line, e.g. "Guarding quietly" or "Maya is on her way".
+        /// Short status line, e.g. "Guarding quietly" or "Maya is on the way."
         public var statusText: String
         /// Next scheduled check-in, if any (drives the countdown text).
         public var nextCheckInAt: Date?
@@ -32,6 +32,11 @@ public struct GuardActivityAttributes: Sendable {
     public var modeRawValue: String
     public var modeDisplayName: String
     public var startedAt: Date
+
+    /// Walk and Ride check once at the time you should have arrived.
+    public var checkInLabel: String {
+        modeRawValue == "walk" || modeRawValue == "ride" ? "Arrival check" : "Next check-in"
+    }
 
     public init(modeRawValue: String, modeDisplayName: String, startedAt: Date) {
         self.modeRawValue = modeRawValue

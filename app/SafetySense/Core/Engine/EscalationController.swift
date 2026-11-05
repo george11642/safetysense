@@ -32,6 +32,8 @@ final class EscalationController: EscalationControllerProtocol {
     @ObservationIgnored var onChange: (@MainActor (EscalationLevel, AlertRecord?) -> Void)?
     /// "I'm okay" or a cancel: the risk engine should discount what it has seen so far.
     @ObservationIgnored var onUserConfirmedOkay: (@MainActor () -> Void)?
+    /// True while a duress alert silently keeps sharing location, false when that ends.
+    @ObservationIgnored var onDuressTracking: (@MainActor (Bool) -> Void)?
     /// Returns the backend `session_id` once `session/start` has answered.
     @ObservationIgnored var serverSessionIDProvider: (@MainActor () -> String?)?
 
@@ -96,6 +98,11 @@ final class EscalationController: EscalationControllerProtocol {
     }
 
     func alert(withID id: UUID) -> AlertRecord? { known[id] }
+
+    /// The app came to the foreground: the mic may be able to start now.
+    func resumeEvidence() async {
+        await evidence?.resume(mode: mode)
+    }
 
     // MARK: Session
 
@@ -368,6 +375,7 @@ final class EscalationController: EscalationControllerProtocol {
     private func beginDuressTracking(alertID: UUID) {
         duressAlertID = alertID
         duressUntil = now.addingTimeInterval(timing.duressTrackingDuration)
+        onDuressTracking?(true)
         scheduleDuressLocation()
     }
 
@@ -378,6 +386,7 @@ final class EscalationController: EscalationControllerProtocol {
             if let until = self.duressUntil, self.now >= until {
                 self.duressAlertID = nil
                 self.evidence?.stop(alertID: id)
+                self.onDuressTracking?(false)
                 return
             }
             self.track { [weak self] in await self?.pushLocation(alertID: id) }
@@ -484,6 +493,8 @@ final class EscalationController: EscalationControllerProtocol {
             AlertEvent(who: $0.name, action: "notified_by_\($0.channel.rawValue)", at: now)
         }
         store(alert)
+        // No fix was ready for `alert/create` (a cold start): fill the map in as soon as one is.
+        if ctx.latitude == nil { track { [weak self] in await self?.pushLocation(alertID: alertID) } }
 
         if let duress = pendingCancels.removeValue(forKey: alertID) {
             await sendCancel(serverID: response.alertId, duress: duress)

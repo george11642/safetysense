@@ -5,7 +5,6 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.georgeteifel.SafetySense.refresh</string>
-		<string>com.georgeteifel.SafetySense.evidence-upload</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
@@ -23,6 +22,17 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.georgeteifel.SafetySense</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>safetysense</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -45,6 +55,8 @@
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
 	<true/>
+	<key>SSAppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
 	<key>SSBackendBaseURL</key>
 	<string>https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api</string>
 	<key>SSBackendPublishableKey</key>
@@ -58,7 +70,6 @@
 		<string>audio</string>
 		<string>location</string>
 		<string>fetch</string>
-		<string>processing</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

@@ -71,6 +71,33 @@ protocol EvidenceHandling: AnyObject {
     func commit(alertID: UUID, serverAlertID: String?, mode: GuardMode) async
     /// Valid cancel or end of session.
     func stop(alertID: UUID)
+    /// The app came to the foreground during an alert: reopen the mic if it couldn't start.
+    func resume(mode: GuardMode) async
+}
+
+extension EvidenceHandling {
+    func resume(mode: GuardMode) async {}
+}
+
+/// Holds live chunks in RAM from the moment an alert starts until the vault can take them (it
+/// waits for `alert/create`), so those seconds aren't lost. Dropped on a cancel: nothing is saved.
+struct EvidenceChunkGate {
+    private var pending: [(data: Data, sequence: Int)] = []
+    private(set) var isOpen = false
+
+    /// Returns the chunk if it should go straight to the vault.
+    mutating func receive(_ data: Data, sequence: Int) -> (data: Data, sequence: Int)? {
+        if isOpen { return (data, sequence) }
+        pending.append((data, sequence))
+        return nil
+    }
+
+    /// Opens the gate and returns what was held, oldest first.
+    mutating func open() -> [(data: Data, sequence: Int)] {
+        isOpen = true
+        defer { pending = [] }
+        return pending
+    }
 }
 
 /// A vault that can take live audio chunks while an alert runs. The evidence module adopts
@@ -88,6 +115,7 @@ final class EvidenceHandoff: EvidenceHandling {
     private let vault: any EvidenceVaultProtocol
     private var prebuffers: [UUID: Data] = [:]
     private var capturingAlertID: UUID?
+    private var gates: [UUID: EvidenceChunkGate] = [:]
 
     init(audio: any AudioGuardService, vault: any EvidenceVaultProtocol) {
         self.audio = audio
@@ -96,6 +124,19 @@ final class EvidenceHandoff: EvidenceHandling {
 
     func prepare(alertID: UUID) {
         if let snapshot = audio.snapshotRecentAudio() { prebuffers[alertID] = snapshot }
+        gates[alertID] = EvidenceChunkGate()
+        if let guardAudio = audio as? AudioGuard, guardAudio.isRunning { stream(guardAudio, alertID: alertID) }
+    }
+
+    private func stream(_ guardAudio: AudioGuard, alertID: UUID) {
+        guardAudio.beginEvidenceStream(alertID: alertID) { [weak self] chunk, sequence in
+            self?.receive(chunk, sequence: sequence, alertID: alertID)
+        }
+    }
+
+    private func receive(_ chunk: Data, sequence: Int, alertID: UUID) {
+        guard let forward = gates[alertID]?.receive(chunk, sequence: sequence) else { return }
+        (vault as? LiveEvidenceAudioSink)?.appendLiveAudio(forward.data, alertID: alertID, sequence: forward.sequence)
     }
 
     func commit(alertID: UUID, serverAlertID: String?, mode: GuardMode) async {
@@ -103,24 +144,35 @@ final class EvidenceHandoff: EvidenceHandling {
         capturingAlertID = alertID
         let prebuffer = prebuffers.removeValue(forKey: alertID)
         try? await vault.startCapture(alertID: alertID, serverAlertID: serverAlertID, prebuffer: prebuffer)
-        guard let guardAudio = audio as? AudioGuard else { return }
-        if !guardAudio.isRunning {
-            // Evidence needs the mic even in modes that don't listen by default (e.g. Walk).
-            try? await guardAudio.start(mode: mode, safeWord: nil)
-        }
+        var gate = gates[alertID] ?? EvidenceChunkGate()
+        let held = gate.open()
+        gates[alertID] = gate
         if let sink = vault as? LiveEvidenceAudioSink {
-            guardAudio.beginEvidenceStream(alertID: alertID) { [weak sink] chunk, seq in
-                sink?.appendLiveAudio(chunk, alertID: alertID, sequence: seq)
-            }
+            for chunk in held { sink.appendLiveAudio(chunk.data, alertID: alertID, sequence: chunk.sequence) }
         }
+        await startMicIfNeeded(alertID: alertID, mode: mode)
+    }
+
+    /// Evidence needs the mic even in modes that don't listen by default (e.g. Walk). This can
+    /// fail from the background, so `resume` tries again when the app opens.
+    private func startMicIfNeeded(alertID: UUID, mode: GuardMode) async {
+        guard let guardAudio = audio as? AudioGuard else { return }
+        if !guardAudio.isRunning { try? await guardAudio.start(mode: mode, safeWord: nil) }
+        if guardAudio.isRunning, guardAudio.evidenceAlertID != alertID { stream(guardAudio, alertID: alertID) }
+    }
+
+    func resume(mode: GuardMode) async {
+        guard let capturingAlertID else { return }
+        await startMicIfNeeded(alertID: capturingAlertID, mode: mode)
     }
 
     func stop(alertID: UUID) {
         prebuffers.removeValue(forKey: alertID)
+        gates.removeValue(forKey: alertID)
+        (audio as? AudioGuard)?.endEvidenceStream()
         guard capturingAlertID == alertID else { return }
         capturingAlertID = nil
         vault.stopCapture()
-        (audio as? AudioGuard)?.endEvidenceStream()
     }
 }
 

@@ -8,7 +8,7 @@ struct StartGuardIntent: AppIntent {
     static var openAppWhenRun: Bool { true }
 
     @Parameter(title: "Mode", default: .nightOut)
-    var mode: GuardMode
+    var mode: GuardModeOption
 
     static var parameterSummary: some ParameterSummary {
         Summary("Start \(\.$mode) Guard")
@@ -16,13 +16,13 @@ struct StartGuardIntent: AppIntent {
 
     init() {}
 
-    init(mode: GuardMode) {
+    init(mode: GuardModeOption) {
         self.mode = mode
     }
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        SharedCommandBridge.submit(SharedCommand(kind: .startGuard, source: .shortcut, mode: mode.rawValue))
+        SharedCommandBridge.submit(SharedCommand(kind: .startGuard, source: .shortcut, mode: mode.mode.rawValue))
         return .result()
     }
 }

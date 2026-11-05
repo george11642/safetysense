@@ -5,8 +5,8 @@ import WidgetKit
 // OWNER: System Integration module. Lock Screen / Control Center controls.
 
 /// "SafetySense Alert": one tap from the Lock Screen or Control Center, no unlock needed.
-/// It opens SafetySense on the alert screen so the person can see who's being told and cancel
-/// with their Safety PIN.
+/// It runs in the app's process without opening it; the Live Activity shows what's happening,
+/// and cancelling takes the Safety PIN in the app.
 struct SOSControlWidget: ControlWidget {
     static let kind = SafetySenseWidgetKind.sosControl
 
@@ -39,11 +39,11 @@ struct GuardControlWidget: ControlWidget {
     }
 }
 
-/// Reads the "guarding" mirror that the app's Live Activity controller keeps in the App Group.
+/// Reads the "guarding" mirror the app keeps in `SharedStore`.
 struct GuardStatusProvider: ControlValueProvider {
     var previewValue: Bool { false }
 
     func currentValue() async throws -> Bool {
-        AppGroup.defaults.bool(forKey: AppGroup.Keys.widgetGuardActive)
+        SharedStore.shared.bool(forKey: AppGroup.Keys.widgetGuardActive)
     }
 }

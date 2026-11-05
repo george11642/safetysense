@@ -43,7 +43,16 @@ enum AppScreen: String, CaseIterable, Sendable {
     }
 }
 
-/// Launch arguments:
+/// Whether this is a Release build. TestFlight has no developer row, launch arguments or QA PIN.
+enum BuildFlags {
+    #if DEBUG
+    nonisolated static let isRelease = false
+    #else
+    nonisolated static let isRelease = true
+    #endif
+}
+
+/// Launch arguments (Debug builds only):
 /// - `-ssScreen <name>`: open straight to a screen with sample data (implies an isolated store).
 /// - `-ssDemo 1`: use demo/mock services (no mic, no network, simulated dispatch).
 /// - `-ssSkipOnboarding 1`: mark onboarding done, seeding sample profile/contacts if empty and
@@ -85,7 +94,12 @@ struct LaunchOptions: Sendable, Equatable {
         scenarioSpeed = value("-ssScenarioSpeed").flatMap(Double.init).map { min(max($0, 0.05), 4) } ?? 1
     }
 
-    static var current: LaunchOptions { LaunchOptions(arguments: ProcessInfo.processInfo.arguments) }
+    /// Launch arguments, which only Debug builds honor. A TestFlight build ignores all of them.
+    static var qaArguments: [String] {
+        BuildFlags.isRelease ? [] : ProcessInfo.processInfo.arguments
+    }
+
+    static var current: LaunchOptions { LaunchOptions(arguments: qaArguments) }
 
     /// True when the app is only hosting the unit-test bundle.
     static var isUnitTestHost: Bool { ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil }
