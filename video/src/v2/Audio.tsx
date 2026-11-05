@@ -33,8 +33,8 @@ export const ReelAudio: React.FC = () => {
     [W(3, "on."), sfx("notify_ping"), 0.25],
     [W(3, "It") - 2, sfx("whoosh_soft"), 0.25],
     // the walk
-    [S.walk, sfx("sticker_pop"), 0.54], // r10: card hits +2.5 dB (they sit in VO gaps)
-    [S.walk, sfx("impact_hit"), 0.42],
+    [S.walk, sfx("sticker_pop"), 0.66], // fix r3: +1.7 dB more punch on the card slam
+    [S.walk, sfx("impact_hit"), 0.52],
     [S.walk - 3, sfx("whoosh_hard"), 0.3],
     [S.walk + TITLE - 4, sfx("footsteps_behind"), 0.42, W(5, "She") - S.walk - TITLE + 4],
     [W(5, "She") - 2, sfx("whoosh_hard"), 0.4],
@@ -100,8 +100,8 @@ export const ReelAudio: React.FC = () => {
     [WE(18, "raises") + 1, sfx("alert_step"), 0.24],
     [WE(18, "itself.") + 2, sfx("phone_ring"), 0.16, 40],
     // the ride
-    [S.ride, sfx("sticker_pop"), 0.54], // r10: card hits +2.5 dB (they sit in VO gaps)
-    [S.ride, sfx("impact_hit"), 0.42],
+    [S.ride, sfx("sticker_pop"), 0.66], // fix r3: +1.7 dB more punch on the card slam
+    [S.ride, sfx("impact_hit"), 0.52],
     [S.ride - 3, sfx("whoosh_hard"), 0.3],
     [W(19, "Ride", 1) - 12, sfx("whoosh_soft"), 0.25],
     [W(19, "on."), sfx("notify_ping"), 0.2],
@@ -119,8 +119,8 @@ export const ReelAudio: React.FC = () => {
     [W(21, "Dispatch") - 4, sfx("alert_step"), 0.18],
     // close
     [S.montage + 2, sfx("whoosh_soft"), 0.3],
-    [W(22, "text-to-911."), sfx("sticker_pop"), 0.35],
-    [W(22, "text-to-911.") + 2, sfx("thud"), 0.42], // r12: the bigger stamp lands with a thud
+    [W(22, "listed"), sfx("sticker_pop"), 0.35], // fix r3: the stamp now lands on "listed"
+    [W(22, "listed") + 2, sfx("thud"), 0.42], // r12: the bigger stamp lands with a thud
     [W(22, "When"), sfx("whoosh_soft"), 0.25],
     [W(22, "When") + 4, sfx("impact_hit"), 0.5],
     [W(22, "When") - 34, sfx("riser"), 0.34, 38], // r7: a real swell into the "CALLS SHE HAD TO MAKE 0" payoff
@@ -134,7 +134,7 @@ export const ReelAudio: React.FC = () => {
 
   // r6: transition SFX sit 4-5 dB lower so the gaps never hit at narration level; only the four chapter cards,
   // "She screams" and the phone smash keep full level.
-  const KEY = new Set([W(21, "It") - 2, S.walk, S.party, S.phone, S.ride, scream, W(5, "She") - 1, W(17, "Smashes") - 1, W(22, "When") + 4, W(22, "When") - 34, W(22, "When") + 5]);
+  const KEY = new Set([S.contacts + 1, W(21, "It") - 2, S.walk, S.party, S.phone, S.ride, scream, W(5, "She") - 1, W(17, "Smashes") - 1, W(22, "When") + 4, W(22, "When") - 34, W(22, "When") + 5]);
   const trim = (f: number, file: string) => (KEY.has(f) ? 1 : /whoosh|impact|glitch|sticker|alert_step|riser|ping|chime/.test(file) ? 0.58 : 0.8);
   const T = (s: number) => Math.round(s * FPS);
   const end = S.total;

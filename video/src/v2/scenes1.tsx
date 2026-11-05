@@ -10,6 +10,7 @@ import { Character } from "./Actor";
 import { MAYA, ROOMMATE_HD, MOM_HD, FRIEND_HD, BROTHER_HD, DISPATCHER_HD, GUY_HD } from "./looks";
 import { B, BE, S, TITLE, W, WE } from "./cues";
 import { CampusHD, ChapterCard, FollowerShadow, OverlayScene3D, SidewalkCloseup } from "./sets2";
+import { DispatchExtras, DormExtras, KitchenSet, LivingRoomSet } from "./sets3";
 import { Dim, DetectionPanel, InfoPill, MiniMap, NameTag, PulseRings, ScreenPhone, Stamp, StatCard, TapRipple, fadeIn, glass } from "./graphics";
 import { DispatchDesk, Headset, ListenRings, LongShadow, PhoneInHand, SoftShadow, WetPatch, alongPath } from "./props3d";
 import * as THREE from "three";
@@ -58,8 +59,10 @@ export const ColdOpen: React.FC = () => {
   // r9 hook: frame 1 is the IMPOSSIBLE image (her phone alone on the wet sidewalk, a shadow over it, the camera slamming
   // in); on "Maya" cut to her walking with a fast push toward the glowing phone in her hand; on "Her phone will" slam
   // back to the phone, which is now calling for help.
-  const hookEnd = maya - 1;
-  const face = f >= hookEnd && f < cutB;
+  // fix r3: frame 0 is Maya mid-stride on the night street, her phone glowing in her hand (character-led hook); the
+  // camera pushes in toward the phone, and the 12:06 "Calling for help" phone beat plays ONCE, on "Her phone will."
+  const hookEnd = 0;
+  const face = f < cutB;
   const clips = [{ anim: "walk" as const, start: 0, offset: 4 }, { anim: "phoneUp" as const, start: -30, mask: "armR" as const }];
   const G = GROUND_PHONE;
   // r7 ground shots: close and high over the phone, so it fills ~55% of the frame width and its "Calling for help" lock
@@ -96,13 +99,12 @@ export const ColdOpen: React.FC = () => {
         )}
         <CameraRig
           rig={cuts([
-            [0, groundShot(0, hookEnd, 0.6, 0.47)], // r10: frame 0 already opens on the big lock-screen framing
-            [hookEnd, (fr) => {
-              // fast push from a medium (head to hips) to her hands + glowing phone, from her right so the screen glow reads
-              const k = prog(fr, hookEnd, cutB, "out");
+            [0, (fr) => {
+              // fix r3: opens already moving: a three-quarter front tracking shot that pushes from head-to-knees in to her
+              // hands + glowing phone (from her right so the screen glow reads); ends on a medium, never a face close-up
+              const k = prog(fr, 0, cutB, "inOut");
               const zz = z(fr);
-              // r10: ends on a medium (head to hips, both hands in frame), never a tight face close-up
-              return { pos: [lerp(1.35, 0.95, k), Y + lerp(1.6, 1.5, k), zz + lerp(3.3, 2.35, k)], look: [0.12, Y + lerp(1.3, 1.22, k), zz], fov: lerp(36, 33, k) };
+              return { pos: [lerp(1.4, 0.95, k), Y + lerp(1.65, 1.5, k), zz + lerp(3.4, 2.3, k)], look: [0.12, Y + lerp(1.25, 1.22, k), zz], fov: lerp(36, 33, k) };
             }],
             [cutB, groundShot(cutB, her + 20, 0.44, 0.39)],
           ])}
@@ -118,7 +120,7 @@ export const ColdOpen: React.FC = () => {
         </div>
       )}
       {face && <StickerTitle text="MAYA" at={maya + 3} sub="UNM STUDENT" size={110} x={0.74} y={0.34} rotate={-6} color={C.accent} />}
-      {(f < hookEnd || f >= cutB) && <CallingSticker f={f} pulseFrom={f < hookEnd ? 0 : her} />}
+      {f >= cutB && <CallingSticker f={f} pulseFrom={her} />}
       <Flash at={0} dur={5} color="#ffffff" max={0.2} />
       <Flash at={her} dur={6} color={C.calm} max={0.22} />
       {/* r12: compliance tag: a dramatization with fictional characters, not a real campus incident */}
@@ -153,6 +155,7 @@ export const Arm: React.FC = () => {
   const F0 = S.arm;
   const tap = W(3, "tap:") - F0;
   const cut = W(3, "It") - F0;
+  const side = W(3, "Nothing") - F0 - 2;
   const z0 = -3.4;
   const z = z0 + Math.max(0, f - cut) * WALK_SPEED * 0.9;
   const PWD = 610, bez = PWD * 0.045, sw = PWD - 2 * bez, sh = PWD * 2.07 - 2 * bez;
@@ -194,8 +197,14 @@ export const Arm: React.FC = () => {
             <ListenRings center={[0.1, Y, z]} start={cut} every={40} life={70} maxR={3.6} y={Y + 0.01} opacity={0.3} pool={false} />
             <CameraRig rig={(fr) => {
               const zz = z0 + Math.max(0, fr - cut) * WALK_SPEED * 0.9;
-              const d = lerp(5.6, 3.6, prog(fr, cut, 188, "glide"));
-              return { pos: [0.9 - 0.3 * prog(fr, cut, 188), 1.3, zz + d], look: [0.15, 1.2, zz], fov: 36 };
+              // fix r3: a cut at "Nothing" to a low three-quarter tracking shot (lamps sliding past in parallax), so the
+              // walk is two shots, not 4 s of her walking straight at the lens
+              if (fr >= side) {
+                const k = prog(fr, side, side + 70, "inOut");
+                return { pos: [lerp(2.3, 1.9, k), lerp(0.75, 0.9, k), zz + lerp(1.6, 1.0, k)], look: [0.1, 1.15, zz + 0.2], fov: 40 };
+              }
+              const d = lerp(5.6, 3.6, prog(fr, cut, side, "glide"));
+              return { pos: [0.9 - 0.3 * prog(fr, cut, side), 1.3, zz + d], look: [0.15, 1.2, zz], fov: 36 };
             }} handheld={0.01} />
           </Scene3D>
           <Grade />
@@ -260,9 +269,13 @@ export const Walk: React.FC = () => {
           ) : (
             <>
               <SidewalkCloseup center={[drop[0], Y, drop[2]]} size={3} />
+              {/* fix r3: ground level, so the sidewalk, the lamp-lit street behind and her own feet frame the phone: she is
+                  right there, frozen mid-step, the phone face-up on the pavement in front of her shoes */}
+              <Character look={MAYA} clips={[{ anim: "startle", start: shotC - 3 }]} position={[0.12, Y, mz]} faceFill={0.3} seed={1} />
+              <Glow position={[drop[0], Y + 0.03, drop[2]]} color="#ff4a5a" size={0.55 + 0.15 * Math.sin(hit / 2)} opacity={hit > 5 ? 0.55 : 0} />
               <Phone position={[drop[0], drop[1] + py, drop[2]]} rotation={[-Math.PI / 2 + spin * 0.3, spin * 0.2, 0.55 + spin]} screen={sv("guard-walk")} glow={0.9} />
               {/* r9: cause -> effect: her scream hits the phone's mic as red sound rings rippling out of it */}
-              <ListenRings center={[drop[0], Y, drop[2]]} start={shotC + 6} every={7} life={24} maxR={1.4} y={Y + 0.016} color="#ff5a6a" />
+              <ListenRings center={[drop[0], Y, drop[2]]} start={shotC + 6} every={8} life={26} maxR={1.1} y={Y + 0.016} color="#ff5a6a" pool={false} />
               {/* r11: no body part near the lens any more (her calf read as a giant pink smear): the phone alone on the wet
                   slab, the follower's long shadow lying across it */}
               <FollowerShadow head={[0.05, Y, drop[2] + 0.55]} length={4.2} width={0.8} opacity={0.8} />
@@ -281,8 +294,10 @@ export const Walk: React.FC = () => {
                 return { pos: [1.3 - 0.3 * k, 2.5 - 0.2 * k, zz - lerp(4.0, 3.2, k)], look: [0.05, lerp(0.75, 0.85, k), zz - 0.2], fov: 50 };
               }],
               [shotC, (fr) => {
+                // fix r3: a low, readable ground-level shot (was a top-down view that read as an abstract disc): the lit
+                // phone in the foreground, her shoes and shins just behind it, the street receding; slow push toward the screen
                 const k = prog(fr, shotC, shotC + 40, "out");
-                return { pos: [drop[0] - 0.05+2.5, Y + 2.5, drop[2] - 2.5], look: [drop[0], Y + 0.02, drop[2] + 0.1], fov: 40, roll: deg(-8) };
+                return { pos: [drop[0] + lerp(0.42, 0.32, k), Y + lerp(0.62, 0.52, k), drop[2] + lerp(1.0, 0.78, k)], look: [drop[0] - 0.04, Y + 0.12, drop[2] - 0.12], fov: 50, roll: deg(-4) };
               }],
             ])}
             handheld={0.008}
@@ -382,11 +397,13 @@ export const FreezeScene: React.FC = () => {
   };
   const vertigo = (fr: number) => {
     const k = prog(fr, s70, reach, "inOut");
-    const fov = lerp(20, 52, k);
-    const half = 1.15; // keep her framed (head to knees) the whole move
+    // fix r3: a medium close-up dolly-zoom (head to chest in the TOP half of the frame, clear of the stat card below);
+    // it was a head-to-knees move that shrank her to a tiny figure at the card's top edge
+    const fov = lerp(18, 32, k);
+    const half = 0.64;
     const d = half / Math.tan(((fov / 2) * Math.PI) / 180);
     const a = 0.45;
-    return { pos: [M[0] + Math.sin(a) * d, Y + 1.15, M[2] + Math.cos(a) * d] as [number, number, number], look: [M[0], Y + 1.05, M[2]] as [number, number, number], fov };
+    return { pos: [M[0] + Math.sin(a) * d, Y + 1.5, M[2] + Math.cos(a) * d] as [number, number, number], look: [M[0], Y + 1.3, M[2]] as [number, number, number], fov };
   };
   // r10: an intentional low angle from behind the phone: the glowing phone sharp in the foreground, her whole frozen
   // figure (torso and clenched hands included) soft beyond it, with the empty slab between them
@@ -405,7 +422,13 @@ export const FreezeScene: React.FC = () => {
       const d = lerp(2.7, 2.25, k);
       return { pos: [M[0] + Math.sin(a) * d, EYE - 0.2 + tremble, M[2] + Math.cos(a) * d], look: [M[0], EYE - 0.42, M[2]], fov: 32 };
     }],
-    [ecuEnd, orbitShot(1.9, 0.75, ecuEnd, s70, 2.9, 0.6, 1.45, 50)],
+    // fix r3: the second move under "of 298 survivors" stays a medium close-up arc (head + chest above the stat card),
+    // not a pull-out to a wide building shot
+    [ecuEnd, (fr) => {
+      const k = prog(fr, ecuEnd, s70, "inOut");
+      const a = lerp(1.15, 0.6, k), d = lerp(2.5, 2.3, k);
+      return { pos: [M[0] + Math.sin(a) * d, Y + 1.55, M[2] + Math.cos(a) * d], look: [M[0], Y + 1.3, M[2]], fov: 30 };
+    }],
     [s70, vertigo],
     [reach, ground],
     [back, (fr) => {
@@ -499,7 +522,8 @@ export const Contacts: React.FC = () => {
       <AbsoluteFill style={{ transform: `scale(${zoom})` }}>
         {shot === 0 && (
           <Scene3D fog={null} background="#221a2c">
-            <Studio top="#3a2a36" bottom="#140f1a" floor="#241c2a" rimColor="#ffb08a" bokeh />
+            {/* fix r3: Mom in her kitchen at night (was a bust against an empty void) */}
+            <KitchenSet />
             {/* r7 acting: she is mid-turn when the alert lands, swings to the phone, steps back, a hand comes to her chest */}
             <Character look={MOM_HD} clips={[{ anim: "idle", start: 0 }, { anim: "phoneRing", start: 2 }]} holdR="phone" phoneScreen={alert} phoneGlow={1}
               position={[0, 0, -0.08 * prog(f, 8, 26, "inOut")]} rotationY={lerp(0.85, 0.2, prog(f, 0, 14, "out"))} seed={2} faceFill={0.45} act={0.9}
@@ -511,6 +535,7 @@ export const Contacts: React.FC = () => {
         {shot === 1 && (
           <Scene3D fog={null} background="#151330">
             <DormRoom phoneLight={0.04} mood="alert" posterArt />
+            <DormExtras />
             <Character look={ROOMMATE_HD} clips={[{ anim: "sit", start: 0 }, { anim: "phoneRing", start: c2 - 8, mask: "upper" }]} position={BED_SEAT} rotationY={lerp(0.3, 0, prog(f, c2, c2 + 10, "out"))} holdR="phone" phoneScreen={alert} phoneGlow={0.35} seed={6} faceFill={0.3} act={1}
               face={{ eyesWide: 0.6 * prog(f, c2 + 4, c2 + 10), worry: 0.8, brow: 0.5 }} />
             <ContactLights at={BED_SEAT} />
@@ -521,7 +546,8 @@ export const Contacts: React.FC = () => {
         )}
         {shot === 2 && (
           <Scene3D fog={null} background="#14122a">
-            <Studio top="#1d2a44" bottom="#0f1424" floor="#1a1e30" rimColor={P.calm} bokeh />
+            {/* fix r3: the brother in his living room (shelf, photos, couch, a warm floor lamp) */}
+            <LivingRoomSet />
             <Character look={BROTHER_HD} clips={[{ anim: "idle", start: 0 }, { anim: "phoneRing", start: c3 - 14 }]} holdR="phone" phoneScreen={alert} phoneGlow={1}
               position={[0.06 * prog(f, c3, c3 + 16, "inOut"), 0, 0.06 * prog(f, c3, c3 + 16, "inOut")]} rotationY={lerp(-0.9, -0.25, prog(f, c3, c3 + 12, "out"))} seed={9} faceFill={0.45} act={0.9}
               face={{ eyesWide: 0.5 * prog(f, c3 + 4, c3 + 10), worry: 0.8, brow: 0.6 }} />
@@ -701,6 +727,8 @@ export const Dispatch: React.FC = () => {
           <Scene3D fog={null} background="#161a30" exposure={1.1}>
             <Studio top="#222a4a" bottom="#0f1224" floor="#1a1e34" bokeh />
             <DispatchDesk screen={scr("17b-alert-active-timeline")} screenTex={mapTex()} />
+            {/* fix r3: a real dispatch room behind her (screen wall, clock, a second console) */}
+            <DispatchExtras />
             <Character look={DISPATCHER_HD} position={[0, 0.0, 0.75]} rotationY={Math.PI - 0.35} clips={[{ anim: "sit", start: 0 }, { anim: "talk", start: 6, mask: "head" }]} seed={11} faceFill={0.6} face={{ worry: 0.35, brow: 0.3 }} act={0.4} />
             {/* r7: a side monitor with Maya's live pin, in frame behind her shoulder, so "a dispatcher" reads at once */}
             <group position={[-0.62, 1.12, 1.05]} rotation={[0, 2.25, 0]}>

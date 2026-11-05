@@ -314,11 +314,12 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
   // fix r2: the card sits OVER the next scene (a blurred, dimmed plate that pushes in and resolves to sharp as the
   // sticker leaves), never a full-frame flat burst that hard-cuts out of 3D. Each chapter exits differently.
   const live = !!children;
-  const exitK = interpolate(f, [dur - 8, dur], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // fix r3: the exit completes 2 frames before the cut (the sticker's tail overlapped the next shot's HUD for a frame)
+  const exitK = interpolate(f, [dur - 9, dur - 2], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const ex = exitK * exitK;
   const exitT = [
     `translateY(${ex * 1300}px) rotate(${ex * 14}deg)`, // drops away
-    `scale(${1 + ex * 2.2})`, // zooms through the lens
+    `scale(${1 + ex * 5})`, // zooms through the lens (fix r3: fully opaque, then gone: no half-faded ghost letters)
     `translateY(${-ex * 1400}px) rotate(${-ex * 10}deg)`, // flies up
     `translateX(${-ex * 1400}px) skewX(${ex * 18}deg)`, // whips out left
   ][variant];
@@ -380,7 +381,7 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
       {/* r9: the sticker sits OUTSIDE the whip (it never enters clipped) and the stamp shakes the frame on impact */}
       {/* r10: the sticker slams in with a 3D tilt (it swings flat from ~40 deg) and a squash-and-stretch overshoot, then
           keeps a slow tilt drift so the card never sits as a flat graphic */}
-      <AbsoluteFill style={{ perspective: 1400, perspectiveOrigin: "50% 44%", transform: exitT, opacity: 1 - (variant === 1 ? ex : 0) }}>
+      <AbsoluteFill style={{ perspective: 1400, perspectiveOrigin: "50% 44%", transform: exitT, opacity: f >= dur - 2 || (variant === 1 && ex > 0.45) ? 0 : 1 }}>
         <AbsoluteFill style={{
           transformOrigin: "50% 44%",
           transform: `translate(${shake * Math.sin(f * 7.3) * 14}px, ${shake * Math.cos(f * 5.1) * 10}px) rotateX(${interpolate(f, [0, 5, 9], [38, -6, 0], { extrapolateRight: "clamp" }) + 3 * Math.sin(f / 9)}deg) rotateY(${(variant % 2 ? -1 : 1) * (interpolate(f, [0, 6, 10], [-12, 4, 0], { extrapolateRight: "clamp" }) + 4 * Math.sin(f / 11))}deg) scale(${interpolate(f, [0, 2, 4, 7, 10], [0.86, 1.06, 0.97, 1.02, 1], { extrapolateRight: "clamp" })}, ${interpolate(f, [0, 2, 4, 7, 10], [0.9, 0.86, 1.06, 0.98, 1], { extrapolateRight: "clamp" })})`,

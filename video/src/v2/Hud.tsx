@@ -64,7 +64,7 @@ const PILL: [number, Pill][] = [
   [T.relief, { label: "HELP ARRIVED", sub: "Simulated", color: C.calm, icon: "shield" }], // fix r2: no "SAFE" outcome word
   [T.party, L("Night Out")],
   [T.youOkay, { label: "CHECK-IN", sub: "“You okay?” · 45 s", color: C.warn, icon: "clock" }],
-  [T.noAnswer, { label: "ALERTED", sub: "3 contacts · live map", color: C.accent, icon: "people" }], // r10: same per-user contact list as THE WALK (SPEC §8)
+  [T.noAnswer, { label: "ALERTED", sub: "Roommate + 2 · live map", color: C.accent, icon: "people" }], // fix r3: matches the one contact on screen // r10: same per-user contact list as THE WALK (SPEC §8)
   [T.phone, { label: "LISTENING", sub: "Night Out · server 60 s", color: C.calm, icon: "server" }], // r8: a server check-in, never a biometric
   [T.dark, { label: "SIGNAL LOST", sub: "Phone went dark", color: C.danger, icon: "server" }],
   [T.alarm, { label: "ALERTED", sub: "Server raised alarm", color: C.accent, icon: "server" }],
@@ -76,7 +76,7 @@ const PILL: [number, Pill][] = [
 ];
 const CLOCK: [number, string][] = [
   [0, "12:06 AM"], [S.arm, "12:04 AM"], [S.walk, "12:05 AM"], [B(6), "12:06 AM"], [T.contactsRing - 10, "12:06 AM"], [T.party, "FRI 10:48 PM"], [T.t1102, "FRI 11:02 PM"], [T.t1120, "FRI 11:20 PM"],
-  [T.t1131, "FRI 11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "SUN 1:12 AM"], [T.alarm, "SUN 1:13 AM"], [T.ride, "WED 1:40 AM"],
+  [T.t1131, "FRI 11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "SUN 1:12 AM"], [T.alarm, "SUN 1:15 AM"], [T.ride, "WED 1:40 AM"],
 ];
 /** RISK meter (game-like bar, like the references' BAC / REMEMBERED meters): [frame, value 0..100]; eased between keys. */
 const RISK: [number, number][] = [
@@ -124,7 +124,7 @@ const Icon: React.FC<{ kind: Pill["icon"]; color: string; size: number }> = ({ k
 /** r9: the HUD steps out of the way on close-ups and stat beats (one caption + at most one callout per shot). */
 const HIDE: [number, number][] = [
   [S.freeze, S.contacts], // freeze close-ups + the 70% card
-  [S.dispatch, W(9, "If") - 3], // dispatcher close-up
+  [S.dispatch, W(9, "A") - 2], // fix r3: only the countdown shot plays clean; the HUD (CALLS SHE MADE 0) stays up on the dispatcher
   // fix r2: the emotional close-ups play clean (her slump, the roommate's call); the HUD returns for the check-in + 45 s
   [W(14, "Then") - 2, W(14, "You") - 2],
   [S.roommate, S.phone],
@@ -161,12 +161,7 @@ export const ReelHud: React.FC = () => {
     ff = frame < T.ninety + 40;
     if (ff) clockChanged = frame - 3;
     // r11: the relief beat fast-forwards to a plausible police arrival (+7:12), never "police at +1:38"
-    if (frame >= T.relief) {
-      const r = Math.round(interpolate(frame, [T.relief, T.relief + 16], [90, 424], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
-      clock = `+${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
-      ff = frame < T.relief + 16;
-      if (ff) clockChanged = frame - 3;
-    }
+    // fix r3: no elapsed-time chip on the relief beat (it read as a police response-time claim)
   }
   const drain0 = T.youOkay + 10; // r5: the check-in's 45 s fast-forwards in the gap after "You okay?" (v2_15 cut)
   if (frame >= drain0 && frame < T.noAnswer) {
@@ -174,10 +169,11 @@ export const ReelHud: React.FC = () => {
     clock = `+0:${String(secs).padStart(2, "0")}`;
     ff = true;
   }
-  // r9: the server's 60 s check-in window fast-forwards on screen (never reads as an instant alarm)
+  // fix r3 (SPEC §3.6): the server alarm fires after THREE missed 60 s heartbeats (180 s grace, once-a-minute
+  // watchdog), so the fast-forward runs to +3:00 and the scene clock moves 1:12 -> 1:15 AM
   const srv0 = T.dark + 4;
   if (frame >= srv0 && frame < T.alarm) {
-    const secs = Math.round(interpolate(frame, [srv0, T.alarm - 2], [0, 60], { extrapolateRight: "clamp" }));
+    const secs = Math.round(interpolate(frame, [srv0, T.alarm - 2], [0, 180], { extrapolateRight: "clamp" }));
     clock = `+${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
     ff = true;
   }
@@ -193,7 +189,8 @@ export const ReelHud: React.FC = () => {
   const pinChip = frame >= T.types && frame < S.montage;
   const gl = frame >= T.isnt && frame < T.isnt + 8 ? (frame % 2 ? 10 : -8) : 0;
   const sinceClock = frame - lastChange(frame, CLOCK.map((c) => c[0]));
-  const clockVis = ff || isPlus || pinChip ? 1 : interpolate(sinceClock, [0, 6, CLOCK_HOLD, CLOCK_HOLD + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const noClock = frame >= T.relief && frame < T.party; // fix r3
+  const clockVis = noClock ? 0 : ff || isPlus || pinChip ? 1 : interpolate(sinceClock, [0, 6, CLOCK_HOLD, CLOCK_HOLD + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   // r12: the CALLS SHE MADE 0 badge is sticky again (it popped on/off between shots); it punches at each escalation
   const callsVis = interpolate(frame - T.hudIn, [0, 4], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   void CALLS_HOLD;

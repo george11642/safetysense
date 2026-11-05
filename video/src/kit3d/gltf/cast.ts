@@ -26,10 +26,10 @@ export const MODELS: Record<ModelKey, ModelDef> = {
 /** Material recolor: key = material name (or "mesh/material" to target one mesh), value = color. */
 export type Recolor = Record<string, string>;
 
-export type Extra = "ponytail" | "policeCap" | "badge" | "headset" | "hood" | "bun" | "bobShell";
+export type Extra = "ponytail" | "policeCap" | "badge" | "headset" | "hood" | "bun" | "bobShell" | "hairCap";
 
 /** skinTone / hairTone (r12, opt-in): lock the rendered skin / hair to one tone under any scene lighting (see charMat). */
-export type CastDef = { model: ModelKey; colors: Recolor; extras?: Extra[]; hair?: string; darkFace?: boolean; skinTone?: string; hairTone?: string };
+export type CastDef = { model: ModelKey; colors: Recolor; extras?: Extra[]; hair?: string; darkFace?: boolean; skinTone?: string; hairTone?: string; /** v2 fix r3 (opt-in): source materials to hide (e.g. the ribbed hair slabs under a hairCap). */ hideMats?: string[] };
 
 /** Extra fields a Look may carry to pick a cast member explicitly. */
 export type LookCast = Look & { cast?: CastKey };
@@ -124,6 +124,38 @@ export const CAST = {
   driver2: { model: "casualM", colors: { LightBrown: "#5a2a3a", LightBlue: "#1d1c28", Red_Dark: "#1d1c28", Hair: "#2a1d16" } },
   /** Police officer: navy uniform, cap, badge. */
   officer: { model: "suitM", colors: { Suit: "#1f2c4f", Black: "#141826", White: "#33467a", Tie: "#141826" }, extras: ["policeCap", "badge"] },
+  /** v2 fix r3 (additive, v2 only): maya3 with dark plum ankle boots (the near-white boots read as pale, faceted,
+   *  see-through shins under the pants hem in walk and sit shots). */
+  maya5: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#1d8f91", "Suit_Legs/Black": "#2c3658", White: "#ef7b9b", Hair_Blond: "#4a2c1c", Hair_Brown: "#3a2216", "Suit_Feet/Black": "#2a2030" },
+    extras: ["bobShell"],
+    hair: "#4a2c1c",
+    skinTone: "#e2a587",
+    hairTone: "#5a3424",
+  },
+  /** v2 fix r3: roommate2 with brown boots (same pale-shin fix) and one blonde tone on both hair materials. */
+  roommate3: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#f0b55a", "Suit_Legs/Black": "#4b3f6b", White: "#fff1d6", Hair_Blond: "#d6ad66", Hair_Brown: "#cda35c", "Suit_Feet/Black": "#4a3226" },
+    hair: "#d2aa62",
+    skinTone: "#f0c2a2",
+    hairTone: "#d8b066",
+  },
+  /** v2 fix r3: Mom with ONE auburn tone on both hair materials plus the smooth bob shell and a bun (the alternating
+   *  strand clumps read as a ribbed beehive), lilac cuffs, dark boots. */
+  mom4: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#6a4c9c", "Suit_Legs/Black": "#33294a", White: "#b9a6dc", Hair_Blond: "#6e4029", Hair_Brown: "#683c26", "Suit_Feet/Black": "#2a2232" },
+    extras: ["bobShell", "bun"],
+    hair: "#6e4029",
+    skinTone: "#e8b597",
+    hairTone: "#74462c",
+  },
+  /** v2 fix r3: the rideshare driver with a smooth hair cap over the model's ribbed hair slabs. */
+  driver3: { model: "casualM", colors: { LightBrown: "#5a2a3a", LightBlue: "#1d1c28", Red_Dark: "#1d1c28", Hair: "#2a1d16" }, extras: ["hairCap"], hideMats: ["Hair"], hair: "#2a1d16", hairTone: "#2a1d16" },
+  /** v2 fix r3: brother with the same smooth hair cap. */
+  brother2: { model: "casualM", colors: { LightBrown: "#3f6a5a", LightBlue: "#2a3346", Hair: "#2a1d18" }, skinTone: "#d99c7c", extras: ["hairCap"], hideMats: ["Hair"], hair: "#2a1d18", hairTone: "#2a1d18" },
 } satisfies Record<string, CastDef>;
 export type CastKey = keyof typeof CAST;
 

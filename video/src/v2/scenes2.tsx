@@ -10,6 +10,7 @@ import { Character } from "./Actor";
 import { MAYA, ROOMMATE_HD, MOM_HD, FRIEND_HD, BROTHER_HD, DISPATCHER_HD, GUY_HD } from "./looks";
 import { NOANSWER, S, TITLE, W } from "./cues";
 import { ChapterCard, OverlayScene3D, XRayPhone } from "./sets2";
+import { DormExtras } from "./sets3";
 import * as THREE from "three";
 import { CountdownRing, Dim, InfoPill, LivePage, ScreenPhone, Stamp, TapRipple, fadeIn, glass } from "./graphics";
 import { Hallway, PhoneInHand, ReachingHand } from "./props3d";
@@ -397,13 +398,13 @@ const SmsToast: React.FC<{ at: number }> = ({ at }) => {
   const k = Math.min(1, f / 7);
   const e = 1 - (1 - k) ** 3;
   return (
-    <div style={{ position: "absolute", left: 50, right: 50, top: 500, transform: `translateY(${(1 - e) * -320}px)`, opacity: e, background: "rgba(246,244,252,.95)", borderRadius: 38, padding: "24px 28px", display: "flex", gap: 22, alignItems: "flex-start", boxShadow: `0 20px 50px rgba(0,0,0,.45), 0 0 0 4px ${C.danger}`, fontFamily: OF.caption }}>
+    <div style={{ position: "absolute", left: 50, right: 50, top: 1110, transform: `translateY(${(1 - e) * 320}px)`, opacity: e, background: "rgba(246,244,252,.95)", borderRadius: 38, padding: "24px 28px", display: "flex", gap: 22, alignItems: "flex-start", boxShadow: `0 20px 50px rgba(0,0,0,.45), 0 0 0 4px ${C.danger}`, fontFamily: OF.caption }}>
       <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(180deg,#6af27a,#25c13f)", display: "grid", placeItems: "center", flex: "none" }}>
         <svg width="50" height="46" viewBox="0 0 24 22"><path d="M12 1 C5.4 1 1 5.2 1 10 c0 2.8 1.5 5.2 3.9 6.8 L4 21 l4.6-2.6 c1.1.3 2.2.4 3.4.4 6.6 0 11-4.2 11-9 S18.6 1 12 1z" fill="#fff" /></svg>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, fontWeight: 800, color: "#6b6880" }}>
-          <span>MESSAGES · TIME SENSITIVE</span><span>now</span>
+          <span>📞 AUTOMATED CALL + TEXT</span><span>now</span>
         </div>
         <div style={{ fontSize: 36, fontWeight: 900, color: "#14131f", marginTop: 4 }}>SafetySense (Maya)</div>
         <div style={{ fontSize: 31, fontWeight: 800, color: "#2a2840", lineHeight: 1.22, marginTop: 2 }}>
@@ -439,6 +440,7 @@ export const Roommate: React.FC = () => {
           <div style={{ position: "absolute", inset: 0, filter: `blur(${blur}px) brightness(${1 - blur / 30})` }}>
             <Scene3D fog={null} background="#151330">
               <DormRoom phoneLight={0.12} mood="alert" posterArt />
+              <DormExtras />
               <Character look={ROOMMATE_HD} clips={[{ anim: "sit", start: 0 }, { anim: "phoneRing", start: 2, mask: "upper" }, { anim: "jolt", start: rings + 1, fade: 3, mask: "head" }]} position={BED_SEAT} holdR="phone" phoneScreen={alert} phoneGlow={0.5} seed={6} faceFill={0.25} act={1} face={{ worry: 0.6 * prog(f, rings, rings + 10), eyesWide: 0.5 * prog(f, rings, rings + 8) }} />
               <CameraRig rig={pushIn(0, page + 10, [-1.1, 0.95, -0.35], [0.45, 0.15, 1], 4.0, 3.1, 34)} handheld={0.008} />
             </Scene3D>
@@ -446,18 +448,19 @@ export const Roommate: React.FC = () => {
           <Grade />
           {f < page + 2 && <SmsToast at={rings - 8} />}
           {f >= page && (
-            <div style={{ position: "absolute", left: (1080 - LW) / 2, top: 495, transform: `translateY(${(1 - pageIn) * 900}px)` }}>
+            // fix r3: the live-link page sits lower-right (over her lap / the bed), never over her face during her own beat
+            <div style={{ position: "absolute", left: 1080 - LW - 46, top: 880, transform: `translateY(${(1 - pageIn) * 900}px) rotate(3deg)` }}>
               <LivePage tapAt={tap} width={LW} />
             </div>
           )}
-          {f >= page && <TapRipple at={tap} x={540} y={495 + LW * 2.07 * 0.79} color={C.calm} />}
+          {f >= page && <TapRipple at={tap} x={1080 - 46 - LW / 2} y={880 + LW * 2.07 * 0.79} color={C.calm} />}
         </>
       ) : f < reach ? (
         <>
           <Scene3D fog={{ color: "#1d1430", near: 4, far: 16 }} background="#1d1430">
             <Hallway pulse={0.7} />
             <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitRest", start: -60 }]} />
-            <Character look={ROOMMATE_HD} position={[-0.2, 0, rz]} rotationY={Math.PI} seed={6} clips={[{ anim: "walk", start: run - 10, speed: 1.7 }]} face={{ worry: 0.8, brow: 0.6, mouth: 0.15 }} act={0} faceFill={0.5} />
+            <Character look={ROOMMATE_HD} position={[-0.2, 0, rz]} rotationY={Math.PI} seed={6} clips={[{ anim: "walk", start: run - 10, speed: 1.7 }]} holdR="phone" phoneScreen={alert} phoneGlow={0.4} grip={0.75} face={{ worry: 0.8, brow: 0.6, mouth: 0.15 }} act={0} faceFill={0.5} />
             <pointLight position={[-0.2, 2.0, rz - 1.0]} color="#ffd8b8" intensity={2.4} distance={3} decay={1.6} />
             {/* r7: cut in on the action, a front tracking medium shot (waist up) that backs away ahead of her run */}
             <CameraRig rig={(fr) => {

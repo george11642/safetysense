@@ -294,7 +294,9 @@ const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number,
       const dark = !!cast.darkFace && skin && parentName.includes("Head");
       m.userData.srcMat = n;
       const lock = dark ? undefined : skin ? cast.skinTone : hair ? cast.hairTone : undefined;
-      return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark, toon, lock, lockAmt: skin ? 0.85 : 0.6, hifi });
+      const cm = charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark, toon, lock, lockAmt: skin ? 0.85 : 0.6, hifi });
+      if (cast.hideMats?.includes(n)) { const h = cm.clone(); h.visible = false; return h; } // v2 fix r3 (opt-in; never touch the shared cached material)
+      return cm;
     });
     m.material = Array.isArray(m.material) ? out : out[0];
     m.castShadow = true;
@@ -559,6 +561,9 @@ export type GltfCharacterProps = CharacterProps & {
   /** fix r2 (opt-in): pose keys forced on top of the evaluated clips (IK targets, etc.). */
   poseAdd?: Partial<Pose>;
 };
+
+/** v2 fix r3: hairCap shell fit (head-bone space, meters). Mutable for lab tuning. */
+export const HAIRCAP = { y: 0.13, z: -0.008, tilt: 0.3, r: 0.112, scale: [1.02, 1.1, 1.08] as [number, number, number], theta: 0.6, fTilt: -0.5, fTheta: 0.44, fZ: 0.035, fScale: [1.04, 1.12, 1.08] as [number, number, number] };
 
 export const GltfCharacter: React.FC<GltfCharacterProps> = (props) => {
   const { look, rim: rimIn } = props;
@@ -907,6 +912,18 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
             <group position={[0, 0.15, -0.085]}>
               <mesh material={ponyMat} castShadow={castShadow} scale={[1, 0.9, 0.85]}><sphereGeometry args={[0.052, 18, 14]} /></mesh>
               <mesh material={ponyMat} position={[0, -0.03, 0.02]} scale={[1.3, 0.5, 0.7]}><sphereGeometry args={[0.04, 14, 10]} /></mesh>
+            </group>
+          )}
+          {extras.has("hairCap") && (
+            // v2 fix r3 (opt-in "hairCap" extra, casts that hide the model's ribbed hair slabs): one smooth short-cut hair
+            // shell (crown, sides, nape), tilted so the rim rises at the forehead and drops at the nape
+            <group position={[0, HAIRCAP.y, HAIRCAP.z]} rotation={[HAIRCAP.tilt, 0, 0]}>
+              <mesh material={ponyMat} castShadow={castShadow} scale={HAIRCAP.scale}>
+                <sphereGeometry args={[HAIRCAP.r, 40, 24, 0, Math.PI * 2, 0, Math.PI * HAIRCAP.theta]} />
+              </mesh>
+              <mesh material={ponyMat} castShadow={castShadow} scale={HAIRCAP.fScale} position={[0, 0, HAIRCAP.fZ]} rotation={[HAIRCAP.fTilt - HAIRCAP.tilt, 0, 0]}>
+                <sphereGeometry args={[HAIRCAP.r, 40, 16, 0, Math.PI * 2, 0, Math.PI * HAIRCAP.fTheta]} />
+              </mesh>
             </group>
           )}
           {extras.has("headset") && (

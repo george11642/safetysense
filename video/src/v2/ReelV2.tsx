@@ -46,9 +46,11 @@ const CAPTION_Y = LOW;
 const TITLE_CARDS = [S.walk, S.party, S.phone, S.ride];
 const cancelBubble = (f: number) => f >= W(20, "cancel") - 3 && f < S.duress;
 // fix r2: the stat card no longer hides the captions; they sit just above the card (rhythm + access for muted viewers)
-const statCard = (f: number) => f >= W(7, "of") - 3 && f < WE(7, "freezing.") + 6; // (chunk y is taken at the chunk's first word)
+// fix r3: the whole "In one study of 298 survivors," line is locked at the card's caption y from its first word
+const statCard = (f: number) => f >= W(7, "In") - 3 && f < WE(7, "freezing.") + 6; // (chunk y is taken at the chunk's first word)
 // fix r2: the NO TEXT-TO-911 stamp already says the line, so the word captions step aside while it is up
-const nmStamp = (f: number) => f >= W(22, "no") - 1 && f < W(22, "When") + 4;
+// fix r3: the stamp lands on "listed"; the "with no" caption stays up until "text-to-911." (which the stamp says)
+const nmStamp = (f: number) => f >= W(22, "text-to-911.") - 1 && f < W(22, "When") + 4;
 const endCard = (f: number) => f >= W(24, "It") - 1;
 const hideCaptions = (f: number) =>
   TITLE_CARDS.some((t) => f >= t && f < t + TITLE) || (f >= S.contacts && f < B(8) - 1) || cancelBubble(f) || nmStamp(f) || endCard(f);
@@ -65,10 +67,13 @@ const splitDivider = (f: number) => f >= W(21, "It") && f < S.montage; // fix r2
 // sit under the polaroid grid; the stat card's caption sits just above the card
 const contactsShot = (f: number) => f >= S.contacts && f < S.dispatch;
 const montage = (f: number) => f >= S.montage && f < S.logo;
-const captionY = (f: number) => (contactsShot(f) ? 0.885 : montage(f) ? 0.895 : statCard(f) ? 0.625 : splitDivider(f) ? 0.86 : mapShot(f) ? 0.72 : high(f) ? HIGH : undefined);
-const backingAt = (f: number) => (f >= S.cup && f < S.tilt) || (f >= S.duress && f < W(21, "It"));
+// fix r3: "11:02." sits lower in the party wide (its plate covered the red cup on the counter)
+const cupWide = (f: number) => f >= S.cup && f < W(11, "Someone") - 3;
+const captionY = (f: number) => (cupWide(f) ? 0.88 : contactsShot(f) ? 0.885 : montage(f) ? 0.895 : statCard(f) ? 0.625 : splitDivider(f) ? 0.86 : mapShot(f) ? 0.72 : high(f) ? HIGH : undefined);
+// fix r3: the roommate's "She taps: I'm on my way." sits on a dark plate (pink on her orange sweater had weak contrast)
+const backingAt = (f: number) => (f >= S.cup && f < S.tilt) || (f >= S.duress && f < W(21, "It")) || (f >= W(16, "She") - 3 && f < S.phone);
 export const _be = BE;
-const CUTS = [...SCENES.map((x) => x[0]), W(9, "A") - 2, MAP_AT, W(8, "ring.") - 2, W(8, "gets") - 4].sort((a, b) => a - b);
+const CUTS = [...SCENES.map((x) => x[0]), W(3, "Nothing") - 2, W(9, "A") - 2, MAP_AT, W(8, "ring.") - 2, W(8, "gets") - 4].sort((a, b) => a - b);
 
 export const ReelV2: React.FC = () => {
   const frame = useCurrentFrame();

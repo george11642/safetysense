@@ -199,7 +199,7 @@ export const Server: React.FC = () => {
         <CameraRig rig={cuts([[0, dolly(0, alarm, [1.9, 1.4, 4.0], [1.1, 1.38, 3.0], [[0, 1.15, 0.2], [0.05, 1.25, 0.3]], 38)], [alarm, pushIn(alarm, alarm + 60, [0, 1.2, 0.4], [0.3, 0.08, 1], 2.9, 2.3, 36)]])} handheld={0.006} shakes={[[dark, 0.025], [alarm, 0.02]]} />
       </Scene3D>
       <Grade vignette={0.6} />
-      <Stamp text="NO CHECK-IN" at={dark} out={alarm - 4} y={0.56} size={92} sub="PHONE SILENT · 60 s" from={1.8} damping={9} shake={12} rotate={-3} />
+      <Stamp text="NO CHECK-IN" at={dark} out={alarm - 4} y={0.56} size={92} sub="3 MISSED CHECK-INS · ~3 MIN" from={1.8} damping={9} shake={12} rotate={-3} />
       <Stamp text="SERVER ALERT" at={alarm} y={0.56} size={92} color={C.danger} sub="CONTACTS GET HER LAST LOCATION" from={1.6} damping={10} shake={8} rotate={3} />
       <Flash at={alarm} dur={8} color={C.danger} max={0.3} />
     </AbsoluteFill>
@@ -209,7 +209,7 @@ export const Server: React.FC = () => {
 // ---------------------------------------------------------------------------
 /** r4: the driver is a neutral silhouette (same near-black as the other threat figures): no skin tone anywhere. */
 // r11: the driver is a real person seen from behind (skin, short dark hair, a maroon jacket), not a faceless mannequin
-const DRIVER = { ...GUY_HD, cast: "driver2" as const, skin: "#b9866a", hair: "#2a1d16", top: "#5a2a3a", bottom: "#1d1c28", eyes: "#2e1e14", stubble: true };
+const DRIVER = { ...GUY_HD, cast: "driver3" as const, skin: "#b9866a", hair: "#2a1d16", top: "#5a2a3a", bottom: "#1d1c28", eyes: "#2e1e14", stubble: true };
 const MAYA_SEAT: [number, number, number] = [-0.16, 0.05, -0.75]; // r3: rear middle, so a clean front shot fits between the front seats
 
 /** Rear-view mirror reflection: only the driver's eyes and brow band (no other face detail), dim skin tone falling
@@ -363,14 +363,14 @@ const RearCabin: React.FC = () => {
 export const DRIVE_IK = { ikR: 1, ikRx: -0.15, ikRy: 0.1, ikRz: 0.34, ikL: 1, ikLx: 0.15, ikLy: 0.1, ikLz: 0.34, elbowOut: 0.3 };
 const sp = (x: number, y: number, z: number): [number, number, number] => [MAYA_SEAT[0] + x, y, MAYA_SEAT[2] + z];
 export const BELT = { pts: [sp(-0.24, 1.5, -0.12), sp(-0.15, 1.36, 0.02), sp(-0.07, 1.2, 0.13), sp(0.03, 1.02, 0.17), sp(0.13, 0.85, 0.16), sp(0.2, 0.72, 0.12)], buckle: sp(0.21, 0.7, 0.11) };
-const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eyes?: number; worry?: number; sweep?: number; dome?: number; mayaClips?: { anim: "sit" | "phoneUp"; start: number; mask?: "armR" }[]; turn?: number }> = ({ speed = 0.4, tension = 0, phone, eyes = 0.15, worry = 0, sweep = 0.6, dome = 0.35, mayaClips, turn = 0 }) => (
+const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eyes?: number; worry?: number; sweep?: number; dome?: number; mayaClips?: { anim: "sit" | "phoneUp"; start: number; mask?: "armR" }[]; turn?: number; driverTurn?: number }> = ({ speed = 0.4, tension = 0, phone, eyes = 0.15, worry = 0, sweep = 0.6, dome = 0.35, mayaClips, turn = 0, driverTurn = 0 }) => (
   <>
     <CarInterior speed={speed} tension={tension} sweep={sweep} dome={dome} passengerSeat={false} plush detail frontDetail={false} frontHeadrests={false} />
     <FrontCabin speed={speed} turn={turn} />
     <RearCity speed={speed} />
     <SeatBelt pts={BELT.pts} buckle={BELT.buckle} />
     <RearCabin />
-    <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} poseAdd={DRIVE_IK} grip={1} position={SEATS.driver} seed={2} faceFill={0.25} rim={{ color: "#ffc890", strength: 0.6 }} />
+    <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} poseAdd={driverTurn ? { ...DRIVE_IK, neckTurn: driverTurn, neckNod: 0.06 * Math.abs(driverTurn) } : DRIVE_IK} grip={1} position={SEATS.driver} seed={2} faceFill={0.25} rim={{ color: "#ffc890", strength: 0.6 }} />
     <Character look={MAYA} clips={mayaClips ?? [{ anim: "sit", start: 0 }]} position={[MAYA_SEAT[0], MAYA_SEAT[1] + 0.03, MAYA_SEAT[2]]} holdR="phone" phoneScreen={phone} phoneGlow={0.45} seed={1} faceFill={0.3} act={0.6} ikOffR={[0.02, -0.06, 0.03]} face={worry > 0 ? { worry, brow: 0.5 * worry, smile: 0.1 - 0.4 * worry, eyesWide: 0.3 * worry } : undefined} />
     <RearMirrorHD eyes={eyes} />
     <PassingLights />
@@ -391,6 +391,9 @@ const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eye
     <pointLight position={[-0.75, 1.3, -0.6]} color="#8fb8ff" intensity={1.4} distance={1.5} decay={1.8} />
     {/* r4: rim from the rear window so her silhouette separates from the dark cabin */}
     <pointLight position={[-0.2, 1.5, -1.35]} color="#a8c4ff" intensity={2.2} distance={1.6} decay={1.8} />
+    {/* fix r3: a warm key on her face matched to the street scenes (the teal dash + cool fills turned her skin grey-green
+        and her hair orange, so she read as a different person in the cabin) */}
+    <pointLight position={[MAYA_SEAT[0] + 0.25, 1.48, MAYA_SEAT[2] + 0.55]} color="#ffdcc0" intensity={1.9} distance={1.1} decay={1.7} />
   </>
 );
 
@@ -491,7 +494,8 @@ export const Cancel: React.FC = () => {
       ) : (
         <>
           <Scene3D fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
-            <BackSeat phone={sv("checkin-ride")} tension={0.5} sweep={0.6} dome={0.12} worry={0.8} eyes={0.12} />
+            {/* fix r3: on "Cancel it." he glances up toward the rear-view mirror (a beat of acting, not a static hold) */}
+            <BackSeat phone={sv("checkin-ride")} tension={0.5} sweep={0.6} dome={0.12} worry={0.8} eyes={0.12} driverTurn={0.32 * prog(f, W(20, "cancel") - F0 - 8, W(20, "cancel") - F0 + 4, "inOut")} />
             {/* r5: lifted cabin light; cool rim from the dash so the driver's headrest + shoulder read as a silhouette */}
             <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={0.9} distance={1.4} decay={1.8} />
             <pointLight position={[0.0, 1.55, 0.2]} color="#c8c0ff" intensity={1.4} distance={2} decay={1.6} />
@@ -503,7 +507,7 @@ export const Cancel: React.FC = () => {
             {/* fix r2: over his LEFT shoulder from the back seat: his hands on the wheel, the lit gauges and the road ahead;
                 his face stays turned away on purpose (dash light rims his cheek and ear) */}
             <pointLight position={[0.3, 1.05, 0.62]} color="#7fe0d2" intensity={1.2} distance={0.8} decay={1.8} />
-            <CameraRig rig={dolly(driver, 150, [-0.36, 1.3, -0.52], [-0.3, 1.29, -0.4], [[0.42, 1.0, 0.8], [0.44, 0.99, 0.8]], 46)} handheld={0.004} near={0.05} />
+            <CameraRig rig={dolly(driver, 140, [-0.38, 1.31, -0.56], [-0.28, 1.28, -0.34], [[0.42, 1.0, 0.8], [0.43, 1.02, 0.8]], 46)} handheld={0.004} near={0.05} />
           </Scene3D>
 
           <Grade vignette={0.8} />

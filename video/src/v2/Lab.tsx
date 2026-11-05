@@ -47,6 +47,26 @@ export const Lab: React.FC = () => {
           <View w={360} cam={[0, 1.3, 1.4]} look={[0, 1.2, 0]} fov={34}><Character look={MAYA} clips={[{ anim: "lockUp", start: -2 }]} /></View>
         </>
       )}
+      {lab === "r3" && (
+        <>
+          <View w={360} cam={[0, 1.5, 1.0]} look={[0, 1.45, 0]} fov={30}><Character look={MOM_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0.8, 1.6, 0.6]} look={[0, 1.45, 0]} fov={30}><Character look={MOM_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0, 1.65, 1.0]} look={[0, 1.55, 0]} fov={30}><Character look={BROTHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0.7, 1.7, -0.8]} look={[0, 1.55, 0]} fov={30}><Character look={BROTHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0.9, 1.75, 0.3]} look={[0, 1.6, 0]} fov={30}><Character look={BROTHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0, 1.5, 1.0]} look={[0, 1.45, 0]} fov={30}><Character look={DISPATCHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0.7, 1.5, 0.7]} look={[0, 1.45, 0]} fov={30}><Character look={DISPATCHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0.6, 0.9, 2.4]} look={[0, 0.75, 0]} fov={34}><Character look={MAYA} clips={[{ anim: "walk", start: 0 }]} /></View>
+          <View w={360} cam={[0.4, 0.7, 1.6]} look={[0, 0.45, 0]} fov={36}><Character look={ROOMMATE_HD} position={[0, 0, 0]} clips={[{ anim: "sit", start: 0 }]} /></View>
+        </>
+      )}
+      {lab === "men" && (
+        <>
+          <View w={360} cam={[0, 1.65, 1.0]} look={[0, 1.55, 0]} fov={30}><Character look={BROTHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0.7, 1.7, -0.8]} look={[0, 1.55, 0]} fov={30}><Character look={BROTHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+          <View w={360} cam={[0.9, 1.75, 0.3]} look={[0, 1.6, 0]} fov={30}><Character look={BROTHER_HD} clips={[{ anim: "idle", start: 0 }]} /></View>
+        </>
+      )}
       {lab === "bust" && (
         <>
           <View cam={[0, 1.4, 1.5]} look={[0, 1.3, 0]} fov={32}><CharacterHD anatomy life={1} look={MAYA} clips={[{ anim: "idle", start: 0 }]} /></View>
