@@ -72,3 +72,11 @@ Import everything from `src/kit3d` (see `index.ts`). `Showcase.tsx` (the `Kit3DS
 - `NotificationToast {at, title, body, critical?}`
 - `PhoneFrame2D {src (mp4 or png), width, trimBefore?}`
 - `Grade {vignette, grain, wash}`, `Flash {at}`, `Fade {inDur, outAt}`
+
+## Skinned glTF characters (`gltf/`, used by v2 + v3)
+`<GltfCharacter>` takes the same props as `<Character>`/`<CharacterHD>` (look, clips, holdR/holdL, phoneScreen, position, rotationY, seed, faceFill, act, ikOffR...).
+- Models: Quaternius CharacterArmature rigs in `public/models/chars/` (licenses: `public/models/LICENSES.md`). Cast + recolors: `gltf/cast.ts` (`look.cast` picks one explicitly; otherwise inferred from the look).
+- Base motion: kit anims map to real clips (`BASE` in `GltfCharacter.tsx`): native Idle, UAL Walk/Jog/Talking/Kneeling retargeted offline with `scripts/bake_ual.mjs` into `public/models/anims/*.json`. Sampled at `frame/30`; full clips crossfade by frame weights.
+- Acting: the kit pose library still runs; `pose(anim) - pose(ref)` is layered on bones as character-space rotations (sit, slump, lookBack, freeze, lockUp, woozy...), `hipDrop` lowers the body, and `ikR/ikL` drive two-bone arm IK (phone, call, drink, hug, wave).
+- Extras (procedural, follow the head/chest bones): ponytail, police cap, badge, headset, hood.
+- Lab: `GltfLab` composition (lineup + motion test).
