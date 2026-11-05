@@ -7,7 +7,7 @@ import { TIMELINE, TOTAL_FRAMES, bEnd, bStart, sec, voEnvelope, w } from "./timi
 import { Captions16, LadderStrip, Letterbox, Shot, Tag, ez } from "./ui";
 import {
   CallMap3D, CarPin3D, PoliceArrive3D, ColdOpen3D, DateGlance3D, DispatchMap3D, HomeSafe3D, MomPhone3D, PartyGuard3D, PartyListen3D, PhoneSmash3D,
-  FreezeInsert3D, DrugsInsert3D, TakenInsert3D,
+  FreezeInsert3D, DrugsInsert3D, TakenInsert3D, PrivacyMic3D, CheckInPhone3D,
   CO_FREEZE, CO_CANT, DRIVER_TURN, PIN_AT,
 } from "./scenes3d";
 import {
@@ -26,7 +26,7 @@ const B = {
   listen3d: bStart("v3_07"), listenReal: W2("v3_07", "It") - 3, checkin: bStart("v3_08"),
   mom: bStart("v3_09"), contacts: W2("v3_09", "automated") + 6, mapLive: bStart("v3_10"), live: W2("v3_10", "location") + 8, dispatch: bStart("v3_11"),
   car: bEnd("v3_11") + 2, pins: bStart("v3_12") - 2, smash: bStart("v3_13") - 3, heart: W2("v3_13", "our") - 13,
-  date: bStart("v3_14") - 3, fake: W2("v3_14", "fake") + 4, privacy: bStart("v3_15") - 4, arch: bStart("v3_16") - 3,
+  date: bStart("v3_14") - 3, fake: W2("v3_14", "fake") + 4, privacy3d: bStart("v3_15") - 4, privacy: W2("v3_15", "While") - 5, arch: bStart("v3_16") - 3,
   team: bStart("v3_17") - 3, home: bEnd("v3_17") + 8, end: bStart("v3_19"),
 };
 const ORDER = Object.keys(B) as (keyof typeof B)[];
@@ -35,6 +35,8 @@ type K = keyof typeof B;
 const f0 = (k: K) => CUTS[k][0];
 const len = (k: K) => CUTS[k][1] - CUTS[k][0];
 const LOCKUP_AT = bStart("v3_18");
+/** v3 fix r3: the check-in cutaway spans "You have 45 seconds." (absolute frames). */
+const CHECK_IN_CUT: [number, number] = [w("v3_08", "You", 1) - 3, w("v3_08", "One") - 4];
 const SMASH_HIT = w("v3_13", "smashed");
 const POLICE_IN = w("v3_11", "they") - 2;
 const POLICE_OUT = w("v3_11", "In") - 3;
@@ -87,7 +89,7 @@ const SoundTrack: React.FC = () => {
       {/* music beds (-24 LUFS), ducked under the voice. Dynamic shape: tense open, hard dip under the problem stat,
           a lift into "Meet SafetySense", a thinner bed for privacy/architecture, a swell into the close. */}
       <Music file="tension_loop.wav" from={0} to={f0("meet") + 6} env={[[0, 0], [20, 0.55], [CO_FREEZE - 16, 0.55], [CO_FREEZE - 12, 0.04], [CO_FREEZE - 1, 0.04], [CO_FREEZE, 0.7], [CO_FREEZE + 10, 0.3], [f0("flash") - 26, 0.3], [f0("flash") - 14, 0], [f0("hero") + 1, 0], [f0("hero") + 6, 0.5], [bEnd("v3_02"), 0.6], [f0("sting"), 1.0], [f0("problem"), 0.45], [f0("stat"), 0.3], [statEnd + 4, 0.4], [w("v3_04", "Drugs") - 2, 0.6], [f0("barriers") + 20, 0.5], [f0("meet") - 32, 0.75], [f0("meet") - 18, 0], [f0("meet") + 6, 0]]} />
-      <Music file="product_pulse_loop.wav" from={f0("meet") - 8} to={f0("team") + 30} env={[[f0("meet") - 8, 0], [f0("meet") + 4, 1.25], [f0("meet") + 70, 0.95], [f0("listen3d") - 10, 0.95], [f0("listen3d") + 12, 0.66], [POLICE_IN - 10, 0.66], [POLICE_IN - 1, 0.3], [POLICE_IN + 3, 0.7], [f0("pins"), 0.7], [f0("smash") - 10, 0.55], [SMASH_HIT - 18, 0.5], [SMASH_HIT - 14, 0.04], [SMASH_HIT - 1, 0.04], [SMASH_HIT + 4, 1.0], [f0("privacy"), 0.85], [f0("privacy") + 40, 0.55], [f0("arch") - 18, 0.85], [f0("arch") + 20, 0.55], [f0("team") - 10, 0.5], [f0("team") + 30, 0]]} />
+      <Music file="product_pulse_loop.wav" from={f0("meet") - 8} to={f0("team") + 30} env={[[f0("meet") - 8, 0], [f0("meet") + 4, 1.25], [f0("meet") + 70, 0.95], [f0("listen3d") - 10, 0.95], [f0("listen3d") + 12, 0.66], [POLICE_IN - 10, 0.66], [POLICE_IN - 1, 0.3], [POLICE_IN + 3, 0.7], [f0("pins"), 0.7], [f0("smash") - 10, 0.55], [SMASH_HIT - 18, 0.5], [SMASH_HIT - 14, 0.04], [SMASH_HIT - 1, 0.04], [SMASH_HIT + 4, 1.0], [f0("privacy3d"), 0.85], [f0("privacy3d") + 40, 0.55], [f0("arch") - 18, 0.85], [f0("arch") + 20, 0.55], [f0("team") - 10, 0.5], [f0("team") + 30, 0]]} />
       <Music file="resolve_pad.wav" from={f0("team") - 20} to={T} env={[[f0("team") - 20, 0], [f0("team") + 40, 0.9], [f0("home") - 10, 1.5], [f0("home") + 30, 1.45], [LOCKUP_AT, 1.1], [T - 75, 1.0], [T - 5, 0]]} />
 
       {/* cold open: quieter and darker (LRA): ambience + his footsteps closing in, a detection hit on the freeze,
@@ -158,7 +160,9 @@ const SoundTrack: React.FC = () => {
       {/* fake call */}
       <Sfx at={f0("fake")} file="phone_ring.wav" vol={0.17} dur={42} fadeOut={8} />
       {/* privacy / architecture / team / close: each section change gets a breath + a swell */}
-      <Sfx at={f0("privacy") - 4} file="whoosh_soft.wav" vol={0.25} dur={48} />
+      <Sfx at={f0("privacy3d") - 4} file="whoosh_soft.wav" vol={0.25} dur={48} />
+      <Sfx at={w("v3_15", "on.") - 2} file="ui_tap.wav" vol={0.3} dur={10} />
+      <Sfx at={f0("privacy") - 3} file="whoosh_soft.wav" vol={0.18} dur={40} />
       <Sfx at={w("v3_15", "encrypted") + 8} file="ui_tap.wav" vol={0.3} dur={10} />
       <Sfx at={f0("arch") - 26} file="riser.wav" vol={0.2} dur={30} />
       <Sfx at={f0("arch") - 4} file="whoosh_soft.wav" vol={0.3} dur={48} />
@@ -183,7 +187,8 @@ const GuardOnBadge: React.FC = () => {
   const atB = w("v3_06", "Action") - f0("party") - 4;
   const pb = ez(frame, atB, atB + 8);
   return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "flex-start", paddingTop: 70, flexDirection: "column", gap: 14 }}>
+    // v3 fix r3: lower-left safe corner (the top-centre pills sat on Ava's head and the friend's face)
+    <AbsoluteFill style={{ alignItems: "flex-start", justifyContent: "flex-end", paddingLeft: 80, paddingBottom: 190, flexDirection: "column", gap: 14 }}>
       <div style={{ opacity: p, transform: `translateY(${(1 - p) * -20}px) scale(${0.9 + 0.1 * p})` }}>
         <Tag color={C.calm} size={34} bg="rgba(13,12,22,.85)">Tap Start Guard · Guard on</Tag>
       </div>
@@ -248,6 +253,29 @@ const InsertTag: React.FC<{ text: string; color: string }> = ({ text, color }) =
   );
 };
 
+/** v3 fix r3: who the kitchen woman is (she is one of the three trusted contacts the app lists). */
+const ContactTag: React.FC = () => {
+  const frame = useCurrentFrame();
+  const p = ez(frame, 4, 12);
+  return (
+    <div style={{ position: "absolute", left: 96, top: 330, opacity: p, transform: `translateX(${(1 - p) * -20}px)` }}>
+      <Tag color={C.calm} size={32} bg="rgba(13,12,22,.85)">Maya Chen · trusted contact</Tag>
+    </div>
+  );
+};
+
+/** v3 fix r3: mic state chip on the privacy 3D beat. */
+const MicChip: React.FC<{ onAt: number }> = ({ onAt }) => {
+  const frame = useCurrentFrame();
+  const on = frame >= onAt;
+  const p = ez(frame, 2, 10);
+  return (
+    <div style={{ position: "absolute", left: 80, top: 70, opacity: p }}>
+      <Tag color={on ? C.calm : C.muted} size={34} bg="rgba(13,12,22,.85)">{on ? "Guard on · mic listening" : "No Guard · mic off"}</Tag>
+    </div>
+  );
+};
+
 /** White flash smash-cut (replaces the dead black frames). */
 const FlashCut: React.FC = () => {
   const frame = useCurrentFrame();
@@ -258,9 +286,12 @@ const FlashCut: React.FC = () => {
 /** 2D sections that get a slow push-in so motion never fully stops (3D shots already have camera moves). */
 // v3 fix r2: "stat" (its own centred push keeps the citation in title-safe), "privacy" (keyed camera) and "end" are out
 const DRIFT = new Set<K>(["mapLive", "problem", "modes", "triggers", "listenReal", "checkin", "contacts", "live", "pins", "heart", "fake", "team"]);
+// v3 fix r3: 3D -> UI cuts are push-throughs (the outgoing shot zooms in with motion blur, the UI settles out of a zoom)
+const ZOUT: Partial<Record<K, number>> = { party: 5, mom: 5, listen3d: 5, date: 5, smash: 5, mapLive: 4 };
+const ZIN: Partial<Record<K, number>> = { hero: 7, triggers: 7, contacts: 7, listenReal: 7, fake: 7, heart: 7, live: 6 };
 export const HybridV3: React.FC = () => {
   const S = (k: K, kind: "cut" | "fade" | "push", node: React.ReactNode, inT = 8, outT = 8) => (
-    <Shot key={k} name={k} from={CUTS[k][0]} to={CUTS[k][1]} kind={kind} inT={inT} outT={outT} drift={DRIFT.has(k) ? 0.055 : 0}>{node}</Shot>
+    <Shot key={k} name={k} from={CUTS[k][0]} to={CUTS[k][1]} kind={kind} inT={inT} outT={outT} drift={DRIFT.has(k) ? 0.055 : 0} zin={ZIN[k] ?? 0} zout={ZOUT[k] ?? 0}>{node}</Shot>
   );
   return (
     <AbsoluteFill style={{ background: "#000" }}>
@@ -270,7 +301,8 @@ export const HybridV3: React.FC = () => {
       {S("hero", "cut", <HeroAlert from={f0("hero")} />)}
       {S("map", "cut", <CallMap3D dur={len("map")} />)}
       <Sequence from={f0("map")} durationInFrames={len("map")}><Toast at={f0("map") + 4} from={f0("map")} y={150} title="SafetySense" body="SafetySense: Ava may need help (sudden stop, then no movement). Live location and what to do: safetysense-live.vercel.app/a/…" /></Sequence>
-      <Sequence from={0} durationInFrames={f0("sting")}><Letterbox inAt={-20} outAt={f0("map") - 4} /></Sequence>
+      {/* v3 fix r3: the bars retract on the smash cut, so the UI cards are never clipped by them */}
+      <Sequence from={0} durationInFrames={f0("sting")}><Letterbox inAt={-20} outAt={f0("flash") - 8} /></Sequence>
       {S("sting", "cut", <BrandSting from={f0("sting")} />)}
 
       {/* PROBLEM */}
@@ -296,11 +328,12 @@ export const HybridV3: React.FC = () => {
       {S("checkin", "cut", <CheckIn from={f0("checkin")} srcStart={Math.round((f0("checkin") - f0("listenReal")) * 0.8)} />)}
       {/* v3 fix r2: the check-in's remaining 35 s are skipped visibly ("+35 s · no answer"), so "No answer?" reads as
           Ava not answering, never as Mom not picking up */}
-      {S("mom", "cut", <><MomPhone3D dur={len("mom")} /><Toast at={f0("mom") + 8} from={f0("mom")} title="SafetySense" body="SafetySense: Ava may need help (missed check-in). Live location and what to do: safetysense-live.vercel.app/a/…" />
+      {/* v3 fix r3: a 1.5 s 3D cutaway breaks the 8 s check-in hold (the buzz in her hand at the party) */}
+      <Sequence from={CHECK_IN_CUT[0]} durationInFrames={CHECK_IN_CUT[1] - CHECK_IN_CUT[0]} name="check-in cutaway"><CheckInPhone3D dur={CHECK_IN_CUT[1] - CHECK_IN_CUT[0]} /><InsertTag text="The quiet check-in" color={C.warn} /></Sequence>
+      {S("mom", "cut", <><MomPhone3D dur={len("mom")} /><ContactTag /><Toast at={f0("mom") + 8} from={f0("mom")} y={110} title="SafetySense" body="SafetySense: Ava may need help (missed check-in). Live location and what to do: safetysense-live.vercel.app/a/…" />
         <SkipChip at={f0("mom") + 1} from={f0("mom")} label="▸▸ +35 s · no answer" style={{ left: 96, top: 800, fontSize: 48 }} /></>)}
       {S("contacts", "cut", <ContactsReal from={f0("contacts")} />)}
-      {/* v3 fix r2: a 6-frame whip across the warm kitchen -> UI cut (the lighting jump was abrupt) */}
-      <Sequence from={f0("contacts") - 3} durationInFrames={7} name="whip mom->contacts"><Whip /></Sequence>
+      {/* v3 fix r3: the light-leak whip is gone; the kitchen pushes through into the contacts UI (ZOUT/ZIN) */}
       {/* v3 fix r1: a 1 s 3D cutaway on "They see your location" (her pin + her people on the map) between UI cards */}
       {S("mapLive", "cut", <><DispatchMap3D dur={len("mapLive")} policeAt={99999} /><InsertTag text="Ava · live location" color={C.calm} /></>)}
       {S("live", "cut", <LiveLink from={f0("live")} />)}
@@ -326,6 +359,8 @@ export const HybridV3: React.FC = () => {
       {S("fake", "cut", <FakeCall from={f0("fake")} />)}
 
       {/* PRIVACY + ARCHITECTURE + TEAM */}
+      {/* v3 fix r3: privacy opens on a 3D beat (her phone wakes into a Guard on "turn it on"), then three claims */}
+      {S("privacy3d", "cut", <><PrivacyMic3D dur={len("privacy3d")} onAt={w("v3_15", "on.") - f0("privacy3d") - 2} /><MicChip onAt={w("v3_15", "on.") - f0("privacy3d") - 2} /></>)}
       {S("privacy", "cut", <Privacy from={f0("privacy")} />)}
       {S("arch", "cut", <Architecture from={f0("arch")} />)}
       {S("team", "cut", <Team from={f0("team")} />)}
@@ -343,12 +378,17 @@ export const HybridV3: React.FC = () => {
       <Captions16 hide={["v3_18", "v3_19"]} cutoffs={ORDER.map((k) => B[k])}
         // one reading channel: no caption while a big on-screen headline says the same words
         // v3 r6: every mute ends >= 20 frames after its line (and Captions16 never re-shows a chunk that started muted)
-        mute={[[w("v3_03", "Most") - 2, w("v3_03", "But") - 2], [w("v3_03", "In") - 2, bEnd("v3_03") + 20], [w("v3_04", "And") - 2, bEnd("v3_04") + 20],
-          [bStart("v3_05") - 2, bEnd("v3_05") + 12], [w("v3_06", "Start") - 2, w("v3_06", "for")],
-          [w("v3_08", "You") - 2, w("v3_08", "You", 1) - 2], [w("v3_08", "One") - 2, bEnd("v3_08") + 8], [w("v3_09", "automated") + 6, w("v3_10", "They") - 2],
+        // v3 fix r3: ONE rule for the whole film: a sentence is muted only as a whole, and only when the on-screen
+        // headline quotes it word for word. "Most safety apps wait for you to press a button", the 70% study line,
+        // "Start a Guard for a walk home..." and "...and a text with a live link" are all captioned in full now.
+        mute={[[w("v3_04", "And") - 2, bEnd("v3_04") + 20],
+          [bStart("v3_05") - 2, bEnd("v3_05") + 12],
+          [w("v3_08", "You") - 2, w("v3_08", "You", 1) - 2], [w("v3_08", "One") - 2, bEnd("v3_08") + 8],
           // v3 fix r2: the sentence "And they can tap" (2nd "and"), ending before "Still no answer" starts
           [w("v3_10", "And", 1) - 2, w("v3_11", "Still") - 2],
           [w("v3_11", "Professional") - 2, w("v3_11", "If") - 2],
+          // v3 fix r3: the privacy headlines quote these three sentences word for word (no double text)
+          [w("v3_15", "While") - 2, bEnd("v3_15") + 12],
           // v3 fix r2: captions now run under privacy (v3_15) and the team (v3_17) too: a projected room with weak
           // audio still gets the narration; the privacy headlines now quote the VO word for word
         ].map(([a, b]) => [a, clampMute(a, b)] as [number, number])}
@@ -365,18 +405,6 @@ const clampMute = (a: number, b: number) => {
   return next === undefined ? b : Math.min(b, next - 2);
 };
 
-/** Whip pan: a bright motion-blurred band sweeps across with a quick slide, bridging two differently lit shots. */
-const Whip: React.FC = () => {
-  const f = useCurrentFrame();
-  const k = f / 6;
-  const peak = 1 - Math.abs(f - 3) / 3.5;
-  return (
-    <AbsoluteFill style={{ pointerEvents: "none", overflow: "hidden" }}>
-      <AbsoluteFill style={{ background: "#120f1c", opacity: Math.max(0, peak) * 0.55 }} />
-      <div style={{ position: "absolute", top: 0, bottom: 0, width: 1400, left: -1400 + k * 3600, background: "linear-gradient(90deg, transparent, rgba(255,214,170,.55) 35%, rgba(255,255,255,.75) 50%, rgba(180,190,255,.5) 65%, transparent)", filter: "blur(40px)" }} />
-    </AbsoluteFill>
-  );
-};
 const Dip: React.FC = () => {
   const f = useCurrentFrame();
   return <AbsoluteFill style={{ background: "#000", opacity: interpolate(f, [0, 3, 6], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) }} />;

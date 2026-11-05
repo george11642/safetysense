@@ -94,3 +94,35 @@ Stills: 10/11/12/13 homes, 05 triggers, 26 live activity, 27 dynamic island, 40/
 - Team: both name plates land in the first ~1.3 s; each lights up on its VO name. End card: a push that runs to the last frame, drifting particles, staggered hotline reveal. Home safe: they turn to each other and smile.
 - Captions: run under privacy (v3_15) and the team (v3_17) too; "Still no answer after 90 seconds?" and "and a timeline." are captioned again (mute ranges are clamped to end before the next beat's first word, and the v3_10 mute matches the 2nd "And"); chunks may hold 7 words / 44 chars, so no orphan "location.".
 - Mix: an extra -4.4 dB duck under "freezing is a normal, involuntary response" and "quietly keeps help coming".
+
+## Fix round 3 changes (no VO regenerated; ledger unchanged)
+- Captions: words animate by opacity + colour only (one size, no per-word scale), so the line never jitters. Late
+  sentence-final highlights fixed by `scripts/v3_fix_late_words.py` (silencedetect -40 dB / 0.1 s on each clip):
+  fires. 117.16 -> 116.74, uploaded. 120.23 -> 119.85, dispatch. 133.84 -> 133.34, people, leave. location, demo, ...
+- One caption rule for the whole film: a sentence is muted only as a whole and only when the on-screen headline quotes
+  it word for word. Now captioned: "Most safety apps...", the 70% study line, "Start a Guard for a walk home...",
+  "...and a text with a live link". Muted (verbatim headlines): NM line, Meet, "You okay?", "One tap...", "And they
+  can tap", "Professional dispatch calls you.", privacy sentences 2-4.
+- Police: real peaked cap (taller domed crown over the hair, band, angled brim); he walks TO Ava, stops ~1.2 m away
+  and raises an open hand; she turns to him, fear easing to relief. Side-on two-shot.
+- Date: both seated at 0.47 m (his chair was 0.25 m), her hips on the booth cushion, his forearms on the table, phone
+  raised from frame 0 (it poked through the tabletop), glasses off the plates, cut-off diner and neon ring removed.
+- Phones get taken: a dark motion-blurred swipe from off-screen left snatches the phone (no hand detail, no contact);
+  startled expression after.
+- Rideshare: two shots. A: from the back seat looking forward (driver from behind, dash glow, instrument cluster,
+  rear-view mirror, windshield lights streaming, door handles) with the PIN pad in her hands; "Cancel it." lands here.
+  B: tight on her face from the empty passenger side (no giant seat-back), lamp sweeps.
+- Characters (v3 only): anisotropic two-lobe hair sheen and a warm skin rim (premiumShade in scenes3d); opt-in `grin`
+  face key (smile line + happy-eye lower lids, unused by v2); per-beat expressions (freeze fear, startle, relief,
+  smiles at home). Kitchen contact is "Maya Chen · trusted contact" on the soft-haired mom2 rig; toast moved into
+  title-safe.
+- Transitions: light-leak whip removed; 3D -> UI cuts are push-throughs (zoom-blur out / settle in, no crossfade).
+- Holds: stat card keyed push onto "reported freezing" (pulses on the word) + DOI line; freeze insert arcs and pushes;
+  a 1.5 s 3D check-in cutaway breaks the "You okay?" hold; privacy opens on a 3D beat (her phone wakes into a Guard on
+  "turn it on"); team camera glides from George to Mary; PIN pads get 1.55x close-ups while typed.
+- Readability: party listening panel 0.44 -> 0.8 scale; Guard HUD moved to the lower-left safe corner; live-link and
+  watch eyebrows removed where phones crossed them; live-link column inside the caption-safe band, larger timeline
+  card; architecture zones end above the caption band; dispatch time badges merged into one sticker.
+- End card: logo settles, number counts in digit by digit and breathes, drift; hotline lines 40-44 px (number 104 px);
+  hold trimmed (runtime 158.0 -> 156.4 s). Hook gets a "+45 s · no check-in" cue; "Everyday" chip removed; letterbox
+  retracts on the smash cut; drug-beat blur masked off her face.

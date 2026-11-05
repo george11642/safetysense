@@ -25,13 +25,29 @@ export const Shot: React.FC<{
   from: number; to: number; name: string; inT?: number; outT?: number; kind?: "cut" | "fade" | "push"; premount?: number; children: React.ReactNode;
   /** v3 r2: slow push-in across the shot (0.03 = 3% scale), so motion never fully stops on 2D sections. */
   drift?: number;
-}> = ({ from, to, name, inT = 8, outT = 8, kind = "fade", premount = 15, children, drift = 0 }) => (
+  /** v3 fix r3: push-through cuts. zin = frames of a zoom-blur settle on entry (1.16 -> 1); zout = frames of a zoom-blur
+   *  push on exit (1 -> 1.14). Paired across a hard cut they read as one camera move through the frame (no crossfade). */
+  zin?: number; zout?: number;
+}> = ({ from, to, name, inT = 8, outT = 8, kind = "fade", premount = 15, children, drift = 0, zin = 0, zout = 0 }) => (
   <Sequence from={from} durationInFrames={to - from + Math.max(outT, 12)} name={name} premountFor={premount}>
     <ShotInner dur={to - from} inT={kind === "cut" ? 0 : inT} outT={0} kind={kind}>
-      {drift ? <Drift dur={to - from} amt={drift}>{children}</Drift> : children}
+      <PushThrough dur={to - from} zin={zin} zout={zout}>
+        {drift ? <Drift dur={to - from} amt={drift}>{children}</Drift> : children}
+      </PushThrough>
     </ShotInner>
   </Sequence>
 );
+
+const PushThrough: React.FC<{ dur: number; zin: number; zout: number; children: React.ReactNode }> = ({ dur, zin, zout, children }) => {
+  const f = useCurrentFrame();
+  if (!zin && !zout) return <>{children}</>;
+  const a = zin ? 1 - clamp01(f / zin) : 0;
+  const b = zout ? clamp01((f - (dur - zout)) / zout) : 0;
+  const ea = a * a, eb = b * b;
+  const sc = 1 + 0.16 * ea + 0.14 * eb;
+  const bl = 14 * ea + 12 * eb;
+  return <AbsoluteFill style={{ transform: `scale(${sc})`, filter: bl > 0.4 ? `blur(${bl}px)` : undefined }}>{children}</AbsoluteFill>;
+};
 
 const Drift: React.FC<{ dur: number; amt: number; children: React.ReactNode }> = ({ dur, amt, children }) => {
   const f = useCurrentFrame();
@@ -369,12 +385,13 @@ export const Captions16: React.FC<{ hide?: string[]; cutoffs?: number[]; mute?: 
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 44 + up, display: "flex", justifyContent: "center", opacity: outO }}>
       <div style={{ maxWidth: 1440, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 15px", padding: "6px 32px 8px", borderRadius: 22, background: "rgba(8,7,14,.66)", backdropFilter: "blur(8px)", boxShadow: "0 8px 30px rgba(0,0,0,.35)" }}>
         {ch.words.map((wd, i) => {
-          const p = clamp01((t - wd.start + 0.08) / 0.14);
-          const cur = t >= wd.start - 0.04 && t < wd.end + 0.05 ? 1 : 0;
+          // v3 fix r3: opacity + colour only (no per-word scale/rise), one size for every word, so the line never
+          // shifts or jitters; each word lights ~50 ms before its VO start (late-alignment words were re-timed too)
+          const p = clamp01((t - wd.start + 0.12) / 0.12);
           return (
             <span key={i} style={{
-              display: "inline-block", fontFamily: F.display, fontWeight: wd.hi ? 800 : 700, fontSize: wd.hi ? 70 : 60, letterSpacing: "-0.01em", lineHeight: 1.18,
-              color: wd.hi ? HI : "#ffffff", opacity: 0.6 + 0.4 * p, transform: `translateY(${(1 - p) * 8}px) scale(${1 + 0.06 * cur * p})`,
+              display: "inline-block", fontFamily: F.display, fontWeight: 800, fontSize: 62, letterSpacing: "-0.01em", lineHeight: 1.18,
+              color: wd.hi && p > 0.5 ? HI : "#ffffff", opacity: 0.42 + 0.58 * p,
               textShadow: `0 2px 0 rgba(0,0,0,.55), 0 4px 22px rgba(0,0,0,.85)${wd.hi && p > 0.5 ? `, 0 0 28px ${HI}99` : ""}`,
             }}>{wd.word}</span>
           );

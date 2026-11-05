@@ -1,6 +1,6 @@
 {
  "format": "16:9, 1920x1080, 30 fps",
- "totalSec": 158.02,
+ "totalSec": 156.4,
  "voSec": 138.57,
  "beats": [
   {
@@ -943,8 +943,8 @@
     },
     {
      "word": "location,",
-     "start": 70.61,
-     "end": 71.17
+     "start": 70.35,
+     "end": 71.03
     },
     {
      "word": "your",
@@ -1087,8 +1087,8 @@
     },
     {
      "word": "you.",
-     "start": 81.56,
-     "end": 81.856
+     "start": 81.34,
+     "end": 81.473
     },
     {
      "word": "If",
@@ -1142,8 +1142,8 @@
     },
     {
      "word": "location.",
-     "start": 84.936,
-     "end": 85.38
+     "start": 84.476,
+     "end": 85.027
     },
     {
      "word": "In",
@@ -1157,7 +1157,7 @@
     },
     {
      "word": "demo,",
-     "start": 86.051,
+     "start": 85.831,
      "end": 86.371
     },
     {
@@ -1355,8 +1355,8 @@
     },
     {
      "word": "heartbeat,",
-     "start": 101.86,
-     "end": 102.3
+     "start": 101.56,
+     "end": 101.973
     },
     {
      "word": "and",
@@ -1459,8 +1459,8 @@
     },
     {
      "word": "leave.",
-     "start": 107.811,
-     "end": 107.871
+     "start": 107.431,
+     "end": 107.752
     }
    ]
   },
@@ -1583,8 +1583,8 @@
     },
     {
      "word": "fires.",
-     "start": 117.16,
-     "end": 117.416
+     "start": 116.74,
+     "end": 117.161
     },
     {
      "word": "Then",
@@ -1618,8 +1618,8 @@
     },
     {
      "word": "uploaded.",
-     "start": 120.234,
-     "end": 120.464
+     "start": 119.854,
+     "end": 120.315
     }
    ]
   },
@@ -1742,8 +1742,8 @@
     },
     {
      "word": "people,",
-     "start": 131.715,
-     "end": 132.115
+     "start": 131.415,
+     "end": 131.783
     },
     {
      "word": "and",
@@ -1762,8 +1762,8 @@
     },
     {
      "word": "dispatch.",
-     "start": 133.835,
-     "end": 133.985
+     "start": 133.335,
+     "end": 133.867
     }
    ]
   },
@@ -1772,7 +1772,7 @@
    "file": "vo/v3/v3_17.mp3",
    "startSec": 135.234,
    "durationSec": 9.48,
-   "highlight": "George Teifel · Mary Teifel",
+   "highlight": "George Teifel \u00b7 Mary Teifel",
    "words": [
     {
      "word": "SafetySense",

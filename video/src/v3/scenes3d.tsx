@@ -1,6 +1,7 @@
 // v3 3D vignettes (same Maya + sets as v2, built from src/kit3d). Frames here are LOCAL to each <Shot>.
 // Trauma-informed: danger is implied (a figure in the distance, a startle), and we always cut away before contact.
 import React, { useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { AbsoluteFill, staticFile, useCurrentFrame } from "remotion";
 import { Scene3D } from "../kit3d/sets/common";
@@ -37,9 +38,13 @@ export const AVA: Look = { ...LOOKS.maya, hairStyle: "bob", eyes: "#5a3b2a", las
 const Character: React.FC<CharacterProps> = (p) => {
   const pos = (p.position ?? [0, 0, 0]) as V3;
   const standing = Math.abs(pos[1]) < 0.02;
+  const ref = React.useRef<THREE.Group>(null);
+  // v3 fix r3: premium shading pass (v3 only, applied to this instance's own meshes): an anisotropic strand sheen on
+  // the hair (two Kajiya-style lobes along the hair flow, so the bob reads as hair, not a faceted helmet) and a warm
+  // subsurface-style rim on the skin
   return (
     <>
-      <GltfCharacter act={0.35} toon {...p} />
+      <group ref={ref}><GltfCharacter act={0.35} toon {...p} /><PremiumPass target={ref} /></group>
       {standing && (
         <mesh position={[pos[0], 0.012, pos[2]]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
           <planeGeometry args={[0.75, 0.75]} />
@@ -48,6 +53,62 @@ const Character: React.FC<CharacterProps> = (p) => {
       )}
     </>
   );
+};
+
+const HAIR_SHEEN = `
+  {
+    vec3 Vv = normalize(vViewPosition);
+    vec3 Nn = normalize(normal);
+    vec3 upV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+    vec3 T = normalize(upV - Nn * dot(Nn, upV) + 1e-4);
+    vec3 L = normalize(vec3(-0.2, 0.45, 0.85));
+    vec3 H = normalize(L + Vv);
+    float t1 = dot(T, normalize(H - 0.12 * Nn));
+    float t2 = dot(T, normalize(H + 0.22 * Nn));
+    float s1 = pow(sqrt(max(0.0, 1.0 - t1 * t1)), 90.0);
+    float s2 = pow(sqrt(max(0.0, 1.0 - t2 * t2)), 34.0);
+    float face = clamp(dot(Nn, L) * 0.6 + 0.5, 0.0, 1.0);
+    gl_FragColor.rgb += (vec3(1.0, 0.9, 0.8) * 0.16 * s1 + diffuseColor.rgb * 0.22 * s2) * face;
+  }`;
+const SKIN_RIM = `
+  {
+    float ndv2 = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+    gl_FragColor.rgb += vec3(1.0, 0.56, 0.42) * 0.12 * pow(1.0 - ndv2, 2.4);
+  }`;
+/** Runs the shading pass right before each render (the rig loads asynchronously, after this wrapper rendered). */
+const PremiumPass: React.FC<{ target: React.RefObject<THREE.Group | null> }> = ({ target }) => {
+  useFrame(() => { if (target.current) premiumShade(target.current); });
+  return null;
+};
+const premiumCache = new Map<string, THREE.Material>();
+const premiumMat = (m: THREE.Material, kind: "hair" | "skin") => {
+  const key = `${m.uuid}|${kind}`;
+  let out = premiumCache.get(key);
+  if (out) return out;
+  const c = m.clone() as THREE.MeshStandardMaterial;
+  const base = (m as THREE.MeshStandardMaterial).onBeforeCompile;
+  const baseKey = (m as THREE.MeshStandardMaterial).customProgramCacheKey?.bind(m);
+  if (kind === "hair") c.roughness = Math.min(c.roughness, 0.5);
+  c.onBeforeCompile = (sh, r) => {
+    base?.call(c, sh, r);
+    sh.fragmentShader = sh.fragmentShader.replace("#include <opaque_fragment>", `#include <opaque_fragment>\n${kind === "hair" ? HAIR_SHEEN : SKIN_RIM}`);
+  };
+  c.customProgramCacheKey = () => `${baseKey ? baseKey() : ""}|v3${kind}`;
+  premiumCache.set(key, c);
+  out = c;
+  return out;
+};
+const premiumShade = (g: THREE.Object3D) => {
+  g.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || mesh.userData.v3prem) return;
+    const src = String(mesh.userData.srcMat ?? "");
+    const lathe = (mesh.geometry as THREE.BufferGeometry)?.type === "LatheGeometry";
+    const kind = src.startsWith("Hair") || lathe ? "hair" : src.startsWith("Skin") ? "skin" : null;
+    if (!kind || Array.isArray(mesh.material)) return;
+    mesh.material = premiumMat(mesh.material, kind);
+    mesh.userData.v3prem = true;
+  });
 };
 /** Fear / worry / relief face overrides (expression acting on top of the clip). */
 const FEAR = { eyesWide: 1, brow: 0.95, worry: 1, mouth: 0.42, smile: -0.5, blink: 0 } as const;
@@ -60,6 +121,7 @@ const SCR = {
   island: staticFile("screens/27-dynamic-island.png"),
   ended: staticFile("v3/screens/session-ended.png"),
   incoming: staticFile("v3/screens/incoming-call-generic.png"), // contacts get a plain phone call, no app
+  checkin: staticFile("screens/15-check-in.png"),
 };
 
 /** Cool back/rim light so characters separate from the dark sets (reads less like flat WebGL). */
@@ -303,11 +365,13 @@ export const FreezeInsert3D: React.FC<{ dur: number }> = ({ dur }) => {
     <>
       <Scene3D fog={{ color: "#0f1226", near: 4, far: 30 }} background="#0f1226">
         <CampusNight dim={0.3} />
-        <Character look={AVA} position={[0, 0, z0]} seed={1} act={0} clips={[{ anim: "freeze", start: -30 }]} faceFill={0.45} />
+        <Character look={AVA} position={[0, 0, z0]} seed={1} act={0} clips={[{ anim: "freeze", start: -30 }]} faceFill={0.45}
+          face={{ eyesWide: 0.95, brow: 0.85, worry: 1, mouth: 0.22, smile: -0.45, blink: 0, eyeX: 0.1 }} />
         <Rim target={[0, 1.4, z0]} from={[-1.4, 2.6, z0 - 3]} color="#9fd8ff" intensity={2.2} />
         <Rim target={[0, 1.4, z0]} from={[1.6, 2.2, z0 - 2.5]} color="#8fa8ff" intensity={1.2} />
         <pointLight position={[0.4, 1.6, z0 + 1.3]} color="#dfe8ff" intensity={1.1} distance={2.6} decay={1.5} />
-        <CameraRig handheld={0.002} rig={pushIn(0, dur, [0, 1.38, z0], [0.08, 0.02, 1], 2.1, 1.75, 30)} />
+        {/* v3 fix r3: a real move (slow arc + push from medium to close) instead of a near-static hold */}
+        <CameraRig handheld={0.002} rig={(f) => { const k = prog(f, 0, dur, "inOut"); const a = -0.3 + 0.42 * k; const d = 2.55 - 0.95 * k; return { pos: [Math.sin(a) * d, 1.44 - 0.04 * k, z0 + Math.cos(a) * d], look: [0, 1.38, z0], fov: 30 }; }} />
       </Scene3D>
       <Grade vignette={0.7} grain={0.06} />
       {/* frost creeping in from the edges */}
@@ -334,7 +398,9 @@ export const DrugsInsert3D: React.FC<{ dur: number }> = ({ dur }) => {
         <CameraRig handheld={0.01} rig={(f) => ({ pos: [0.55 + 0.08 * Math.sin(f / 13), 1.5 + 0.03 * Math.sin(f / 9), 2.35 - 0.25 * prog(f, 0, dur)], look: [0.15, 1.38, 0.9], fov: 32, roll: 0.05 * Math.sin(f / 15) } as never)} />
       </Scene3D>
       <Grade vignette={0.6} grain={0.06} />
-      <AbsoluteFill style={{ backdropFilter: `blur(${1.5 + 1.5 * Math.abs(sway)}px)`, background: `rgba(120,40,110,${0.08 + 0.05 * sway})` }} />
+      {/* v3 fix r3: the room swims but her face (frame centre-left) stays in focus: the blur is masked off around her */}
+      <AbsoluteFill style={{ backdropFilter: `blur(${1.5 + 1.5 * Math.abs(sway)}px)`, background: `rgba(120,40,110,${0.08 + 0.05 * sway})`,
+        WebkitMaskImage: "radial-gradient(ellipse 22% 34% at 44% 38%, transparent 55%, #000 100%)", maskImage: "radial-gradient(ellipse 22% 34% at 44% 38%, transparent 55%, #000 100%)" }} />
     </>
   );
 };
@@ -350,6 +416,7 @@ export const TakenInsert3D: React.FC<{ dur: number }> = ({ dur }) => {
       <Scene3D fog={{ color: "#120f26", near: 5, far: 32 }} background="#120f26">
         <CampusNight dim={0.3} />
         <Character look={AVA} position={[0, 0, z0]} seed={1} holdR={frame < GRAB ? "phone" : "none"} phoneScreen={SCR.home} phoneGlow={0.6} act={0}
+          face={frame < GRAB ? { worry: 0.35, brow: 0.15, eyeY: -0.4 } : { eyesWide: 1, brow: 0.9, worry: 0.7, mouth: 0.38, smile: -0.4, blink: 0, eyeX: -0.7 }}
           ikOffR={[0.02, -0.1, 0.06]}
           clips={[{ anim: "idle", start: 0 }, { anim: "phoneUp", start: -20, mask: "upper", end: GRAB + 1, fade: 2 }, { anim: "flinchBack", start: GRAB, fade: 2, mask: "upper" }]} />
         {/* the phone whips away to frame left (whoever took it stays off screen) */}
@@ -361,7 +428,26 @@ export const TakenInsert3D: React.FC<{ dur: number }> = ({ dur }) => {
         <CameraRig handheld={0.004} shakes={[[GRAB, 0.02]]} rig={dolly(0, dur, [0.25, 1.35, z0 + 1.9], [0.22, 1.33, z0 + 1.7], [[-0.05, 1.22, z0], [-0.05, 1.22, z0]], 34)} />
       </Scene3D>
       <Grade vignette={0.6} grain={0.06} />
+      {/* v3 fix r3: the cause, shown tastefully: a dark motion-blurred swipe from off-screen left snatches the phone
+          (no hand detail, no body, no contact with her) */}
+      <SnatchSwipe frame={frame} at={GRAB} />
     </>
+  );
+};
+
+const SnatchSwipe: React.FC<{ frame: number; at: number }> = ({ frame, at }) => {
+  const t = (frame - at + 4) / 9; // across frames at-4 .. at+5
+  if (t <= 0 || t >= 1) return null;
+  const inK = Math.min(1, t / 0.45), outK = Math.max(0, (t - 0.45) / 0.55);
+  const tip = -10 + 60 * inK - 75 * outK; // % of width: reaches the phone at the grab, then whips back out left
+  const o = Math.sin(Math.PI * t);
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none", overflow: "hidden" }}>
+      <div style={{ position: "absolute", top: "55%", height: "16%", left: "-30%", width: `${30 + tip}%`, borderRadius: "0 999px 999px 0", opacity: 0.95 * o,
+        background: "linear-gradient(90deg, rgba(8,7,14,0) 0%, rgba(8,7,14,.8) 40%, rgba(14,12,24,.97) 85%, rgba(34,30,52,.95) 100%)", filter: "blur(12px)", transform: "rotate(-5deg)" }} />
+      <div style={{ position: "absolute", top: "55.5%", height: "3.5%", left: "-10%", width: `${10 + tip}%`, opacity: 0.8 * o,
+        background: "linear-gradient(90deg, transparent, rgba(180,190,255,.6))", filter: "blur(8px)", transform: "rotate(-5deg)" }} />
+    </AbsoluteFill>
   );
 };
 
@@ -517,7 +603,8 @@ export const MomPhone3D: React.FC<{ dur: number }> = ({ dur }) => {
     <>
       <Scene3D fog={null} background="#151330">
         <HomeKitchen />
-        <Character look={LOOKS.mom} position={[-0.15, 0, -0.35]} seed={6} holdR={frame >= PICK ? "phone" : "none"} phoneScreen={SCR.incoming} phoneGlow={0.7}
+        {/* v3 fix r3: Maya Chen (a trusted contact, labelled on screen), on the SuitFemale rig: soft hair, no spiky slabs */}
+        <Character look={{ ...LOOKS.mom, cast: "mom2" } as Look} position={[-0.15, 0, -0.35]} seed={6} holdR={frame >= PICK ? "phone" : "none"} phoneScreen={SCR.incoming} phoneGlow={0.7}
           life={1}
           face={frame >= PICK + 6 ? (() => { const k = clamp((frame - PICK - 6) / 10); return { worry: 1.1 * k, brow: 0.4 * k, eyesWide: 0.45 * k, mouth: 0.12 * k, smile: 0.05 - 0.2 * k, eyeY: -0.3 }; })() : undefined}
           clips={[{ anim: "idle", start: 0 }, { anim: "lookBack", start: 0, end: 10, mask: "head" }, { anim: "phoneRing", start: PICK, mask: "upper", fade: 6 }]} />
@@ -628,31 +715,70 @@ const CabinDressing: React.FC = () => {
   );
 };
 
-// v3 fix r2: ONE continuous push-in from the empty front passenger seat (no cut, no lighting jump): Ava belted in the
-// back, tense (brows knit, eyes squeezed), the PIN screen glowing in her hand, street lights sweeping across the cabin.
+/** v3 fix r3: the front of the cabin, seen from the back seat: a rear-view mirror, windshield glass with the road's
+ *  lights streaming toward us, a lit dash cluster, door handles, a passenger headrest. */
+const FrontDressing: React.FC = () => {
+  const frame = useCurrentFrame();
+  const lights = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({ x: (hash(i * 4.1) - 0.5) * 6, y: 0.9 + hash(i * 2.3) * 0.9, ph: hash(i * 9.7), c: ["#ffd27a", "#ff9e7a", "#9fb2ff", "#ff5a5a"][i % 4], s: 0.06 + hash(i * 1.7) * 0.1 })), []);
+  return (
+    <group>
+      {/* rear-view mirror on its stalk */}
+      <mesh position={[0, 1.36, 0.86]}><cylinderGeometry args={[0.008, 0.008, 0.08, 8]} /><meshStandardMaterial color="#15141c" /></mesh>
+      <group position={[0, 1.29, 0.84]} rotation={[0.12, Math.PI, 0]}>
+        <mesh><boxGeometry args={[0.26, 0.075, 0.03]} /><meshStandardMaterial color="#121118" roughness={0.4} /></mesh>
+        <mesh position={[0, 0, -0.016]}><planeGeometry args={[0.235, 0.055]} /><meshBasicMaterial color="#2a3158" toneMapped={false} /></mesh>
+      </group>
+      {/* windshield: dark glass with a faint sheen; the road's lights stream toward us beyond it */}
+      <mesh position={[0, 1.18, 1.08]} rotation={[-0.5, 0, 0]}><planeGeometry args={[1.55, 0.62]} /><meshBasicMaterial color="#b9c6ff" transparent opacity={0.05} depthWrite={false} toneMapped={false} /></mesh>
+      {lights.map((l, i) => {
+        const z = 9 - (((frame * 0.16 + l.ph * 8) % 8));
+        return <Glow key={`wl${i}`} position={[l.x, l.y, z + 1.4]} color={l.c} size={l.s * 3} opacity={0.7} />;
+      })}
+      {/* instrument cluster glow behind the wheel + centre screen */}
+      <mesh position={[0.38, 1.0, 0.86]} rotation={[-0.4, 0, 0]}><planeGeometry args={[0.32, 0.11]} /><meshBasicMaterial color="#5cc7b2" transparent opacity={0.55} toneMapped={false} /></mesh>
+      <Glow position={[0.38, 1.0, 0.84]} color="#5cc7b2" size={0.35} opacity={0.35} />
+      {/* door handles + armrests on both rear doors */}
+      {[-0.765, 0.765].map((x) => (
+        <group key={x}>
+          <mesh position={[x, 0.8, -0.45]}><boxGeometry args={[0.02, 0.03, 0.12]} /><meshStandardMaterial color="#c9cbd8" metalness={0.85} roughness={0.2} /></mesh>
+          <mesh position={[x, 0.62, -0.7]}><boxGeometry args={[0.07, 0.06, 0.55]} /><meshStandardMaterial color="#2e2b3c" roughness={0.7} /></mesh>
+        </group>
+      ))}
+    </group>
+  );
+};
+
+// v3 fix r3: two shots. A (0-SHOT_B): from her seat looking forward: the dark driver from behind, the dash, the mirror,
+// the road streaming past; her hands in the foreground hold the phone on the PIN pad ("Cancel it." lands here).
+// B: the push-in on her tense face, a street lamp sweeping across her.
+const SHOT_B = 30;
 const CarInside: React.FC<{ dur: number }> = ({ dur }) => {
   const frame = useCurrentFrame();
   const worry = clamp((frame - 4) / 10);
   const down = prog(frame, PIN_AT - 12, PIN_AT + 6, "inOut");
-  // a passing street lamp sweeps over her every ~1.3 s
-  const sw = Math.max(0, Math.sin((frame / 40) * Math.PI * 2 - 1.2)) ** 3;
+  const sw = Math.max(0, Math.sin((frame / 34) * Math.PI * 2 - 1.2)) ** 3;
+  const A = frame < SHOT_B;
   return (
     <>
       <Scene3D fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
-        <CarInterior tension={0.05} plush detail dome={0.35} frontHeadrests={false} passengerSeat={false} />
+        <CarInterior tension={0.05} plush detail dome={A ? 0.1 : 0.35} frontHeadrests={A} passengerSeat={A} />
         <CabinDressing />
-        <pointLight position={[AVA_SEAT[0] + 0.15, 1.35, AVA_SEAT[2] + 0.5]} color="#ffd6b8" intensity={0.7} distance={1.6} decay={1.5} />
-        <pointLight position={[AVA_SEAT[0] - 0.9, 1.25, AVA_SEAT[2] + 0.6 - 1.2 * sw]} color="#ffcf8a" intensity={2.4 * sw} distance={2.2} decay={1.5} />
+        <FrontDressing />
+        <pointLight position={[AVA_SEAT[0] + 0.15, 1.35, AVA_SEAT[2] + 0.5]} color="#ffd6b8" intensity={A ? 0.15 : 0.7} distance={1.6} decay={1.5} />
+        <pointLight position={[AVA_SEAT[0] - 0.9, 1.25, AVA_SEAT[2] + 0.6 - 1.2 * sw]} color="#ffcf8a" intensity={2.8 * sw} distance={2.2} decay={1.5} />
         <Rim target={[AVA_SEAT[0], 1.15, AVA_SEAT[2]]} from={[AVA_SEAT[0] - 0.3, 1.9, -2.6]} color="#8fa8ff" intensity={1.3} />
-        <Character look={{ ...LOOKS.guy, top: "#1c1b26", jacket: "#16151e", hair: "#0e0d12", skin: "#4a3a34" }} position={SEATS.driver} seed={2} rim={{ color: "#9fb2ff", strength: 0.08 }} faceFill={0} rotationY={0} act={0}
+        <Character look={{ ...LOOKS.guy, top: "#1c1b26", jacket: "#16151e", hair: "#0e0d12", skin: "#4a3a34" }} position={SEATS.driver} seed={2} rim={{ color: "#9fb2ff", strength: 0.12 }} faceFill={0} rotationY={0} act={0}
           face={{ smile: -0.1, brow: -0.2 }}
           clips={[{ anim: "drive", start: 0 }]} />
-        <Character look={AVA} position={AVA_SEAT} seed={1} holdR="phone" phoneScreen={SCR.pin} phoneGlow={0.7} faceFill={0.25} act={0.1}
-          ikOffR={[0.02 + 0.03 * down, -0.12 - 0.13 * down, 0.05 + 0.05 * down]}
-          face={{ worry: 1.0 * worry, brow: -0.3 * worry, eyesWide: 0.25 * worry, blink: 0.06 * worry, mouth: 0.04 * worry, smile: -0.4 * worry, eyeY: -0.2 - 0.5 * down, eyeX: 0.3 - 0.15 * down }}
+        <Character look={AVA} position={AVA_SEAT} seed={1} holdR="phone" phoneScreen={SCR.pin} phoneGlow={0.9} faceFill={0.25} act={0.1}
+          ikOffR={A ? [0.14, -0.02, 0.1] : [0.02 + 0.03 * down, -0.12 - 0.13 * down, 0.05 + 0.05 * down]}
+          face={{ worry: 1.0 * worry, brow: 0.35 * worry, eyesWide: 0.45 * worry, blink: 0, mouth: 0.08 * worry, smile: -0.45 * worry, eyeY: -0.2 - 0.5 * down, eyeX: 0.3 - 0.15 * down }}
           clips={[{ anim: "sit", start: 0 }, { anim: "phoneUp", start: 0, offset: 14, mask: "upper" }]} />
-        <pointLight position={[AVA_SEAT[0] + 0.05, 1.0, AVA_SEAT[2] + 0.45]} color="#bcd0ff" intensity={0.35} distance={0.7} decay={2} />
-        <CameraRig handheld={0.004} rig={dolly(0, dur + 6, [-0.2, 0.98, 0.62], [-0.28, 1.0, 0.22], [[-0.38, 1.12, -0.7], [-0.39, 1.12, -0.7]], 46)} />
+        <pointLight position={[AVA_SEAT[0] + 0.05, 1.0, AVA_SEAT[2] + 0.45]} color="#bcd0ff" intensity={0.45} distance={0.7} decay={2} />
+        <CameraRig handheld={0.004} rig={cuts([
+          [0, dolly(0, SHOT_B, [-0.1, 1.33, -1.02], [-0.11, 1.32, -0.9], [[0.12, 0.98, 0.9], [0.1, 0.99, 0.9]], 54)],
+          [SHOT_B, dolly(SHOT_B, dur + 6, [-0.5, 1.04, 0.42], [-0.46, 1.04, 0.16], [[-0.39, 1.1, -0.7], [-0.4, 1.1, -0.7]], 44)],
+        ])} />
       </Scene3D>
       <Grade vignette={0.55} grain={0.05} />
     </>
@@ -863,15 +989,16 @@ const Restaurant: React.FC = () => {
       {/* booth bench behind her + chair for him */}
       <mesh position={[0.62, 0.24, -0.15]} castShadow receiveShadow><boxGeometry args={[0.6, 0.47, 1.6]} /><meshStandardMaterial color={booth} roughness={0.55} /></mesh>
       <mesh position={[0.95, 0.85, -0.15]} castShadow><boxGeometry args={[0.16, 0.95, 1.6]} /><meshStandardMaterial color={booth} roughness={0.55} /></mesh>
-      <mesh position={[-0.62, 0.23, -0.15]} castShadow receiveShadow><boxGeometry args={[0.45, 0.05, 0.45]} /><meshStandardMaterial color={wood} roughness={0.5} /></mesh>
-      <mesh position={[-0.86, 0.6, -0.15]} castShadow><boxGeometry args={[0.04, 0.75, 0.42]} /><meshStandardMaterial color={wood} roughness={0.5} /></mesh>
-      {[[-0.82, -0.36], [-0.82, 0.06], [-0.42, -0.36], [-0.42, 0.06]].map(([x, z], i) => <mesh key={i} position={[x, 0.11, z]}><boxGeometry args={[0.03, 0.22, 0.03]} /><meshStandardMaterial color={wood} /></mesh>)}
+      {/* v3 fix r3: his chair seat is at the same 0.47 m as the booth (he used to hover above a 0.25 m seat) */}
+      <mesh position={[-0.66, 0.445, -0.15]} castShadow receiveShadow><boxGeometry args={[0.45, 0.05, 0.45]} /><meshStandardMaterial color={wood} roughness={0.5} /></mesh>
+      <mesh position={[-0.9, 0.82, -0.15]} castShadow><boxGeometry args={[0.04, 0.72, 0.42]} /><meshStandardMaterial color={wood} roughness={0.5} /></mesh>
+      {[[-0.86, -0.36], [-0.86, 0.06], [-0.46, -0.36], [-0.46, 0.06]].map(([x, z], i) => <mesh key={i} position={[x, 0.21, z]}><boxGeometry args={[0.03, 0.42, 0.03]} /><meshStandardMaterial color={wood} /></mesh>)}
       {/* table with a cloth, a candle, two wine glasses, plates */}
       <mesh position={[0, 0.38, -0.15]} castShadow><cylinderGeometry args={[0.05, 0.12, 0.74, 16]} /><meshStandardMaterial color="#2a2028" /></mesh>
       <mesh position={[0, 0.75, -0.15]} castShadow receiveShadow><boxGeometry args={[0.72, 0.03, 0.72]} /><meshStandardMaterial color={cloth} roughness={0.85} /></mesh>
       <mesh position={[0, 0.7, -0.15]}><boxGeometry args={[0.76, 0.1, 0.76]} /><meshStandardMaterial color="#e6dccd" roughness={0.9} /></mesh>
       {[[0.2, -0.15], [-0.2, -0.15]].map(([x, z], i) => <mesh key={`pl${i}`} position={[x, 0.772, z]} receiveShadow><cylinderGeometry args={[0.1, 0.09, 0.012, 24]} /><meshStandardMaterial color="#fbf8f2" roughness={0.3} /></mesh>)}
-      {[[0.16, 0.05], [-0.18, -0.36]].map(([x, z], i) => (
+      {[[0.27, 0.13], [-0.27, -0.43]].map(([x, z], i) => (
         <group key={`wg${i}`} position={[x, 0.766, z]}>
           <mesh position={[0, 0.06, 0]}><cylinderGeometry args={[0.004, 0.004, 0.11, 8]} /><meshStandardMaterial color="#e8eef8" transparent opacity={0.7} /></mesh>
           <mesh position={[0, 0.14, 0]}><sphereGeometry args={[0.035, 16, 12, 0, Math.PI * 2, Math.PI / 2.4, Math.PI / 1.8]} /><meshStandardMaterial color="#e8eef8" transparent opacity={0.45} side={THREE.DoubleSide} /></mesh>
@@ -882,15 +1009,9 @@ const Restaurant: React.FC = () => {
         <mesh position={[0, 0.05, 0]}><cylinderGeometry args={[0.022, 0.022, 0.1, 16]} /><meshStandardMaterial color="#f4ecd8" roughness={0.6} /></mesh>
         <mesh position={[0, 0.115, 0]} scale={[1, 1.7 * flick, 1]}><sphereGeometry args={[0.009, 10, 8]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
         <Glow position={[0, 0.12, 0]} color="#ffb35a" size={0.35 * flick} opacity={0.7} />
-        <pointLight position={[0, 0.16, 0]} color="#ffb070" intensity={1.4 * flick} distance={1.8} decay={1.5} castShadow />
+        <pointLight position={[0, 0.16, 0]} color="#ffb070" intensity={1.4 * flick} distance={1.8} decay={1.5} />
       </group>
-      {/* v3 fix r1: depth: a neon sign on the back wall, string lights, and warm bokeh behind the booth */}
-      <group position={[-1.5, 1.85, -1.33]}>
-        <mesh><torusGeometry args={[0.2, 0.014, 8, 40]} /><meshBasicMaterial color="#ff6fa0" toneMapped={false} /></mesh>
-        <mesh position={[0, 0, 0.002]}><torusGeometry args={[0.13, 0.012, 8, 40, Math.PI * 1.3]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
-        <Glow color="#ff6fa0" size={0.9 * flick} opacity={0.45} />
-        <pointLight position={[0, 0, 0.3]} color="#ff6fa0" intensity={0.9} distance={2.4} decay={1.5} />
-      </group>
+      {/* v3 fix r3: the neon ring is gone (it read as a stray UI arc over the sconce) */}
       <Bokeh center={[-0.6, 2.1, -1.2]} spread={[3.2, 0.25, 0.1]} count={22} colors={["#ffd27a", "#ffb35a"]} size={[0.03, 0.06]} opacity={0.6} />
       <Bokeh center={[0, 1.2, -1.25]} spread={[4.5, 0.8, 0.1]} count={16} colors={["#ffb35a", "#ff8f8f", "#9fb2ff"]} size={[0.08, 0.18]} opacity={0.25} />
       {/* background tables (dim) */}
@@ -913,15 +1034,16 @@ export const DateGlance3D: React.FC<{ dur: number }> = ({ dur }) => {
       <Scene3D fog={{ color: "#1d1218", near: 5, far: 16 }} background="#1d1218">
         <Restaurant />
         {/* v3 r6: she sits angled toward camera so the locked look (rose top under the navy jacket) reads */}
-        <Character look={AVA} position={[0.45, SEAT_Y, -0.15]} rotationY={-Math.PI / 2 + 0.55} holdR="phone" phoneScreen={SCR.home} phoneGlow={0.5} faceFill={0.3}
-          ikOffR={[0.02, -0.1, 0.05]}
-          face={{ worry: 0.55 * glance, smile: 0.15 - 0.35 * glance, eyeY: -0.5 * glance, brow: 0.2 * glance, eyeX: track(frame, [[2, 0], [5, 0.8], [12, 0.8], [15, 0]]) }}
-          clips={[{ anim: "sit", start: 0 }, { anim: "lookBack", start: 3, end: 13, fade: 3, mask: "head" }, { anim: "phoneUp", start: 14, mask: "upper" }]} />
-        {/* v3 fix r1: other diners at the dim background tables (the room is not empty) */}
-        <Character look={LOOKS.friend} position={[-1.8, SEAT_Y, -0.6]} rotationY={-Math.PI / 2} seed={12} act={0.4} clips={[{ anim: "sit", start: 0 }, { anim: "talk", start: 0, mask: "upper" }]} />
+        {/* v3 fix r3: she sits ON the booth seat (hips over the cushion, knees under the table, no legs in the seat) */}
+        <Character look={AVA} position={[0.6, SEAT_Y, -0.15]} rotationY={-Math.PI / 2 + 0.4} holdR="phone" phoneScreen={SCR.home} phoneGlow={0.5} faceFill={0.35}
+          ikOffR={[0.0, -0.04, 0.02]}
+          face={{ worry: 0.6 * glance, smile: 0.2 - 0.4 * glance, eyeY: -0.5 * glance, brow: 0.35 * glance, eyeX: track(frame, [[2, 0], [5, 0.8], [12, 0.8], [15, 0]]) }}
+          clips={[{ anim: "sit", start: 0 }, { anim: "lookBack", start: 3, end: 13, fade: 3, mask: "head" }, { anim: "phoneUp", start: -20, mask: "armR" }]} />
+        {/* v3 fix r3: the extra diner cut by the left frame edge is gone; the date's forearms rest ON the table */}
         <Character look={LOOKS.roommate} position={[2.0, SEAT_Y, 0.2]} rotationY={Math.PI / 2} seed={13} act={0.4} clips={[{ anim: "sit", start: 0 }]} />
-        <Character look={LOOKS.guy} position={[-0.6, SEAT_Y, -0.15]} rotationY={Math.PI / 2 - 0.25} seed={8}
-          clips={[{ anim: "sit", start: 0 }, { anim: "talk", start: 0, mask: "upper" }]} />
+        <Character look={LOOKS.guy} position={[-0.66, SEAT_Y, -0.15]} rotationY={Math.PI / 2 - 0.2} seed={8} face={{ smile: 0.3, brow: 0.2, blink: 0 }}
+          ikOffR={[0.0, -0.2, 0.0]} ikOffL={[0.0, -0.2, 0.0]}
+          clips={[{ anim: "sit", start: 0 }, { anim: "hug", start: -30, mask: "upper" }, { anim: "talk", start: 0, mask: "head" }]} />
         <Rim target={[0.45, 1.1, -0.15]} from={[2.4, 2.6, -2.2]} color="#ffb98a" intensity={1.8} />
         <Rim target={[-0.6, 1.1, -0.15]} from={[-2.4, 2.6, -2.2]} color="#9fb2ff" intensity={1.4} />
         <pointLight position={[0.1, 1.35, 1.0]} color="#ffcf9e" intensity={1.6} distance={2.6} decay={1.4} />
@@ -940,9 +1062,10 @@ export const HomeSafe3D: React.FC<{ dur: number }> = ({ dur }) => {
   const frame = useCurrentFrame();
   const PH: V3 = [-1.72, 0.565, -0.98]; // on the bed, behind them (away from any limbs)
   const A_X = BED_SEAT[0] + 0.45, R_X = BED_SEAT[0] - 0.12;
-  const lean = prog(frame, 30, 70, "inOut");
+  const lean = prog(frame, 24, 46, "inOut");
+  const grin = prog(frame, 32, 54, "inOut");
   // v3 fix r2: the payoff has warmth: after the lean they turn to each other, eyes up off the phone, real smiles
-  const turn = prog(frame, 58, 84, "inOut");
+  const turn = prog(frame, 30, 52, "inOut");
   return (
     <>
       <Scene3D fog={null} background="#151330">
@@ -952,11 +1075,11 @@ export const HomeSafe3D: React.FC<{ dur: number }> = ({ dur }) => {
         <pointLight position={[BED_SEAT[0] + 1.2, 1.5, BED_SEAT[2] + 1.3]} color="#ffc896" intensity={2.2} distance={3.6} decay={1.4} />
         <pointLight position={[BED_SEAT[0] - 0.8, 1.0, BED_SEAT[2] + 1.4]} color="#ffb0c0" intensity={0.5} distance={3} decay={1.6} />
         <Character look={AVA} position={[A_X, BED_SEAT[1], BED_SEAT[2]]} seed={1} rotationY={-0.18 - 0.12 * lean - 0.32 * turn} holdR="phone" phoneScreen={SCR.ended} phoneGlow={0.55} faceFill={0.3} act={0.25}
-          ikOffR={[0.03, -0.17, 0.07]}
-          face={{ ...RELIEF, eyeY: -0.55 + 0.6 * turn, eyeX: -0.5 * turn, smile: 0.45 + 0.2 * lean + 0.3 * turn, brow: 0.3 + 0.15 * turn }}
+          ikOffR={[0.03 - 0.1 * turn, -0.17 + 0.07 * turn, 0.07 + 0.05 * turn]}
+          face={{ ...RELIEF, worry: -0.25, eyeY: -0.55 + 0.6 * turn, eyeX: -0.5 * turn, smile: 0.5 + 0.4 * grin, brow: 0.35 + 0.15 * turn, grin: 0.85 * grin } as never}
           clips={[{ anim: "sit", start: 0 }, { anim: "relief", start: 0, mask: "head" }, { anim: "phoneUp", start: 0, offset: 20, mask: "armR" }]} />
-        <Character look={LOOKS.roommate} position={[R_X + 0.05 * lean, BED_SEAT[1], BED_SEAT[2] + 0.04]} seed={6} rotationY={0.35 + 0.15 * lean + 0.25 * turn} faceFill={0.15} act={0.4}
-          face={{ ...RELIEF, smile: 0.65 + 0.25 * turn, eyeX: 0.4 + 0.3 * turn, brow: 0.35 }}
+        <Character look={LOOKS.roommate} position={[R_X + 0.1 * lean, BED_SEAT[1], BED_SEAT[2] + 0.04]} seed={6} rotationY={0.35 + 0.15 * lean + 0.25 * turn} faceFill={0.15} act={0.4}
+          face={{ ...RELIEF, worry: -0.25, smile: 0.65 + 0.3 * grin, eyeX: 0.4 + 0.3 * turn, brow: 0.4, grin: 0.9 * grin } as never}
           clips={[{ anim: "sit", start: 0 }, { anim: "relief", start: 0, mask: "head" }]} />
         {frame < 22 && (
           <>
@@ -970,7 +1093,7 @@ export const HomeSafe3D: React.FC<{ dur: number }> = ({ dur }) => {
           // A: top-down macro, the phone fills the frame
           [0, dolly(0, 22, [PH[0] + 0.03, PH[1] + 0.46, PH[2] + 0.07], [PH[0] + 0.02, PH[1] + 0.38, PH[2] + 0.05], PH, 30)],
           // B: waist-up two-shot, slow push-in
-          [22, dolly(22, dur + 30, [BED_SEAT[0] + 0.3, 1.18, BED_SEAT[2] + 1.95], [BED_SEAT[0] + 0.28, 1.16, BED_SEAT[2] + 1.7], [[BED_SEAT[0] + 0.18, 1.06, BED_SEAT[2]], [BED_SEAT[0] + 0.18, 1.07, BED_SEAT[2]]], 36)],
+          [22, dolly(22, dur + 30, [BED_SEAT[0] + 0.3, 1.0, BED_SEAT[2] + 1.7], [BED_SEAT[0] + 0.28, 1.0, BED_SEAT[2] + 1.42], [[BED_SEAT[0] + 0.18, 1.12, BED_SEAT[2]], [BED_SEAT[0] + 0.18, 1.14, BED_SEAT[2]]], 34)],
         ])} />
       </Scene3D>
       <Grade vignette={0.45} grain={0.05} />
@@ -985,34 +1108,80 @@ export const PoliceArrive3D: React.FC<{ dur: number }> = ({ dur }) => {
   const z0 = mayaZ(CO_FREEZE);
   const blink = Math.floor(frame / 5) % 2;
   const sweep = Math.sin(frame / 7);
-  // v3 r6: he walks in and STOPS 1.3 m short of her, then raises an open hand at chest height (help arriving, space kept)
-  const STOP = 34;
-  const offZ = z0 - 3.2 + Math.min(frame, STOP) * WALK_SPEED * 1.1;
-  const relief = clamp((frame - 20) / 20);
+  // v3 fix r3: help ARRIVES TO her. He walks straight toward her (facing her), slows, stops ~1.2 m away, and raises an
+  // open hand at chest height (a calm "you're okay" gesture, space kept); she turns her head and body to him, eye
+  // contact, and her face eases from fear to relief.
+  const STOP = 30;
+  const walkK = Math.min(frame, STOP) - Math.max(0, Math.min(frame, STOP) - (STOP - 10)) * 0.5; // eases into the stop
+  const offZ = z0 - 3.15 + walkK * WALK_SPEED * 1.15;
+  const relief = clamp((frame - 26) / 22);
+  const turn = prog(frame, 2, 22, "inOut");
   return (
     <>
       <Scene3D fog={{ color: "#120f26", near: 6, far: 40 }} background="#120f26">
         <CampusNight dim={0.3} />
-        {/* she faces 3/4 to camera (rose top + jacket visible), turned toward him */}
-        {/* v3 fix r1: she turns from the dark path toward the lights and the officer (relief), facing camera 3/4 */}
-        <Character look={AVA} position={[AVA_X, 0, z0]} rotationY={Math.PI - 0.3 - 0.55 * prog(frame, 6, 26, "inOut")} seed={1} faceFill={0.35}
-          face={{ worry: 0.9 - 0.6 * relief, brow: 0.3 - 0.2 * relief, smile: -0.3 + 0.45 * relief, eyesWide: 0.4 * (1 - relief) }}
-          clips={[{ anim: "idle", start: 0 }, { anim: "relief", start: 24, fade: 10, mask: "head" }]} />
-        {/* v3 fix r1: a neutral approach: arms relaxed at his sides (no reaching hand), cap + badge, front-lit face */}
-        <Character look={LOOKS.officer} position={[AVA_X - 0.3, 0, offZ]} rotationY={0.15} seed={9} faceFill={0.45} act={0}
-          face={{ smile: 0.25, brow: 0.15 }}
-          clips={[{ anim: "walk", start: 0 }, { anim: "idle", start: STOP, fade: 10 }]} />
-        <pointLight position={[AVA_X + 0.4, 1.8, offZ + 1.0]} color="#ffe0c4" intensity={1.1} distance={2.6} decay={1.5} />
+        <Character look={AVA} position={[AVA_X, 0, z0]} rotationY={Math.PI - 0.3 - 0.5 * (1 - turn)} seed={1} faceFill={0.4} act={0}
+          face={{ worry: 0.85 - 0.65 * relief, brow: 0.55 - 0.35 * relief, smile: -0.35 + 0.6 * relief, eyesWide: 0.55 * (1 - relief), mouth: 0.12 * (1 - relief), eyeX: -0.25, eyeY: 0.1 }}
+          clips={[{ anim: "idle", start: 0 }]} />
+        <Character look={LOOKS.officer} position={[AVA_X - 0.2, 0, offZ]} rotationY={0.12} seed={9} faceFill={0.55} act={0}
+          face={{ smile: 0.35, brow: 0.25, worry: 0.15, eyeX: 0.15 }}
+          ikOffR={[0.06, -0.02, -0.02]}
+          clips={[{ anim: "walk", start: 0, speed: 1 }, { anim: "idle", start: STOP - 4, fade: 10 }, { anim: "phoneUp", start: STOP + 2, fade: 8, mask: "armR" }]} />
+        <pointLight position={[AVA_X + 0.6, 1.8, offZ + 0.9]} color="#ffe0c4" intensity={1.3} distance={2.6} decay={1.5} />
         {/* the (off-screen) cruiser's lights: a softer red/blue spill (no hot salmon skin) */}
         <pointLight position={[2.6, 1.3, z0 - 3 + sweep]} color="#ff3b4e" intensity={blink ? 4.5 : 1.2} distance={9} decay={1.3} />
         <pointLight position={[2.6, 1.3, z0 - 2 - sweep]} color="#3b6bff" intensity={blink ? 1.2 : 5.5} distance={9} decay={1.3} />
         <Glow position={[3.4, 1.2, z0 - 3]} color={blink ? "#ff3b4e" : "#3b6bff"} size={1.6} opacity={0.5} />
-        {/* strong cool rims so both dark-clothed figures separate from the night set */}
         <Rim target={[AVA_X, 1.3, z0]} from={[-1.8, 3, z0 - 3]} color="#a9bcff" intensity={2.2} />
-        <Rim target={[AVA_X - 0.3, 1.3, offZ]} from={[-2.2, 3, offZ - 2]} color="#a9bcff" intensity={1.8} />
-        <pointLight position={[AVA_X + 1.0, 1.7, z0 + 0.4]} color="#ffd9b8" intensity={1.4} distance={2.8} decay={1.4} />
-        {/* v3 fix r1: eye-level two-shot from the front-side: both faces (and his cap) in frame, him coming toward camera */}
-        <CameraRig handheld={0.004} rig={dolly(0, dur, [AVA_X + 2.15, 1.62, z0 - 0.35], [AVA_X + 1.9, 1.6, z0 - 0.5], [[AVA_X - 0.3, 1.42, z0 - 0.8], [AVA_X - 0.3, 1.42, z0 - 0.9]], 36)} />
+        <Rim target={[AVA_X - 0.2, 1.3, offZ]} from={[-2.2, 3, offZ - 2]} color="#a9bcff" intensity={1.8} />
+        <pointLight position={[AVA_X + 1.0, 1.7, z0 + 0.4]} color="#ffd9b8" intensity={1.5} distance={2.8} decay={1.4} />
+        {/* side-on two-shot at eye level: Ava on the left looking right at him, the officer walking in from the right */}
+        <CameraRig handheld={0.004} rig={dolly(0, dur, [AVA_X + 2.45, 1.6, z0 - 1.0], [AVA_X + 2.15, 1.58, z0 - 0.92], [[AVA_X - 0.15, 1.4, z0 - 1.05], [AVA_X - 0.15, 1.42, z0 - 0.88]], 38)} />
+      </Scene3D>
+      <Grade vignette={0.55} grain={0.05} />
+    </>
+  );
+};
+
+/** v3 fix r3: privacy as a 3D cause -> effect: Ava's phone on the dorm duvet, dark (no session, mic off). On "turn it
+ *  on" she starts a Guard: the screen lights to the Guard screen, the mic glow and listening rings start. `onAt` is local. */
+export const PrivacyMic3D: React.FC<{ dur: number; onAt: number }> = ({ dur, onAt }) => {
+  const frame = useCurrentFrame();
+  const PH: V3 = [-1.72, 0.565, -0.98];
+  const on = frame >= onAt;
+  const k = clamp((frame - onAt) / 8);
+  return (
+    <>
+      <Scene3D fog={null} background="#100e26">
+        <ambientLight intensity={0.35} />{/* no room geometry: the macro sits on the duvet only (a wall corner cut into frame) */}
+        <mesh position={[PH[0], PH[1] - 0.006, PH[2]]} rotation={[-Math.PI / 2, 0, 0.35]}><planeGeometry args={[6, 6]} /><meshBasicMaterial color="#120f2a" /></mesh>
+        <Bokeh center={[PH[0] + 0.1, PH[1] - 0.15, PH[2] - 0.3]} spread={[0.6, 0.05, 0.3]} count={16} colors={["#ffd27a", "#ff9e7a"]} size={[0.02, 0.05]} opacity={0.35} />
+        <Phone screen={SCR.ended} glow={0.25} position={on ? [PH[0], PH[1] - 1, PH[2]] : PH} rotation={[-Math.PI / 2, 0, 0.35]} />
+        <Phone screen={SCR.guard} glow={0.4 + 0.5 * k} position={on ? PH : [PH[0], PH[1] - 1, PH[2]]} rotation={[-Math.PI / 2, 0, 0.35]} />
+        {on && <ListenRings center={[PH[0], PH[1] + 0.004, PH[2]]} start={onAt + 2} every={16} count={3} color={C.calm} max={0.34} opacity={0.6} width={0.012} />}
+        <Glow position={[PH[0], PH[1] + 0.03, PH[2]]} color={C.calm} size={0.15 + 0.3 * k} opacity={0.35 * k} />
+        <pointLight position={[PH[0] + 0.3, PH[1] + 0.5, PH[2] + 0.3]} color="#ffc896" intensity={0.8} distance={1.6} decay={1.5} />
+        <CameraRig handheld={0.003} rig={dolly(0, dur, [PH[0] + 0.16, PH[1] + 0.5, PH[2] + 0.26], [PH[0] + 0.06, PH[1] + 0.36, PH[2] + 0.12], [[PH[0], PH[1], PH[2]], [PH[0], PH[1], PH[2]]], 32)} />
+      </Scene3D>
+      <Grade vignette={0.6} grain={0.05} />
+    </>
+  );
+};
+
+/** v3 fix r3: a 1.5 s cutaway inside the long check-in hold: at the party, the quiet "You okay?" buzzes in Ava's hand. */
+export const CheckInPhone3D: React.FC<{ dur: number }> = ({ dur }) => {
+  const frame = useCurrentFrame();
+  return (
+    <>
+      <Scene3D fog={{ color: "#2a1838", near: 6, far: 22 }} background="#2a1838">
+        <PartyKitchen />
+        <Character look={AVA} position={[0.3, 0, 0.95]} rotationY={-0.4} holdR="phone" phoneScreen={SCR.checkin} phoneGlow={1} act={0}
+          ikOffR={[0.02, 0.03, 0.04]}
+          face={{ worry: 0.5, brow: 0.35, eyeY: -0.5, eyesWide: 0.25, blink: 0 }}
+          clips={[{ anim: "idle", start: 0 }, { anim: "phoneUp", start: -20, mask: "armR" }]} />
+        <pointLight position={[0.6, 1.5, 1.7]} color="#ffd6b8" intensity={1.0} distance={2.2} decay={1.5} />
+        <Glow position={[0.42, 1.18, 1.25]} color={C.warn} size={0.18 + 0.04 * Math.sin(frame / 2)} opacity={0.35} />
+        <CameraRig handheld={0.006} shakes={[[2, 0.006], [10, 0.006]]} rig={dolly(0, dur, [0.95, 1.42, 2.15], [0.85, 1.38, 1.9], [[0.3, 1.25, 0.95], [0.32, 1.24, 0.95]], 30)} />
       </Scene3D>
       <Grade vignette={0.55} grain={0.05} />
     </>

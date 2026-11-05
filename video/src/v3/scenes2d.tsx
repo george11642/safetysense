@@ -108,12 +108,14 @@ export const HeroAlert: React.FC<{ from: number }> = ({ from }) => {
           </div>
         </Card>
       </div>
-      <div style={{ position: "absolute", left: 90, top: 330 }}>
+      <div style={{ position: "absolute", left: 56, top: 330 }}>
         {/* v3 fix r2: ONE large, consistent cue in the 2 s smash cut (the timing detail lives in the check-in section) */}
         <div style={{ transform: `rotate(-4deg) scale(${interpolate(t, [2, 7, 10], [0.6, 1.06, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })})`, opacity: interpolate(t, [2, 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), padding: "18px 32px 22px", borderRadius: 24, background: C.warn, color: "#14131f", fontFamily: F.display, fontWeight: 800, boxShadow: "0 16px 40px rgba(0,0,0,.5), 0 0 0 5px #14131f", whiteSpace: "nowrap" }}>
           <div style={{ fontSize: 74, lineHeight: 1 }}>No response</div>
           <div style={{ fontSize: 50, lineHeight: 1.05, marginTop: 8 }}>→ contacts alerted</div>
         </div>
+        {/* v3 fix r3: a time cue so the hook matches the 45 s check-in the film teaches later (SPEC 6.3) */}
+        <div style={{ marginTop: 22, marginLeft: 20, opacity: interpolate(t, [8, 13], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), display: "inline-flex", padding: "10px 22px", borderRadius: 999, background: "#14131f", border: `3px solid ${C.warn}`, fontFamily: F.mono, fontWeight: 700, fontSize: 28, color: C.warn, letterSpacing: "0.05em" }}>▸▸ +45 S · NO CHECK-IN</div>
       </div>
     </AbsoluteFill>
   );
@@ -189,23 +191,32 @@ export const Stat: React.FC<{ from: number }> = ({ from }) => {
   const cols = 23, rows = 13, d = 22, gap = 11;
   // v3 fix r1: the card keeps moving after the count-up: a slow push toward the dots, a light wave across the lit dots
   // v3 fix r2: the push is centred and gentle, so every line stays >= 96 px inside the frame (it drifted off the left edge)
-  const push = interpolate(A - from, [0, 200], [1, 1.04], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.sin) });
+  // v3 fix r3: a keyed camera instead of a 4% creep: settle on the count-up, then push onto "reported freezing" as the
+  // VO reaches "freezing" (that line pulses), so the 5 s hold keeps the 3-5 s cause -> effect rhythm
+  const tFreeze = w("v3_03", "freezing", 1);
+  const pulse = interpolate(A, [tFreeze - 2, tFreeze + 6, tFreeze + 30], [0, 1, 0.35], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const camK = ezIO(A, tFreeze - 16, tFreeze + 10);
+  const push = interpolate(A - from, [0, 60], [1, 1.03], { extrapolateRight: "clamp" }) + 0.07 * camK + 0.01 * ez(A, tFreeze + 10, tFreeze + 90);
+  const ox = 960 - 380 * camK;
   return (
     <AbsoluteFill>
       <Stage tint={C.accent} tint2={ICE} />
       <Chapter n="01" title="The problem" from={from} />
-      <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: "50% 50%" }}>
+      <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: `${ox}px 520px` }}>
       <div style={{ position: "absolute", left: 150, top: 150, width: 800 }}>
         <Kicker color="#c9c6da" size={34}>In one clinical study</Kicker>
         <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 290, lineHeight: 0.95, letterSpacing: "-0.05em", color: C.accent, marginTop: 10, textShadow: `0 0 80px ${C.accent}44`, fontVariantNumeric: "tabular-nums" }}>
           {n}<span style={{ fontSize: 170 }}>%</span>
-          <div style={{ fontSize: 84, color: ICE, letterSpacing: "-0.03em", marginTop: 6, opacity: ez(A, t70, t70 + 10), textShadow: `0 0 50px ${ICE}44` }}>reported freezing</div>
+          <div style={{ fontSize: 84, color: ICE, letterSpacing: "-0.03em", marginTop: 6, opacity: ez(A, t70, t70 + 10), textShadow: `0 0 ${50 + 50 * pulse}px ${ICE}${pulse > 0.5 ? "99" : "44"}`, transform: `scale(${1 + 0.05 * pulse})`, transformOrigin: "left center" }}>reported freezing</div>
         </div>
         <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 46, lineHeight: 1.25, color: C.ink, marginTop: 14, opacity: ez(A, t70 + 6, t70 + 22) }}>
           of 298 women seen after a sexual assault: <span style={{ color: ICE }}>significant tonic immobility</span>, an involuntary inability to move.
         </div>
         <div style={{ fontFamily: F.mono, fontSize: 34, color: "#e0dded", marginTop: 26, opacity: ez(A, t70 + 20, t70 + 36), letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
           Möller et al., Acta Obstet Gynecol Scand, 2017
+        </div>
+        <div style={{ fontFamily: F.mono, fontSize: 30, color: "#c9c6da", marginTop: 8, opacity: ez(A, t70 + 26, t70 + 42), letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+          doi:10.1111/aogs.13174
         </div>
       </div>
       <div style={{ position: "absolute", left: 1010, top: 270, display: "grid", gridTemplateColumns: `repeat(${cols}, ${d}px)`, gap }}>
@@ -344,8 +355,8 @@ export const GuardModes: React.FC<{ from: number }> = ({ from }) => {
       <div style={{ position: "absolute", top: 70, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
         <RiseWords text="Start a Guard." at={-8} size={72} accent={["Guard"]} accentColor={C.calm} />
         <div style={{ display: "flex", gap: 12, opacity: ez(A, from - 4, from + 8) }}>
-          {["Everyday", "Walk Home", "Night Out", "Date", "Ride"].map((m, i) => {
-            const on = i - 1 === cur;
+          {["Walk Home", "Night Out", "Date", "Ride"].map((m, i) => { /* v3 fix r3: no "Everyday" chip (no phone shows it) */
+            const on = i === cur;
             return <Tag key={m} color={on ? C.calm : "#bdbad0"} bg={on ? `${C.calm}26` : "rgba(255,255,255,.03)"} dot={on} size={28}>{m}</Tag>;
           })}
         </div>
@@ -442,7 +453,7 @@ export const SignalRail: React.FC<{ from: number; solid?: boolean; fullAt?: numb
   const onDevice = ez(A, tAll - 2, tAll + 12);
   // v3 fix r1: a compact corner HUD over the 3D party shot; it grows to full size only on the real-app shot
   const full = fullAt === undefined ? 1 : ez(A, fullAt - 4, fullAt + 8);
-  const sc = 0.44 + 0.56 * full; // v3 fix r2: a smaller corner HUD over the party (the characters own the frame)
+  const sc = 0.8 + 0.2 * full; // v3 fix r3: legible at phone size over the party (was 0.44, ~140 px wide)
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div style={{ position: "absolute", right: 80 - 30 * (1 - full), top: 96 - 30 * (1 - full), width: 640, transform: `scale(${sc})`, transformOrigin: "right top", padding: 22, borderRadius: 30, display: "flex", flexDirection: "column", gap: 12,
@@ -503,7 +514,6 @@ export const ListeningReal: React.FC<{ from: number; dur: number }> = ({ from, d
   return (
     <AbsoluteFill>
       <Stage tint={C.calm} tint2={C.accent} />
-      <Chapter n="03" title="Watch · real app" color={C.calm} from={from} />
       {/* v3 fix r1: push in on the live Guard timer + signal row as the VO lists what it feels for */}
       <Cam from={from} keys={[[from, 1, 620, 430], [from + 12, 1.02, 620, 430], [from + 46, 1.34, 620, 400], [from + dur - 30, 1.38, 620, 470], [from + dur, 1.2, 620, 470]]}>
       <div style={{ position: "absolute", left: 420, top: 120, opacity: ph, transform: `translateY(${(1 - ph) * 60}px) scale(${push})`, transformOrigin: "50% 40%" }}>
@@ -669,7 +679,7 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
   const phase2 = ez(A, tWay - 10, tWay + 4);
   const cards: { at: number; crop: [number, number, number, number]; label: string; icon: IconName }[] = [
     { at: tLoc, crop: [64, 548, 676, 560], label: "Live location", icon: "pin" },
-    { at: tBat, crop: [64, 1128, 676, 122], label: "Battery · last update · accuracy", icon: "battery" },
+    { at: tBat, crop: [64, 1128, 676, 122], label: "Battery · last update", icon: "battery" },
     { at: tTime, crop: [44, 2760, 716, 560], label: "Timeline of what happened", icon: "list" },
   ];
   const buttons: { at: number; crop: [number, number, number, number]; color: string }[] = [
@@ -680,7 +690,6 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
   return (
     <AbsoluteFill>
       <Stage tint={C.calm} tint2={C.accent} />
-      <Chapter n="04" title="What your people see" color={C.calm} from={from} />
       <Cam from={from} keys={[[from, 1.06, 360, 380], [from + 12, 1.36, 360, 360], [tTime - 4, 1.36, 360, 420], [tTime + 10, 1.36, 360, 520], [tWay - 20, 1.36, 360, 520], [tWay - 4, 1.06, 360, 520], [from + 240, 1.1, 360, 560]]}>
       <div style={{ position: "absolute", left: 170, top: 150, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
         <Device w={dw} rotY={8} glow={C.calm} reflect={false} island={false}>
@@ -694,8 +703,8 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
         <div style={{ position: "absolute", top: deviceH(dw) + 10, left: -40, width: dw + 80, textAlign: "center", fontFamily: F.mono, fontSize: 30, color: "#d0cde0", letterSpacing: "0.02em" }}>Real page · test alert</div>
       </div>
       </Cam>
-      <div style={{ position: "absolute", left: 650, top: 150, width: 1200 }}>
-        <Kicker color={C.calm} size={30} style={{ opacity: ez(A, from + 2, from + 14) }}>A live link · no app needed</Kicker>
+      <div style={{ position: "absolute", left: 620, top: 104, width: 1240 }}>
+        <Kicker color={C.calm} size={30} style={{ opacity: ez(A, from + 2, from + 14) }}>Live link · no app</Kicker>
         <div style={{ position: "relative", marginTop: 26 }}>
           {/* phase 1: location, battery, timeline */}
           <div style={{ position: "absolute", top: 0, left: 0, display: "flex", gap: 26, opacity: 1 - phase2, transform: `translateY(${-phase2 * 30}px)` }}>
@@ -715,10 +724,12 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
             {(() => {
               const c = cards[2];
               const p = useSpring(c.at - from - 4, { damping: 16, stiffness: 120 });
+              // v3 fix r3: the timeline is the biggest card, with a slow push onto its rows once it lands
+              const tz = 1 + 0.06 * ez(A, c.at + 6, c.at + 60);
               return (
-                <div style={{ opacity: p, transform: `translateY(${(1 - p) * 40}px) scale(${0.94 + 0.06 * p})` }}>
+                <div style={{ opacity: p, transform: `translateY(${(1 - p) * 40}px) scale(${(0.94 + 0.06 * p) * tz})`, transformOrigin: "30% 30%" }}>
                   <Card accent={C.calm} style={{ padding: 14 }}>
-                    <ZoomCrop src={SHARE} imgW={SH_W} imgH={SH_H} crop={c.crop} w={540} />
+                    <ZoomCrop src={SHARE} imgW={SH_W} imgH={SH_H} crop={c.crop} w={600} />
                     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 6px 2px" }}><Icon name={c.icon} size={32} color={C.calm} /><span style={{ fontFamily: F.body, fontWeight: 700, fontSize: 38, color: C.ink }}>{c.label}</span></div>
                   </Card>
                 </div>
@@ -776,10 +787,10 @@ export const DispatchOverlay: React.FC<{ from: number; skip: number }> = ({ from
       </Cam>
       {/* v3 r7: ONE time cue for the skip ("+80 S · 2× speed", ~1.5 s, then gone); the 90 s chip below is the only
           number that stays, matching the VO. Nothing in the top-right except the simulated notice + the ladder. */}
-      <SkipChip at={from + skip} from={from} label="▸▸ 80 s later · 2× speed" style={{ left: 600, top: 150, fontSize: 44 }} />
+      {/* v3 fix r3: ONE time sticker (the separate "80 s later" chip is merged into it) + the Simulated disclosure */}
       <div style={{ position: "absolute", left: 700, top: 300, width: 760 }}>
-        <div style={{ opacity: p90, transform: `translateY(${(1 - p90) * 20}px)` }}>
-          <Tag color={C.warn} size={36}>90 s · still no answer</Tag>
+        <div style={{ opacity: Math.max(p90, ez(A, from + skip - 2, from + skip + 8)), transform: `translateY(${(1 - p90) * 20}px)` }}>
+          <Tag color={C.warn} size={38} dot={false}>▸▸ 90 s · still no answer</Tag>
         </div>
         <div style={{ marginTop: 30, opacity: ez(A, tProf - 4, tProf + 10) }}>
           <RiseWords text="Professional dispatch calls you." at={tProf - from - 2} size={88} accent={["dispatch"]} accentColor={C.danger} />
@@ -904,7 +915,9 @@ export const Pins: React.FC<{ from: number }> = ({ from }) => {
       <Stage tint={focusD > 0.5 ? C.accent : C.calm} tint2={C.accent} />
       <Chapter n="05" title="Two PINs" from={from} />
       {/* v3 fix r1: the camera follows the PIN being typed (left phone, then right), then pulls wide for "the same" */}
-      <Cam from={from} keys={[[from, 1, 960, 540], [sType - 6, 1.0, 900, 540], [sType + 4, 1.16, 700, 520], [sDone + 6, 1.16, 700, 520], [dType - 2, 1.16, 1220, 520], [tSame - 8, 1.16, 1220, 520], [tSame + 6, 1.0, 960, 540]]}>
+      {/* v3 fix r3: a real close-up on each PIN pad while it is typed (legible at phone size), then wide for "the same",
+          then a push onto the duress column as "quietly keeps help coming" lands */}
+      <Cam from={from} keys={[[from, 1, 960, 540], [sType - 8, 1.0, 900, 540], [sType + 2, 1.55, 691, 640], [sDone + 8, 1.55, 691, 560], [dType - 4, 1.55, 1228, 640], [tSame - 8, 1.55, 1228, 560], [tSame + 6, 1.0, 960, 540], [tQuiet + 2, 1.0, 960, 540], [tQuiet + 22, 1.22, 1450, 520]]}>
       <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 96, gap: 36, transform: `scale(${push})` }}>
         {col(false)}
         <div style={{ alignSelf: "center", marginTop: -60, fontFamily: F.display, fontWeight: 800, fontSize: 120, color: C.muted, opacity: eq }}>=</div>
@@ -1260,7 +1273,7 @@ export const Architecture: React.FC<{ from: number }> = ({ from }) => {
   // v3 r6: one column at a time (1.32x push-ins that follow the VO), then a pull back to the whole system at the end
   const tEnd = w("v3_16", "dispatch.") + 22;
   const shots: [number, number, number, number][] = [
-    [from, 520, 470, 1.32], [tCloud - 4, 1060, 470, 1.32], [tTwilio - 4, 1340, 470, 1.32], [tEnd, 960, 470, 0.96],
+    [from, 520, 500, 1.25], [tCloud - 4, 1060, 500, 1.25], [tTwilio - 4, 1340, 500, 1.25], [tEnd, 960, 470, 0.96], // v3 fix r3: zone bottoms stay above the caption band
   ];
   const c = { s: shots[0][3], x: shots[0][1], y: shots[0][2] };
   for (let i = 1; i < shots.length; i++) {
@@ -1367,7 +1380,9 @@ export const Team: React.FC<{ from: number }> = ({ from }) => {
     { at: w("v3_17", "Mary"), name: "Mary Teifel", short: "CNM · Freshman", role: "Mechanical Engineering", c: C.calm },
   ];
   const ph = useSpring(-10, { damping: 18, stiffness: 100 });
-  const push = interpolate(A - from, [0, 300], [1, 1.06], { extrapolateRight: "clamp" });
+  // v3 fix r3: the camera moves with the VO: in on George's plate, then a glide down onto Mary's
+  const push = interpolate(A - from, [0, 40, 300], [1, 1.05, 1.08], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.sin) });
+  const fy = interpolate(A, [people[1].at - 10, people[1].at + 12], [380, 650], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
   return (
     <AbsoluteFill>
       <Stage tint={C.accent} tint2={C.calm} />
@@ -1375,13 +1390,13 @@ export const Team: React.FC<{ from: number }> = ({ from }) => {
         {TEAM_BROLL.map((src, i) => <Img key={i} src={src} style={{ width: 250, borderRadius: 30, boxShadow: "0 20px 60px rgba(0,0,0,.6)" }} />)}
       </div>
       <AbsoluteFill style={{ background: "linear-gradient(90deg, rgba(11,10,18,.2), rgba(11,10,18,.75) 45%, rgba(11,10,18,.85))" }} />
-      <Chapter n="10" title="The team · UNM & CNM App Contest 2026" from={from} />
-      <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: "50% 45%" }}>
+      <div style={{ opacity: 1 - ez(A, people[1].at - 12, people[1].at - 2) }}><Chapter n="10" title="The team · UNM & CNM App Contest 2026" from={from} /></div>
+      <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: `1200px ${fy}px` }}>
         <div style={{ position: "absolute", left: 200, top: 120, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
           {/* v3 r7: one still of the home screen (the looping check-in/alert footage pulled focus from the names) */}
           {/* v3 fix r1: the phone lives: it turns slowly and steps through the screens they built */}
           <Device w={380} rotY={14 - (A - from) * 0.05} rotX={2 * Math.sin((A - from) / 60)} glow={C.accent} reflect={false}>
-            {TEAM_BROLL.slice(0, 6).map((src, i) => {
+            {TEAM_BROLL.slice(1, 7).map((src, i) => { /* v3 fix r3: no 'Alex' home greeting */
               const k = Math.floor((A - from) / 45) % 6;
               const o = i === k ? 1 : 0;
               return <Img key={i} src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: o }} />;
@@ -1446,8 +1461,8 @@ export const EndCard: React.FC<{ from: number }> = ({ from }) => {
       <AbsoluteFill style={{ background: `radial-gradient(ellipse 55% 50% at ${50 + 6 * Math.sin((A - from) / 50)}% ${40 + 4 * Math.sin((A - from) / 70)}%, ${C.accent}22, transparent 70%)` }} />
       {/* v3 r7: slow 3% push so the 8 s hold never freezes */}
       {/* v3 fix r1: a real push (6%) plus a closing beat: the icon sends out a slow ring every ~1.5 s */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", transform: `scale(${interpolate(A - from, [0, 240], [0.97, 1.05], { extrapolateRight: "extend" })}) translateY(${interpolate(A - from, [0, 240], [14, -8], { extrapolateRight: "extend" })}px)` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24, ...r(from) }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", transform: `scale(${interpolate(A - from, [0, 170], [0.95, 1.04], { extrapolateRight: "extend" })}) translateY(${interpolate(A - from, [0, 170], [18, -10], { extrapolateRight: "extend" })}px) translateX(${4 * Math.sin((A - from) / 60)}px)` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24, opacity: ez(A, from, from + 10), transform: `scale(${1.25 - 0.25 * ez(A, from, from + 22)})`, filter: `drop-shadow(0 0 ${10 + 8 * Math.sin((A - from) / 11)}px ${C.accent}55)` }}>
           <div style={{ position: "relative", width: 90, height: 90 }}>
             {[0, 1].map((j) => { const q = (((A - tNever - 14 + j * 22) % 44) + 44) % 44 / 44; return A > tNever + 14 ? <div key={j} style={{ position: "absolute", inset: 0, borderRadius: 26, border: `3px solid ${C.accent}`, opacity: 0.7 * (1 - q), transform: `scale(${1 + q * 0.9})` }} /> : null; })}
             <Img src={S("img/icon.png")} style={{ position: "relative", width: 90, height: 90, borderRadius: 22 }} />
@@ -1466,13 +1481,16 @@ export const EndCard: React.FC<{ from: number }> = ({ from }) => {
           <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 56, color: "#ffffff" }}>In an emergency, call 911.</div>
         </div>
         <div style={{ marginTop: 32 }}>
-          <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 36, color: "#e6e3f2", ...r(tNever + 22) }}>Support 24/7, confidential · RAINN National Sexual Assault Hotline</div>
-          <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 88, color: "#ffffff", marginTop: 4, letterSpacing: "0.01em", ...r(tNever + 28) }}>1-800-656-4673</div>
-          <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 34, color: "#e6e3f2", marginTop: 10, ...r(tNever + 40) }}>In Albuquerque · Rape Crisis Center of Central NM, 24/7 · <span style={{ color: "#fff", fontWeight: 800 }}>505-266-7711</span></div>
+          <div style={{ fontFamily: F.body, fontWeight: 700, fontSize: 44, color: "#f1eef9", ...r(tNever + 16) }}>Support 24/7, confidential · RAINN Hotline</div>
+          {/* v3 fix r3: the number counts in digit by digit, then breathes with a soft glow */}
+          <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 104, color: "#ffffff", marginTop: 2, letterSpacing: "0.01em", textShadow: `0 0 ${18 + 14 * Math.sin((A - tNever) / 9)}px ${C.accent}66` }}>
+            {"1-800-656-4673".split("").map((ch, i) => { const a = tNever + 20 + i * 1.4; return <span key={i} style={{ display: "inline-block", opacity: ez(A, a, a + 5), transform: `translateY(${(1 - ez(A, a, a + 6)) * 26}px)` }}>{ch}</span>; })}
+          </div>
+          <div style={{ fontFamily: F.body, fontWeight: 700, fontSize: 40, color: "#f1eef9", marginTop: 10, ...r(tNever + 34) }}>In Albuquerque · Rape Crisis Center of Central NM, 24/7 · <span style={{ color: "#fff", fontWeight: 800 }}>505-266-7711</span></div>
         </div>
-        <div style={{ marginTop: 30, ...r(tNever + 54) }}>
+        <div style={{ marginTop: 30, ...r(tNever + 44) }}>
           <div style={{ fontFamily: F.mono, fontWeight: 600, fontSize: 30, color: "#c9c6da", letterSpacing: "0.08em" }}>GEORGE TEIFEL · MARY TEIFEL · UNM & CNM APP CONTEST 2026</div>
-          <div style={{ fontFamily: F.mono, fontWeight: 500, fontSize: 20, color: "#9d99b2", letterSpacing: "0.06em", marginTop: 10 }}>3D CHARACTERS: QUATERNIUS (CC0 / CC-BY 3.0, VIA POLY.PIZZA)</div>
+          <div style={{ fontFamily: F.mono, fontWeight: 500, fontSize: 24, color: "#a9a5bd", letterSpacing: "0.06em", marginTop: 10 }}>3D CHARACTERS: QUATERNIUS (CC0 / CC-BY 3.0, VIA POLY.PIZZA)</div>
         </div>
       </div>
     </AbsoluteFill>
