@@ -2,7 +2,7 @@
 import React from "react";
 import { AbsoluteFill, Freeze, interpolate, staticFile, useCurrentFrame } from "remotion";
 import {
-  CameraRig, COUNTER_TOP, DormRoom, BED_SEAT, Cup as CupProp, Glow, LOOKS, PartyKitchen, Phone, Scene3D, StickerTitle, Grade, Flash, NotificationToast,
+  CameraRig, COUNTER_TOP, StringLights, DormRoom, BED_SEAT, Cup as CupProp, Glow, LOOKS, PartyKitchen, Phone, Scene3D, StickerTitle, Grade, Flash, NotificationToast,
   cuts, dolly, orbit, pushIn, prog, lerp, deg, RUN_SPEED, P, ANIMS,
 } from "../kit3d";
 import { C } from "../theme";
@@ -21,16 +21,75 @@ const img = (n: string) => staticFile(`img/${n}.png`);
 const sv = (n: string) => staticFile(`v2/screens/${n}.png`);
 const PARTY_FOG = { color: "#2a1838", near: 6, far: 22 };
 
+/** r10: party set dressing (the kitchen read sparse): a dark stone top over the island (the bright lilac slab filled half
+ *  the close-up frame), a cluster of glass bottles, a speaker that pumps with the beat, a second string of lights in
+ *  depth, and a dancing crowd of soft back-lit silhouettes in the far room. */
+const glassMats = new Map<string, THREE.MeshStandardMaterial>();
+const glassMat = (c: string) => {
+  let m = glassMats.get(c);
+  if (!m) glassMats.set(c, (m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.12, metalness: 0.2, transparent: true, opacity: 0.82, emissive: new THREE.Color(c).multiplyScalar(0.25) })));
+  return m;
+};
+const STONE = new THREE.MeshStandardMaterial({ color: "#3b2c40", roughness: 0.62, metalness: 0.05 });
+const SIL = new THREE.MeshStandardMaterial({ color: "#150f1f", roughness: 0.9 });
+export const PartyDressing: React.FC<{ top?: boolean; crowd?: boolean }> = ({ top = true, crowd = true }) => {
+  const f = useCurrentFrame();
+  const beat = 0.5 + 0.5 * Math.sin((f / 30) * Math.PI * 2);
+  const bottles: [number, number, string, number][] = [[0.62, -0.36, "#2f6a3a", 0.3], [0.74, -0.3, "#7a3a1f", 0.34], [0.86, -0.38, "#3a4a9a", 0.27], [0.97, -0.28, "#c9b27a", 0.31], [-0.9, -0.38, "#2f6a5a", 0.29]];
+  return (
+    <group>
+      {top && (
+        <mesh position={[0, COUNTER_TOP + 0.0, 0]} material={STONE} receiveShadow>
+          <boxGeometry args={[2.64, 0.014, 1.12]} />
+        </mesh>
+      )}
+      {bottles.map(([x, z, c, h], i) => (
+        <group key={i} position={[x, COUNTER_TOP + 0.007, z]}>
+          <mesh material={glassMat(c)} position={[0, h * 0.35, 0]} castShadow><cylinderGeometry args={[0.034, 0.036, h * 0.7, 14]} /></mesh>
+          <mesh material={glassMat(c)} position={[0, h * 0.8, 0]}><cylinderGeometry args={[0.012, 0.032, h * 0.26, 12]} /></mesh>
+          <mesh position={[0, h * 0.38, 0.001]}><cylinderGeometry args={[0.0365, 0.0365, h * 0.2, 14]} /><meshStandardMaterial color="#efe4d2" roughness={0.7} /></mesh>
+        </group>
+      ))}
+      {/* speaker on the back counter */}
+      <group position={[-1.55, 0.95, -2.8]}>
+        <mesh position={[0, 0.3, 0]}><boxGeometry args={[0.42, 0.6, 0.34]} /><meshStandardMaterial color="#16131f" roughness={0.5} /></mesh>
+        {[0.42, 0.16].map((y, i) => (
+          <group key={i} position={[0, y, 0.172]} scale={1 + 0.06 * beat * (i ? 1 : 0.6)}>
+            <mesh><circleGeometry args={[i ? 0.13 : 0.07, 24]} /><meshStandardMaterial color="#2a2536" roughness={0.4} /></mesh>
+            <mesh position={[0, 0, 0.002]}><ringGeometry args={[i ? 0.13 : 0.07, i ? 0.145 : 0.08, 28]} /><meshBasicMaterial color="#38c9d8" toneMapped={false} transparent opacity={0.35 + 0.5 * beat} /></mesh>
+          </group>
+        ))}
+      </group>
+      <StringLights a={[-3.6, 2.55, -1.7]} b={[3.4, 2.7, -1.1]} sag={0.35} count={16} seed={4} />
+      <StringLights a={[-3.2, 2.75, 0.9]} b={[3.6, 2.6, 0.2]} sag={0.3} count={14} seed={7} />
+      {crowd && [[-2.6, -2.55], [-1.9, -2.7], [-0.9, -2.6], [0.2, -2.75], [1.4, -2.6], [2.3, -2.7], [3.1, -2.55]].map(([x, z], i) => {
+        const bob = Math.max(0, Math.sin(f / 4.6 + i * 1.7)) * 0.05;
+        const sway = Math.sin(f / 9 + i) * 0.08;
+        const h = 1.55 + (i % 3) * 0.12;
+        return (
+          <group key={`c${i}`} position={[x, bob, z]} rotation={[0, 0, sway * 0.4]}>
+            <mesh material={SIL} position={[0, h * 0.42, 0]}><capsuleGeometry args={[0.17, h * 0.5, 6, 12]} /></mesh>
+            <mesh material={SIL} position={[0, h * 0.86, 0]}><sphereGeometry args={[0.11, 14, 10]} /></mesh>
+            {i % 2 === 0 && <mesh material={SIL} position={[0.18, h * 0.8 + 0.08 * Math.sin(f / 5 + i), 0]} rotation={[0, 0, -0.5]}><capsuleGeometry args={[0.045, 0.42, 4, 8]} /></mesh>}
+          </group>
+        );
+      })}
+      {crowd && <pointLight position={[0.2, 2.0, -2.15]} color="#a86cff" intensity={2.5 + 2 * beat} distance={2.8} decay={1.6} />}
+    </group>
+  );
+};
+
 // ---------------------------------------------------------------------------
 /** THE DRINK (r5: v2_10 cut). The title holds 0.9 s on its own frame, then a short party establishing shot (Maya laughing
  *  with friends, phone in hand) while the HUD flips to NIGHT OUT and a pill confirms Night Out Guard is on. */
 export const Party: React.FC = () => {
   const f = useCurrentFrame();
-  if (f < TITLE) return <ChapterCard text="THE DRINK" color={C.warn} variant={1} />;
+  if (f < TITLE) return <ChapterCard text="THE DRINK" color={C.warn} variant={1} sub="WHAT IF · ANOTHER NIGHT" />;
   return (
     <AbsoluteFill>
       <Scene3D fog={PARTY_FOG} background="#2a1838">
         <PartyKitchen />
+        <PartyDressing />
         <Character look={MAYA} position={[0.25, 0, 0.85]} rotationY={-0.35} holdR="phone"
           clips={[{ anim: "laugh", start: 0, offset: 9 }, { anim: "phoneUp", start: -30, mask: "armR" }]}
           phoneScreen={sv("guard-night")} phoneGlow={0.8} faceFill={0.5} face={{ smile: 0.3 }} rim={{ color: "#ffd6f2", strength: 1.1 }} ikOffR={[0.02, -0.08, 0.03]} />
@@ -74,6 +133,7 @@ export const CupScene: React.FC = () => {
     <AbsoluteFill>
       <Scene3D fog={PARTY_FOG} background="#2a1838">
         <PartyKitchen cups={false} />
+        <PartyDressing />
         <CupProp position={cupPos} fill={0.7} />
         <CupProp position={[-0.75, COUNTER_TOP + 0.06, 0.15]} fill={0.4} />
         <CupProp position={[0.85, COUNTER_TOP + 0.06, 0.25]} fill={0.5} />
@@ -93,7 +153,7 @@ export const CupScene: React.FC = () => {
             <pointLight position={[cupPos[0] + 0.2, COUNTER_TOP + 0.5, cupPos[2] - 0.5]} color="#ffc6e8" intensity={1.4 * reach} distance={1.2} decay={1.8} />
           </>
         )}
-        <pointLight position={[0.4, 1.6, -1.6]} color="#ef4fa0" intensity={5} distance={4} decay={1.4} />
+        <pointLight position={[0.4, 1.6, -1.6]} color="#ef4fa0" intensity={3.2} distance={4} decay={1.4} />
         <pointLight position={[0.0, 1.5, 1.2]} color="#ffe0d0" intensity={1.2} distance={3} decay={1.6} />
         <CameraRig rig={cuts([
           [0, dolly(0, close, [0.55, 1.45, 1.6], [0.45, 1.42, 1.3], [[-0.25, 1.3, -0.7], [-0.2, 1.25, -0.6]], 36)],
@@ -140,6 +200,7 @@ export const Tilt: React.FC = () => {
       <div style={{ position: "absolute", inset: 0, filter: `blur(${(0.6 + 1.6 * k * (0.5 + 0.5 * Math.sin(f / 7))).toFixed(2)}px) saturate(${1 + 0.2 * k})` }}>
         <Scene3D fog={PARTY_FOG} background="#2a1838">
           <PartyKitchen pulse={0.6} />
+          <PartyDressing />
           <Character look={MAYA} position={[0.2, 0, 0.9]} rotationY={-0.2} clips={[{ anim: "idle", start: 0 }, { anim: "woozy", start: room, fade: 16 }]} faceFill={0.7} rim={{ color: "#ffd6f2", strength: 1.1 }} act={0} />
           <pointLight position={[0.1, 2.0, 0.2]} color="#ffc8ee" intensity={4} distance={2.4} decay={1.6} />
           <Character look={FRIEND_HD} position={[-0.9, 0, 0.2]} rotationY={0.9} seed={4} clips={[{ anim: "talk", start: 0, offset: 30 }]} />
@@ -273,7 +334,7 @@ export const HallwayScene: React.FC = () => {
         <pointLight position={[0.2, 1.9, -1.4]} color="#9fd8ff" intensity={3} distance={3} decay={1.6} />
         <pointLight position={[-0.4, 1.6, 1.6]} color="#ffe2cc" intensity={1.6} distance={3.5} decay={1.6} />
         <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 1, worry: 0.2 } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
-          clips={[{ anim: "woozy", start: 0, speed: 0.8 }, { anim: "stumble", start: stumble, fade: 5 }, { anim: "sitSlump", start: sit, fade: 14 }]} />
+          clips={[{ anim: "woozy", start: 0, speed: 0.8 }, { anim: "stumbleCatch", start: stumble, fade: 4 }, { anim: "sitSlump", start: sit, fade: 14 }]} />
         <CameraRig rig={(fr) => {
           const d = lerp(4.0, 2.0, prog(fr, 0, noAns + 10, "inOut"));
           const low = prog(fr, sit, still + 20, "inOut");

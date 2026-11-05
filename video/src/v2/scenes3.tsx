@@ -42,7 +42,7 @@ export const PhoneDark: React.FC = () => {
   const sk = prog(f, TITLE, takes, "inOut");
   const P0: [number, number, number] = [0.15, 1.18, 0.5];
   const reach = prog(f, takes, fallFrom - 1, "out");
-  if (f < TITLE) return <ChapterCard text="THE PHONE" color={C.danger} variant={2} />;
+  if (f < TITLE) return <ChapterCard text="THE PHONE" color={C.danger} variant={2} sub="WHAT IF · ANOTHER NIGHT" />;
   return (
     <AbsoluteFill>
       <Scene3D fog={{ color: P.fogNight, near: 3, far: 26 }}>
@@ -276,6 +276,21 @@ const RearCity: React.FC<{ speed?: number }> = ({ speed = 0.4 }) => {
 };
 const hash = (n: number) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
+/** r10: sodium street lights sweeping front-to-back through the side windows (light streaks across faces sell motion). */
+const PassingLights: React.FC = () => {
+  const f = useCurrentFrame();
+  return (
+    <>
+      {[0, 1].map((k) => {
+        const t = ((f + k * 23) % 46) / 46;
+        const z = lerp(1.0, -1.6, t);
+        const I = Math.sin(Math.PI * t) ** 2;
+        return <pointLight key={k} position={[k ? -0.9 : 0.9, 1.3, z]} color={k ? "#ffb86a" : "#9fc4ff"} intensity={3.2 * I} distance={1.6} decay={1.8} />;
+      })}
+    </>
+  );
+};
+
 /** Back seat of the rideshare: Maya rear right, the driver seen from behind. */
 const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eyes?: number; worry?: number; sweep?: number; dome?: number; mayaClips?: { anim: "sit" | "phoneUp"; start: number; mask?: "armR" }[] }> = ({ speed = 0.4, tension = 0, phone, eyes = 0.15, worry = 0, sweep = 0.6, dome = 0.35, mayaClips }) => (
   <>
@@ -287,6 +302,16 @@ const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eye
     <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} position={SEATS.driver} seed={2} faceFill={0} rim={{ color: "#6fd6c8", strength: 0.35 }} />
     <Character look={MAYA} clips={mayaClips ?? [{ anim: "sit", start: 0 }]} position={MAYA_SEAT} holdR="phone" phoneScreen={phone} phoneGlow={0.6} seed={1} faceFill={0.45} act={0.6} ikOffR={[0.02, -0.06, 0.03]} face={worry > 0 ? { worry, brow: 0.5 * worry, smile: 0.1 - 0.4 * worry, eyesWide: 0.3 * worry } : undefined} />
     <RearMirrorHD eyes={eyes} />
+    <PassingLights />
+    {/* r10: tufted seat-back panels + a rear headrest behind her, so the back seat is upholstery, not a flat slab */}
+    <group position={[MAYA_SEAT[0], 0, -1.07]}>
+      {[-0.42, -0.21, 0, 0.21, 0.42].map((x) => (
+        <mesh key={x} position={[x, 0.98, 0]}><boxGeometry args={[0.012, 0.5, 0.03]} /><meshStandardMaterial color="#141226" roughness={0.95} /></mesh>
+      ))}
+      <mesh position={[0, 0.98, -0.005]}><boxGeometry args={[1.02, 0.012, 0.03]} /><meshStandardMaterial color="#141226" roughness={0.95} /></mesh>
+      <mesh position={[0, 1.36, 0.03]} scale={[0.15, 0.11, 0.07]}><sphereGeometry args={[1, 20, 14]} /><meshStandardMaterial color="#2b2a48" roughness={0.9} /></mesh>
+      {[-0.06, 0.06].map((x) => <mesh key={x} position={[x, 1.22, 0.03]}><cylinderGeometry args={[0.007, 0.007, 0.12, 8]} /><meshStandardMaterial color="#9a9cb0" metalness={0.8} roughness={0.3} /></mesh>)}
+    </group>
     <ambientLight color="#7a70b8" intensity={0.55} />
     <pointLight position={[-0.05, 1.45, -0.25]} color="#e6dcff" intensity={1.0} distance={1.6} decay={1.8} />
     <pointLight position={[-0.75, 1.3, -0.6]} color="#8fb8ff" intensity={1.4} distance={1.5} decay={1.8} />
@@ -310,7 +335,7 @@ export const Ride: React.FC = () => {
   const zOut = W(19, "way.") - F0 + 22;
   const zk = interpolate(f, [wrong - 2, wrong + 8, zOut, zOut + 6], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const zoomed = zk > 0.02;
-  if (f < TITLE) return <ChapterCard text="THE RIDE" color={C.calm} variant={3} />;
+  if (f < TITLE) return <ChapterCard text="THE RIDE" color={C.calm} variant={3} sub="WHAT IF · ANOTHER NIGHT" />;
   return (
     <AbsoluteFill>
       {f < inside ? (
@@ -392,7 +417,7 @@ export const Cancel: React.FC = () => {
           <Scene3D fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
             <BackSeat phone={sv("checkin-ride")} tension={0.5} sweep={0.6} dome={0.12} worry={0.8} eyes={0.12} />
             {/* r5: lifted cabin light; cool rim from the dash so the driver's headrest + shoulder read as a silhouette */}
-            <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={2} distance={1.4} decay={1.8} />
+            <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={0.9} distance={1.4} decay={1.8} />
             <pointLight position={[0.0, 1.55, 0.2]} color="#c8c0ff" intensity={1.4} distance={2} decay={1.6} />
             <ambientLight intensity={0.35} color="#8a80c8" />
             <WindshieldFrame f={f} />
@@ -448,9 +473,10 @@ export const Duress: React.FC = () => {
   const dispatch = W(21, "Dispatch") - F0;
   const taps = [types, types + 8, types + 16, types + 25];
   const filled = taps.filter((t) => f >= t + 1).length;
-  const tap = Math.max(0, ...taps.map((t) => (f >= t - 3 && f < t + 4 ? 1 - Math.abs(f - t) / 4 : 0)));
-  // thumb hovers over the middle of the pad (never lands on an identifiable key)
-  const thumbAt: [number, number] = [0.42 + 0.08 * Math.sin(filled * 2.1), 0.5 + 0.06 * Math.cos(filled * 1.7)];
+  // r10 privacy: no tap ripple and ONE fixed thumb spot between keys, so the PIN can't be read from tap positions;
+  // only the dots count up
+  const tap = 0;
+  const thumbAt: [number, number] = [0.5, 0.565];
   const calm = f >= disappear;
   const split = f >= isnt;
   // r8: the pad sits lower in frame, so the caption band above it never touches the "You okay?" header
@@ -483,13 +509,13 @@ export const Duress: React.FC = () => {
           <div style={{ position: "absolute", left: 0, top: 0, width: 1080, height: 958, overflow: "hidden" }}>
             <Scene3D width={1080} height={958} fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
               <BackSeat phone={sv("guard-ride")} tension={0.2} sweep={0.6} dome={0.1} eyes={0.12} />
-              <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={2} distance={1.4} decay={1.8} />
+              <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={0.9} distance={1.4} decay={1.8} />
               <CameraRig rig={dolly(isnt, isnt + 120, [-0.5, 1.22, -0.42], [-0.42, 1.21, -0.28], [[0.32, 1.12, 0.6], [0.3, 1.13, 0.6]], 50)} handheld={0.003} near={0.03} />
             </Scene3D>
-            <div style={{ position: "absolute", left: 40, top: 560, fontFamily: OF.caption, fontWeight: 900, fontSize: 40, color: C.ink, opacity: fadeIn(f, isnt + 8, 6), ...glass, borderRadius: 999, padding: "8px 26px" }}>Driver sees: nothing</div>
+            <PanelLabel text="WHAT THE DRIVER SEES" sub="a calm screen" color={C.ink} at={isnt + 4} top={250} />
           </div>
           {/* bottom half: X-ray layer under her calm screen */}
-          <div style={{ position: "absolute", left: 0, top: 962, width: 1080, height: 958, overflow: "hidden", filter: "saturate(1.2)" }}>
+          <div style={{ position: "absolute", left: 0, top: 1030, width: 1080, height: 890, overflow: "hidden", filter: "saturate(1.2)" }}>
             <Scene3D width={1080} height={958} fog={{ color: "#1a0608", near: 10, far: 70 }} background="#1a0608">
               <CarInterior speed={0.4} tension={0.6} sweep={0.3} dome={0.1} passengerSeat={false} plush detail />
               {povPhone}
@@ -500,7 +526,8 @@ export const Duress: React.FC = () => {
             <svg width="1080" height="958" style={{ position: "absolute", inset: 0, opacity: 0.25 }}>
               {Array.from({ length: 40 }).map((_, i) => <line key={i} x1={0} y1={(i * 24 + f * 3) % 958} x2={1080} y2={(i * 24 + f * 3) % 958} stroke={C.danger} strokeWidth={2} />)}
             </svg>
-            <div style={{ position: "absolute", left: 60, right: 60, top: 560, ...glass, borderRadius: 30, padding: "18px 28px", borderColor: C.danger, background: "linear-gradient(180deg, rgba(239,106,92,.3), rgba(20,19,31,.94))", boxShadow: `0 0 60px ${C.danger}55`, opacity: fadeIn(f, isnt + 4, 6) }}>
+            <PanelLabel text="WHAT DISPATCH SEES" sub="hidden from the driver" color={C.danger} at={isnt + 4} top={24} />
+            <div style={{ position: "absolute", left: 60, right: 60, top: 370, ...glass, borderRadius: 30, padding: "18px 28px", borderColor: C.danger, background: "linear-gradient(180deg, rgba(239,106,92,.3), rgba(20,19,31,.94))", boxShadow: `0 0 60px ${C.danger}55`, opacity: fadeIn(f, isnt + 4, 6) }}>
               <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 30, letterSpacing: 3, color: C.danger }}>HIDDEN · SILENT ALERT</div>
               {[["🚨", "Duress PIN used", isnt + 8], ["🎧", "Dispatch notified", dispatch], ["📍", "Live location shared", dispatch + 10]].map(([ic, t, at]) => (
                 <div key={t as string} style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, opacity: fadeIn(f, at as number, 6), transform: `translateX(${(1 - fadeIn(f, at as number, 6)) * 30}px)` }}>
@@ -511,8 +538,9 @@ export const Duress: React.FC = () => {
               ))}
             </div>
           </div>
-          {/* the split line glitches in */}
-          <div style={{ position: "absolute", left: 0, right: 0, top: 952, height: 16, background: C.danger, boxShadow: `0 0 30px ${C.danger}`, transform: `translateX(${glitch ? (f % 2 ? 30 : -30) : 0}px)` }} />
+          {/* r10: a deliberate divider band (dark, with thin rules) between the two panels; the word captions sit in it,
+              outside both pictures */}
+          <div style={{ position: "absolute", left: 0, right: 0, top: 900, height: 130, background: "#0b0a12", borderTop: `4px solid ${C.ink}55`, borderBottom: `4px solid ${C.danger}`, boxShadow: `0 0 40px ${C.danger}44`, transform: `translateX(${glitch ? (f % 2 ? 24 : -24) : 0}px)` }} />
           <Grade vignette={0.45} />
         </>
       )}
@@ -520,6 +548,17 @@ export const Duress: React.FC = () => {
       <Flash at={isnt} dur={6} color={C.danger} max={0.4} />
       {f >= isnt + 6 && <SimCard at={isnt + 6} top={1740} />}
     </AbsoluteFill>
+  );
+};
+
+/** r10: label chip for the duress split panels. */
+const PanelLabel: React.FC<{ text: string; sub: string; color: string; at: number; top: number }> = ({ text, sub, color, at, top }) => {
+  const f = useCurrentFrame();
+  return (
+    <div style={{ position: "absolute", left: 40, top, opacity: fadeIn(f, at, 6), ...glass, borderRadius: 22, padding: "10px 26px", borderColor: `${color}aa`, display: "flex", flexDirection: "column" }}>
+      <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 40, letterSpacing: 2, color }}>{text}</span>
+      <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 30, color: C.ink, opacity: 0.85 }}>{sub}</span>
+    </div>
   );
 };
 

@@ -130,10 +130,11 @@ export const StatCard: React.FC<{ at: number; out: number; top?: number }> = ({ 
     <div style={{ position: "absolute", left: 60, right: 60, top, ...glass, borderRadius: 40, padding: "28px 40px 30px", opacity: o * k, transform: `translateY(${(1 - k) * 60}px) rotate(${-1.5 * (1 - k)}deg)`, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, borderColor: `${C.warn}99`, textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 24 }}>
         <span style={{ fontFamily: OF.sticker, fontSize: 210, color: C.warn, lineHeight: 0.88, textShadow: `0 0 50px ${C.warn}66` }}>{n}%</span>
-        <span style={{ fontFamily: OF.sticker, fontSize: 120, color: C.ink, lineHeight: 0.9 }}>FROZE</span>
+        <span style={{ fontFamily: OF.sticker, fontSize: 78, color: C.ink, lineHeight: 0.95, textAlign: "left" }}>REPORTED<br />FREEZING</span>
       </div>
-      <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 48, color: C.ink, lineHeight: 1.08 }}>of 298 women reported significant tonic immobility</span>
-      <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 36, color: C.warn, marginTop: 4 }}>Möller et al., 2017 · Acta Obstet Gynecol Scand</span>
+      {/* r10: the card says what the VO says ("of 298 survivors, 70% reported freezing"); the study's term stays exact */}
+      <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 50, color: C.ink, lineHeight: 1.08 }}>of 298 survivors in one study<br />(significant tonic immobility)</span>
+      <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 42, color: C.warn, marginTop: 6 }}>Möller et al., 2017 · Acta Obstet Gynecol Scand</span>
     </div>
   );
 };
@@ -260,7 +261,12 @@ export const LivePage: React.FC<{ tapAt: number; width: number }> = ({ tapAt, wi
         <div style={{ marginTop: 8 * u, borderRadius: 18 * u, padding: `${18 * u}px`, textAlign: "center", fontWeight: 900, fontSize: 32 * u, color: tapped ? C.calm : "#fff", background: tapped ? "#e2f6f1" : C.calm, border: `3px solid ${C.calm}`, transform: `scale(${frame >= tapAt - 1 && frame < tapAt + 4 ? 0.95 : 1})` }}>
           {tapped ? "✓ On my way" : "I'm on my way"}
         </div>
-        <div style={{ borderRadius: 18 * u, padding: `${14 * u}px`, textAlign: "center", fontWeight: 900, fontSize: 20 * u, color: "#14131f", background: "#e9e6f2" }}>Call Maya</div>
+        {/* r10: the other two live-link actions from SPEC §9 #7, so contacts visibly can escalate to dispatch */}
+        <div style={{ display: "flex", gap: 8 * u }}>
+          <div style={{ flex: 1, borderRadius: 18 * u, padding: `${12 * u}px`, textAlign: "center", fontWeight: 900, fontSize: 18 * u, color: "#14131f", background: "#e9e6f2" }}>Call Maya</div>
+          <div style={{ flex: 1, borderRadius: 18 * u, padding: `${12 * u}px`, textAlign: "center", fontWeight: 900, fontSize: 18 * u, color: "#14131f", background: "#e9e6f2" }}>I called 911</div>
+        </div>
+        <div style={{ borderRadius: 18 * u, padding: `${12 * u}px`, textAlign: "center", fontWeight: 900, fontSize: 18 * u, color: "#fff", background: C.danger }}>Send help now</div>
       </div>
     </DeviceFrame>
   );

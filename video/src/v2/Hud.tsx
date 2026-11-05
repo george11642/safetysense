@@ -64,8 +64,8 @@ const PILL: [number, Pill][] = [
   [T.relief, { label: "SAFE", sub: "Help reached her", color: C.calm, icon: "shield" }],
   [T.party, L("Night Out")],
   [T.youOkay, { label: "CHECK-IN", sub: "“You okay?” · 45 s", color: C.warn, icon: "clock" }],
-  [T.noAnswer, { label: "ALERTED", sub: "1 contact · live map", color: C.accent, icon: "people" }], // r9: per-mode contact count explicit
-  [T.phone, { label: "LISTENING", sub: "Server check-in · 60 s", color: C.calm, icon: "server" }], // r8: a server check-in, never a biometric
+  [T.noAnswer, { label: "ALERTED", sub: "3 contacts · live map", color: C.accent, icon: "people" }], // r10: same per-user contact list as THE WALK (SPEC §8)
+  [T.phone, { label: "LISTENING", sub: "Night Out · server 60 s", color: C.calm, icon: "server" }], // r8: a server check-in, never a biometric
   [T.dark, { label: "SIGNAL LOST", sub: "Phone went dark", color: C.danger, icon: "server" }],
   [T.alarm, { label: "ALERTED", sub: "Server raised alarm", color: C.accent, icon: "server" }],
   [T.ride, L("Ride · route on")],
@@ -75,8 +75,8 @@ const PILL: [number, Pill][] = [
   [T.isnt, { label: "DISPATCH", sub: "Silent · duress PIN", color: C.danger, icon: "siren" }],
 ];
 const CLOCK: [number, string][] = [
-  [0, "12:06 AM"], [S.arm, "12:04 AM"], [S.walk, "12:05 AM"], [B(6), "12:06 AM"], [T.contactsRing - 10, "+0:08"], [T.party, "10:48 PM"], [T.t1102, "11:02 PM"], [T.t1120, "11:20 PM"],
-  [T.t1131, "11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "1:12 AM"], [T.alarm, "1:13 AM"], [T.ride, "1:40 AM"],
+  [0, "12:06 AM"], [S.arm, "12:04 AM"], [S.walk, "12:05 AM"], [B(6), "12:06 AM"], [T.contactsRing - 10, "+0:08"], [T.party, "FRI 10:48 PM"], [T.t1102, "FRI 11:02 PM"], [T.t1120, "FRI 11:20 PM"],
+  [T.t1131, "FRI 11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "SUN 1:12 AM"], [T.alarm, "SUN 1:13 AM"], [T.ride, "WED 1:40 AM"],
 ];
 /** RISK meter (game-like bar, like the references' BAC / REMEMBERED meters): [frame, value 0..100]; eased between keys. */
 const RISK: [number, number][] = [

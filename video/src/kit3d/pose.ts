@@ -391,7 +391,23 @@ const jolt: AnimFn = (t, s) => {
   return pose({ ...idle(t, s), shrugL: 0.07 * k, shrugR: 0.07 * k, chestBend: -0.1 * k, neckNod: -0.14 * k, eyesWide: hit, brow: 0.9 * hit, worry: 0.9 * hit, mouth: 0.5 * k, smile: -0.4 * hit, blink: 0 });
 };
 
+/** Additive (v2 r10): a stumble with real weight: the knees buckle and the hips drop, the torso pitches, and the free
+ *  (left) hand shoots back and down to catch the bench behind her, then she half-recovers into a braced crouch. */
+const stumbleCatch: AnimFn = (t, s) => {
+  const lurch = r(t, 0, 7) * (1 - 0.55 * r(t, 12, 26));
+  const reach = r(t, 3, 10);
+  const st = stumble(t, s);
+  return pose({
+    ...st,
+    hipDrop: st.hipDrop + 0.11 * lurch, knL: st.knL + 0.55 * lurch, knR: st.knR + 0.5 * lurch, hipLfwd: st.hipLfwd + 0.25 * lurch, hipRfwd: st.hipRfwd + 0.3 * lurch,
+    anL: 0.2 * lurch, anR: 0.2 * lurch, spineBend: st.spineBend + 0.16 * lurch, rootRoll: st.rootRoll + 0.08 * lurch,
+    ikL: reach, ikLx: 0.36, ikLy: -0.3, ikLz: -0.12, elbowOut: 0.3 * reach,
+    neckNod: st.neckNod + 0.12 * lurch, eyesWide: 0.8 * lurch, mouth: 0.25 + 0.3 * lurch,
+  });
+};
+
 export const ANIMS = {
+  stumbleCatch,
   idle, walk, run, lookBack, startle, phoneUp, phoneRing, phoneCall, drink, woozy, stumble,
   sitSlump, sit, collapse, lieSide, hug, wave, kneel, drive, talk, freeze, relief, laugh, lockUp, flinchBack, jolt,
 } satisfies Record<string, AnimFn>;

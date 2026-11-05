@@ -96,12 +96,13 @@ export const ColdOpen: React.FC = () => {
         )}
         <CameraRig
           rig={cuts([
-            [0, groundShot(0, hookEnd, 0.95, 0.5)],
+            [0, groundShot(0, hookEnd, 0.6, 0.47)], // r10: frame 0 already opens on the big lock-screen framing
             [hookEnd, (fr) => {
               // fast push from a medium (head to hips) to her hands + glowing phone, from her right so the screen glow reads
               const k = prog(fr, hookEnd, cutB, "out");
               const zz = z(fr);
-              return { pos: [lerp(1.25, 0.62, k), Y + lerp(1.55, 1.42, k), zz + lerp(2.9, 1.35, k)], look: [0.12, Y + lerp(1.35, 1.22, k), zz], fov: lerp(36, 30, k) };
+              // r10: ends on a medium (head to hips, both hands in frame), never a tight face close-up
+              return { pos: [lerp(1.35, 0.95, k), Y + lerp(1.6, 1.5, k), zz + lerp(3.3, 2.35, k)], look: [0.12, Y + lerp(1.3, 1.22, k), zz], fov: lerp(36, 33, k) };
             }],
             [cutB, groundShot(cutB, her + 20, 0.44, 0.39)],
           ])}
@@ -116,7 +117,7 @@ export const ColdOpen: React.FC = () => {
           <div style={{ ...glass, borderRadius: 999, padding: "10px 30px", fontFamily: OF.caption, fontWeight: 900, fontSize: 40, letterSpacing: 3, color: C.ink, borderColor: `${C.accent}88` }}>LATER TONIGHT · 12:06 AM</div>
         </div>
       )}
-      {face && <StickerTitle text="MAYA" at={maya + 3} sub="UNM STUDENT" size={110} x={0.72} y={0.6} rotate={-6} color={C.accent} />}
+      {face && <StickerTitle text="MAYA" at={maya + 3} sub="UNM STUDENT" size={110} x={0.74} y={0.34} rotate={-6} color={C.accent} />}
       {f >= cutB && <CallingSticker f={f} pulseFrom={her} />}
       <Flash at={0} dur={5} color="#ffffff" max={0.2} />
       <Flash at={her} dur={6} color={C.calm} max={0.22} />
@@ -176,7 +177,8 @@ export const Arm: React.FC = () => {
           </div>
           </div>
           <Flash at={tap + 1} dur={8} color={C.calm} max={0.25} />
-          <StickerTitle text="ONE TAP" at={tap} out={cut - 6} y={0.765} size={120} color={C.calm} rotate={-4} />
+          {/* r10: above the phone, clear of the word captions (they shared y ~0.75 and printed through each other) */}
+          <StickerTitle text="ONE TAP" at={tap} out={cut - 6} y={0.205} size={120} color={C.calm} rotate={-4} />
         </>
       ) : (
         <>
@@ -296,7 +298,8 @@ export const Detect: React.FC = () => {
   const red = Math.max(0, 1 - Math.abs(f - scream - 4) / 14);
   return (
     <AbsoluteFill style={{ background: C.bgDeep }}>
-      <div style={{ position: "absolute", inset: 0, filter: "blur(14px) brightness(0.5) saturate(0.8)" }}>
+      {/* r10: Maya stays readable behind the detection card (light blur, not a 14 px smear) */}
+      <div style={{ position: "absolute", inset: 0, filter: "blur(4px) brightness(0.62) saturate(0.85)" }}>
         <Scene3D fog={{ color: P.fogNight, near: 5, far: 34 }}>
           <Freeze frame={20}>
             <CampusHD dim={0.35} />
@@ -318,6 +321,22 @@ export const Detect: React.FC = () => {
 };
 
 // ---------------------------------------------------------------------------
+/** r10: secondary motion for a frozen body (the freeze must read as alive, not a paused frame): shallow fast breathing
+ *  (shoulders rise), a fine tremble that grows with `fear`, pivoting at her feet. */
+export const Shiver: React.FC<{ at: [number, number, number]; fear?: number; children: React.ReactNode }> = ({ at, fear = 1, children }) => {
+  const f = useCurrentFrame();
+  const br = Math.sin(f / 7.5) * 0.006 * (0.6 + 0.4 * fear);
+  const tr = fear * (0.0042 * Math.sin(f * 2.3) + 0.0026 * Math.sin(f * 3.7 + 1.3));
+  return (
+    <group position={at}>
+      <group rotation={[tr * 0.6, 0, tr]} scale={[1, 1 + br, 1 + br * 0.4]}>
+        <group position={[-at[0], -at[1], -at[2]]}>{children}</group>
+      </group>
+    </group>
+  );
+};
+
+// ---------------------------------------------------------------------------
 /** v2_07 (r4): she freezes. Intercut, never a static hold: (1) bullet-time orbit around her in a grey, time-stopped
  *  world (dust hangs, the follower's shadow frozen at her heels); (2) extreme close-up of her eyes (wide, brows up,
  *  no blink, fine tremble) while the stat card sits low; (3) the orbit again from the other side; (4) ground level:
@@ -334,7 +353,8 @@ export const FreezeScene: React.FC = () => {
   const grey = interpolate(f, [0, 5, back, back + 12], [0.25, 0.6, 0.6, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const cold = interpolate(f, [0, 6, back, back + 10], [0, 0.16, 0.16, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const M: [number, number, number] = [0.1, Y, 0];
-  const PH: [number, number, number] = [0.42, Y + 0.012, 0.62];
+  // r10: the phone lies ~2 m in front of her (out of reach, not at her feet), the same spot in every shot
+  const PH: [number, number, number] = [0.5, Y + 0.012, 2.1];
   const help = lockTex({ time: "12:06", title: "Calling for help", body: "3 contacts alerted · live location shared", tint: "#5cc7b2", alert: true });
   const tremble = 0.0025 * Math.sin(f * 1.7);
   const EYE = Y + 1.7;
@@ -354,11 +374,11 @@ export const FreezeScene: React.FC = () => {
     const a = 0.45;
     return { pos: [M[0] + Math.sin(a) * d, Y + 1.15, M[2] + Math.cos(a) * d] as [number, number, number], look: [M[0], Y + 1.05, M[2]] as [number, number, number], fov };
   };
-  const PR: [number, number, number] = [0.42, Y + 0.012, 1.3];
+  // r10: an intentional low angle from behind the phone: the glowing phone sharp in the foreground, her whole frozen
+  // figure (torso and clenched hands included) soft beyond it, with the empty slab between them
   const ground = (fr: number) => {
     const k = prog(fr, reach, back, "glide");
-    const PH = PR;
-    return { pos: [PH[0] + 0.12, Y + lerp(0.34, 0.3, k), PH[2] + lerp(0.62, 0.52, k)] as [number, number, number], look: [0.3, Y + 0.13, 0.7] as [number, number, number], fov: 46 };
+    return { pos: [PH[0] + 0.1, Y + lerp(0.46, 0.42, k), PH[2] + lerp(1.35, 1.2, k)] as [number, number, number], look: [lerp(0.36, 0.33, k), Y + lerp(0.55, 0.6, k), 0.3] as [number, number, number], fov: 52 };
   };
   const rig = cuts([
     [0, orbitShot(0.15, 1.75, 0, sIn, 2.5, 1.35, 1.15, 38)],
@@ -366,7 +386,10 @@ export const FreezeScene: React.FC = () => {
     // replaces the extreme close-up of her eyes
     [sIn, (fr) => {
       const k = prog(fr, sIn, ecuEnd, "linear");
-      return { pos: [M[0] + 0.38, EYE - 0.14 + tremble, M[2] + lerp(2.0, 1.72, k)], look: [M[0], EYE - 0.3, M[2]], fov: 30 };
+      // r10: a slow arc + push on a medium shot (head to waist), never a tight face close-up
+      const a = lerp(0.32, 0.12, k);
+      const d = lerp(2.7, 2.25, k);
+      return { pos: [M[0] + Math.sin(a) * d, EYE - 0.2 + tremble, M[2] + Math.cos(a) * d], look: [M[0], EYE - 0.42, M[2]], fov: 32 };
     }],
     [ecuEnd, orbitShot(1.9, 0.75, ecuEnd, s70, 2.9, 0.6, 1.45, 50)],
     [s70, vertigo],
@@ -383,9 +406,11 @@ export const FreezeScene: React.FC = () => {
         <CampusHD dim={0.35} flickerLamp={1} />
         <Motes center={[0.1, Y + 1.2, 0.3]} spread={[3, 2.4, 3]} count={240} color="#dfe8ff" />
       </Freeze>
-      <SidewalkCloseup center={[0.3, Y, 0.5]} size={3} />
-      <Character look={MAYA} clips={[{ anim: "lockUp", start: -2 }]} position={M} faceFill={0.55} seed={1} act={0} life={0.05}
-        face={{ eyesWide: 0.85, worry: 1, brow: 0.8, blink: 0, mouth: 0.1, smile: -0.35, eyeX: f >= sIn && f < ecuEnd ? tremble * 40 : 0.1 }} />
+      <SidewalkCloseup center={[0.3, Y, 1.0]} size={4} />
+      <Shiver at={M} fear={f < back ? 0.6 + 0.4 * prog(f, 0, reach) : 1 - prog(f, back, back + 16)}>
+        <Character look={MAYA} clips={[{ anim: "lockUp", start: -2 }]} position={M} faceFill={0.55} seed={1} act={0} life={0.05} grip={0.7} ikOffR={[0.02, -0.12, 0.03]} ikOffL={[-0.02, -0.12, 0.03]}
+          face={{ eyesWide: 0.85, worry: 1, brow: 0.8, blink: 0, mouth: 0.1, smile: -0.35, eyeX: f >= sIn && f < ecuEnd ? tremble * 40 : 0.1 }} />
+      </Shiver>
       <FollowerShadow head={[0.05, Y, -0.05]} length={4.2} width={1.1} opacity={f < back ? 0.85 : 0.85 * (1 - prog(f, back, back + 14))} />
       <pointLight position={[0.7, Y + 1.9, 1.5]} color="#ffe2cc" intensity={1.8} distance={3.2} decay={1.6} />
       <pointLight position={[-1.0, Y + 1.8, -0.9]} color="#8fb8ff" intensity={2.4} distance={3.5} decay={1.6} />
@@ -395,7 +420,7 @@ export const FreezeScene: React.FC = () => {
       {f >= back && <ListenRings center={PH} start={back} every={10} life={36} maxR={3} y={Y + 0.016} />}
     </>
   );
-  const phone = <Phone position={racking ? [0.42, Y + 0.012, 1.3] : PH} rotation={[-Math.PI / 2, 0, 0.35]} screen={f >= back ? help : sv("guard-walk")} glow={1} />;
+  const phone = <Phone position={PH} rotation={[-Math.PI / 2, 0, 0.35]} screen={f >= back ? help : sv("guard-walk")} glow={1} />;
   return (
     <AbsoluteFill>
       <div style={{ position: "absolute", inset: 0, filter: `grayscale(${grey}) contrast(${1 + 0.08 * grey})${racking ? ` blur(${lerp(1, 7, prog(f, reach, reach + 10, "out"))}px)` : ""}` }}>
@@ -414,6 +439,8 @@ export const FreezeScene: React.FC = () => {
         </OverlayScene3D>
       )}
       <AbsoluteFill style={{ background: "#6fa8ff", mixBlendMode: "soft-light", opacity: cold, pointerEvents: "none" }} />
+      {/* r10: time is passing while she can't move: the frame closes in (vignette + darkening) until help starts */}
+      <AbsoluteFill style={{ pointerEvents: "none", background: "radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 35%, rgba(4,3,10,.85) 100%)", opacity: 0.25 + 0.6 * prog(f, 0, back) * (1 - prog(f, back, back + 10)) }} />
       <Grade vignette={0.65} />
       <InfoPill at={W(7, "freezes.") - F0} out={sIn - 8} icon="❄" text="FREEZE RESPONSE" color="#8fd3ff" y={0.845} size={44} />
       <StatCard at={W(7, "of") - F0 - 2} out={W(7, "freezing.") - F0 + 2} top={1410} />
@@ -615,7 +642,7 @@ export const Dispatch: React.FC = () => {
   const noPin = W(9, "cancels.") - F0 - 6;
   const end = S.relief - F0;
   const secs = Math.round(interpolate(f, [0, 40], [8, 98], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
-  const PH: [number, number, number] = [0.42, Y + 0.012, 0.62];
+  const PH: [number, number, number] = [0.5, Y + 0.012, 1.6];
   const help = lockTex({ time: "12:06", title: "Calling for help", body: "3 contacts alerted · live location shared", tint: "#5cc7b2", alert: true });
   return (
     <AbsoluteFill style={{ background: "#0e1424" }}>
@@ -628,11 +655,14 @@ export const Dispatch: React.FC = () => {
               <pointLight position={[1.1, Y + 2.2, 1.4]} color="#ffd9b0" intensity={4.5} distance={4.5} decay={1.5} />
               <pointLight position={[-0.6, Y + 2.0, -1.0]} color="#9fc8ff" intensity={4} distance={3.2} decay={1.6} />
               <LightPool position={[0.2, Y + 0.02, 0.3]} color={P.lampWarm} radius={1.8} opacity={0.3} />
-              <Character look={MAYA} clips={[{ anim: "lockUp", start: -2 }]} position={[0.1, Y, 0]} seed={1} faceFill={0.4} face={{ eyesWide: 0.7, worry: 0.9, brow: 0.6 }} />
+              <Shiver at={[0.1, Y, 0]} fear={1}>
+                <Character look={MAYA} clips={[{ anim: "lockUp", start: -2 }]} position={[0.1, Y, 0]} seed={1} faceFill={0.4} grip={0.7} ikOffR={[0.02, -0.12, 0.03]} ikOffL={[-0.02, -0.12, 0.03]} face={{ eyesWide: 0.7, worry: 0.9, brow: 0.6 }} />
+              </Shiver>
               <Phone position={PH} rotation={[-Math.PI / 2, 0, 0.55]} screen={help} glow={1} />
               <ListenRings center={PH} start={-40} every={14} life={40} maxR={2.4} y={Y + 0.016} />
               <pointLight position={[0.7, Y + 1.9, 1.5]} color="#ffe2cc" intensity={1.8} distance={3.2} decay={1.6} />
-              <CameraRig rig={pushIn(0, desk, [0.15, 1.15, 0.2], [0.5, 0.35, 1], 4.6, 2.7, 36, "glide")} handheld={0.006} />
+              {/* r10: the clock runs while the camera keeps moving (orbit + push), so the 90 s plays as cause -> effect */}
+              <CameraRig rig={orbit(0, desk, { center: [0.15, 1.0, 0.2], radius: 3.4, height: 0.55, from: 0.95, to: 0.2, fov: 36, lookOffset: [0, 0.05, 0] })} handheld={0.006} />
             </Scene3D>
           </div>
           <div style={{ position: "absolute", left: 0, right: 0, top: 330, display: "flex", justifyContent: "center" }}>

@@ -85,11 +85,13 @@ export type CaptionsProps = {
   yAt?: (frame: number) => number | undefined;
   /** Additive (v2 r3): frames where the caption sits on a dark backing pill (busy split-screens). */
   backingAt?: (frame: number) => boolean;
+  /** r10: scene-cut frames; a chunk's 0.45 s tail hold never carries across a cut onto a fresh shot. */
+  cutFrames?: number[];
 };
 
 /** Big, bold, rounded word-by-word captions. Each word pops in on its VO timestamp; keywords glow in brand color. */
 export const ReelCaptions: React.FC<CaptionsProps> = ({
-  timeline, y = 0.66, fontSize, highlight = C.accent, extraHighlights, maxWords = 3, offsetSec = 0, upper = false, tightPop = false, clean = false, hideAt, yAt, backingAt,
+  timeline, y = 0.66, fontSize, highlight = C.accent, extraHighlights, maxWords = 3, offsetSec = 0, upper = false, tightPop = false, clean = false, hideAt, yAt, backingAt, cutFrames,
 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -97,7 +99,12 @@ export const ReelCaptions: React.FC<CaptionsProps> = ({
   const fs = fontSize ?? Math.round((height > width ? 92 : 70) * (Math.min(width, height) / 1080));
   const chunks = React.useMemo(() => chunkWords(timelineWords(timeline, { extraHighlights, phrase: clean }), maxWords), [timeline, extraHighlights, maxWords, clean]);
   if (hideAt && hideAt(frame)) return null;
-  const idx = chunks.findIndex((c, i) => t >= c.start - 0.05 && t < Math.min(c.end + 0.45, chunks[i + 1]?.start ?? Infinity));
+  const cutAfter = (sec: number) => {
+    const fps0 = 30;
+    for (const cf of cutFrames ?? []) if (cf / fps0 > sec + 0.02) return cf / fps0;
+    return Infinity;
+  };
+  const idx = chunks.findIndex((c, i) => t >= c.start - 0.05 && t < Math.min(c.end + 0.45, chunks[i + 1]?.start ?? Infinity, Math.max(c.end + 0.05, cutAfter(c.end))));
   if (idx < 0) return null;
   const ch = chunks[idx];
   // r8: each caption line is locked to ONE position (and one backing state), sampled at the frame its first word

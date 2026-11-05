@@ -358,8 +358,15 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
       </svg>
       <AbsoluteFill style={{ opacity: 0.09, backgroundImage: "repeating-radial-gradient(circle at 17% 31%, #fff 0 1px, transparent 1px 3px), repeating-radial-gradient(circle at 71% 63%, #000 0 1px, transparent 1px 4px)", mixBlendMode: "overlay" }} />
       {/* r9: the sticker sits OUTSIDE the whip (it never enters clipped) and the stamp shakes the frame on impact */}
-      <AbsoluteFill style={{ transform: `translate(${shake * Math.sin(f * 7.3) * 14}px, ${shake * Math.cos(f * 5.1) * 10}px)` }}>
-        <StickerTitle text={text} at={at} color={color} size={190} y={0.44} rotate={variant % 2 ? 4 : -4} sub={sub} />
+      {/* r10: the sticker slams in with a 3D tilt (it swings flat from ~40 deg) and a squash-and-stretch overshoot, then
+          keeps a slow tilt drift so the card never sits as a flat graphic */}
+      <AbsoluteFill style={{ perspective: 1400, perspectiveOrigin: "50% 44%" }}>
+        <AbsoluteFill style={{
+          transformOrigin: "50% 44%",
+          transform: `translate(${shake * Math.sin(f * 7.3) * 14}px, ${shake * Math.cos(f * 5.1) * 10}px) rotateX(${interpolate(f, [0, 5, 9], [38, -6, 0], { extrapolateRight: "clamp" }) + 3 * Math.sin(f / 9)}deg) rotateY(${(variant % 2 ? -1 : 1) * (interpolate(f, [0, 6, 10], [-30, 5, 0], { extrapolateRight: "clamp" }) + 4 * Math.sin(f / 11))}deg) scale(${interpolate(f, [0, 2, 4, 7, 10], [0.7, 1.24, 0.93, 1.04, 1], { extrapolateRight: "clamp" })}, ${interpolate(f, [0, 2, 4, 7, 10], [1.3, 0.82, 1.08, 0.98, 1], { extrapolateRight: "clamp" })})`,
+        }}>
+          <StickerTitle text={text} at={at} color={color} size={190} y={0.44} rotate={variant % 2 ? 4 : -4} sub={sub} />
+        </AbsoluteFill>
       </AbsoluteFill>
     </AbsoluteFill>
   );

@@ -33,8 +33,9 @@ export const ReelAudio: React.FC = () => {
     [W(3, "on."), sfx("notify_ping"), 0.25],
     [W(3, "It") - 2, sfx("whoosh_soft"), 0.25],
     // the walk
-    [S.walk, sfx("sticker_pop"), 0.4],
-    [S.walk, sfx("impact_hit"), 0.3],
+    [S.walk, sfx("sticker_pop"), 0.54], // r10: card hits +2.5 dB (they sit in VO gaps)
+    [S.walk, sfx("impact_hit"), 0.42],
+    [S.walk - 3, sfx("whoosh_hard"), 0.3],
     [S.walk + TITLE - 4, sfx("footsteps_behind"), 0.42, W(5, "She") - S.walk - TITLE + 4],
     [W(5, "She") - 2, sfx("whoosh_hard"), 0.4],
     [scream, sfx("distant_cry_abstract"), 0.14, 26],
@@ -67,8 +68,9 @@ export const ReelAudio: React.FC = () => {
     [W(9, "police") - 6, sfx("siren_far"), 0.25, S.party - W(9, "police") + 6],
     [S.relief + 2, sfx("chime"), 0.18],
     // the drink
-    [S.party, sfx("sticker_pop"), 0.4],
-    [S.party, sfx("impact_hit"), 0.3],
+    [S.party, sfx("sticker_pop"), 0.54], // r10: card hits +2.5 dB (they sit in VO gaps)
+    [S.party, sfx("impact_hit"), 0.42],
+    [S.party - 3, sfx("whoosh_hard"), 0.3],
     [S.party + TITLE + 3, sfx("notify_ping"), 0.22],
     [W(11, "Someone") + 4, sfx("whoosh_soft"), 0.18],
     [S.tilt, sfx("heartbeat_calm"), 0.4],
@@ -86,8 +88,9 @@ export const ReelAudio: React.FC = () => {
     [W(16, "I'm"), sfx("ui_tap"), 0.5],
     [W(16, "way.") + 2, sfx("footsteps_walk"), 0.3, 22, 1.7],
     // the phone
-    [S.phone, sfx("sticker_pop"), 0.4],
-    [S.phone, sfx("impact_hit"), 0.3],
+    [S.phone, sfx("sticker_pop"), 0.54], // r10: card hits +2.5 dB (they sit in VO gaps)
+    [S.phone, sfx("impact_hit"), 0.42],
+    [S.phone - 3, sfx("whoosh_hard"), 0.3],
     [W(17, "Smashes") - 1, sfx("phone_smash"), 0.34],
     [W(17, "Smashes") + 14, sfx("signal_lost"), 0.15], // r8: ~4.5 dB lower under "Smashes it?"
     // server
@@ -97,8 +100,9 @@ export const ReelAudio: React.FC = () => {
     [WE(18, "raises") + 1, sfx("alert_step"), 0.24],
     [WE(18, "itself.") + 2, sfx("phone_ring"), 0.16, 40],
     // the ride
-    [S.ride, sfx("sticker_pop"), 0.4],
-    [S.ride, sfx("impact_hit"), 0.3],
+    [S.ride, sfx("sticker_pop"), 0.54], // r10: card hits +2.5 dB (they sit in VO gaps)
+    [S.ride, sfx("impact_hit"), 0.42],
+    [S.ride - 3, sfx("whoosh_hard"), 0.3],
     [W(19, "Ride", 1) - 12, sfx("whoosh_soft"), 0.25],
     [W(19, "on."), sfx("notify_ping"), 0.2],
     [W(19, "turns") - 8, sfx("turn_signal"), 0.36],
@@ -167,7 +171,7 @@ export const ReelAudio: React.FC = () => {
       }} />
       <Bed src="music/tension_build.wav" from={S.contacts - 4} to={S.party + 6} duck={0.6} vol={(g) => ramp(g, [[S.contacts - 4, 0], [S.contacts + 14, 1], [S.party - 4, 1], [S.party + 6, 0]])} />
       <Bed src="music/tension_loop.wav" from={S.party - 2} to={S.cancel + 10} duck={0.6} vol={(g) => {
-        const base = ramp(g, [[S.party - 2, 0], [S.party + 14, 1.05], [S.notice, 1.05], [S.notice + 6, 0.7], [S.hallway, 1.05], [W(14, "still.") + 4, 1.05], [W(14, "still.") + 8, 0.5], [W(14, "Her") - 2, 0.5], [W(14, "Her") + 6, 1.05], [S.cancel - 6, 1.05], [S.cancel + 10, 0]]);
+        const base = ramp(g, [[S.party - 2, 0], [S.party + 14, 1.05], [S.notice, 1.05], [S.notice + 6, 0.7], [S.hallway, 1.05], [W(14, "still.") + 4, 1.05], [W(14, "still.") + 8, 0.12], [W(14, "Her") - 2, 0.12], [W(14, "Her") + 6, 1.05], [S.cancel - 6, 1.05], [S.cancel + 10, 0]]);
         const hush = g >= W(18, "dark,") + 4 && g < W(18, "raises") - 2 ? 0 : 1; // the pings stop: a beat of silence
         const tech = g >= S.phone + TITLE && g < S.ride ? 0.55 : 1; // r5: THE PHONE / server lines: music sits 8-10 dB under the VO
         return base * hush * tech;

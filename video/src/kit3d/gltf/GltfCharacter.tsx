@@ -94,8 +94,8 @@ const smoothGeo = (g: THREE.BufferGeometry) => {
 // rim (Fresnel) term so silhouettes separate from dark night sets
 type Rim = { color: string; strength: number };
 const matCache = new Map<string, THREE.MeshStandardMaterial>();
-const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Rim | null, opts: { dark?: boolean; skin?: boolean; hair?: boolean } = {}) => {
-  const key = `${base.uuid}|${color}|${rim?.color}|${rim?.strength}|${opts.dark}|${opts.skin}|${opts.hair}`;
+const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Rim | null, opts: { dark?: boolean; skin?: boolean; hair?: boolean; toon?: boolean } = {}) => {
+  const key = `${base.uuid}|${color}|${rim?.color}|${rim?.strength}|${opts.dark}|${opts.skin}|${opts.hair}|${opts.toon}`;
   let m = matCache.get(key);
   if (m) return m;
   m = new THREE.MeshStandardMaterial({
@@ -110,6 +110,13 @@ const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Ri
     // falls off, and at grazing angles), so cheeks, nose and jaw read as rounded forms instead of a flat cream plane
     m.emissive = m.color.clone().multiplyScalar(0.06);
     m.roughness = 0.5;
+    if (opts.toon) {
+      // v2 r10 "toon" skin: richer peach albedo (the pale cream read as unlit plastic under the face fill), a warm
+      // red emissive floor (fake subsurface) and a satin roughness so cheeks catch a soft highlight
+      m.color.multiply(new THREE.Color(0.93, 0.78, 0.7));
+      m.emissive = new THREE.Color("#5a1e14").multiplyScalar(0.18);
+      m.roughness = 0.46;
+    }
   }
   const rimU = rim && rim.strength > 0 ? (() => { const col = new THREE.Color(rim.color); return { value: new THREE.Vector4(col.r, col.g, col.b, rim.strength * (opts.hair ? 0.4 : 1)) }; })() : null;
   if (rimU || skinLit) {
@@ -127,11 +134,11 @@ const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Ri
           float lum = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
           // shadowed skin goes warm instead of grey; grazing edges pick up a soft red bleed
           gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * uSss * 1.35, 0.22 * (1.0 - smoothstep(0.05, 0.5, lum)));
-          gl_FragColor.rgb += diffuseColor.rgb * uSss * 0.07 * pow(1.0 - ndv, 1.6);` : ""}
+          gl_FragColor.rgb += diffuseColor.rgb * uSss * ${opts.toon ? "0.16" : "0.07"} * pow(1.0 - ndv, 1.6);` : ""}
         }`,
       );
     };
-    m.customProgramCacheKey = () => (skinLit ? "gltfRimSkin" : "gltfRim");
+    m.customProgramCacheKey = () => (skinLit ? (opts.toon ? "gltfRimSkinToon" : "gltfRimSkin") : "gltfRim");
   }
   matCache.set(key, m);
   return m;
@@ -159,6 +166,7 @@ const BASE: Record<AnimName, Base> = {
   drink: { clip: "Idle", ref: "idle" },
   woozy: { clip: "Idle", ref: "idle" },
   stumble: { clip: "Idle", ref: "idle" },
+  stumbleCatch: { clip: "Idle", ref: "idle" },
   collapse: { clip: "Idle", ref: "idle", speed: 0.4 },
   lieSide: { clip: "Idle", ref: "idle", speed: 0.4 },
   hug: { clip: "Idle", ref: "idle" },
@@ -211,7 +219,7 @@ const NAMES = {
   ulL: "UpperLegL", llL: "LowerLegL", ftL: "FootL", ulR: "UpperLegR", llR: "LowerLegR", ftR: "FootR",
 };
 
-const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number): Rig => {
+const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number, toon = false): Rig => {
   const root = skClone(asset.gltf.scene);
   const meshes: THREE.SkinnedMesh[] = [];
   const hide = MODELS[cast.model].hide ?? [];
@@ -234,7 +242,7 @@ const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number)
       const hair = n.startsWith("Hair");
       const dark = !!cast.darkFace && skin && parentName.includes("Head");
       m.userData.srcMat = n;
-      return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark });
+      return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark, toon });
     });
     m.material = Array.isArray(m.material) ? out : out[0];
     m.castShadow = true;
@@ -405,7 +413,21 @@ const aimBone = (b: THREE.Object3D, childPos: THREE.Vector3, target: THREE.Vecto
 /** r9 procedural face: eyelids that blink / narrow / open wide, brows that raise and knit with worry, a sculpted nose
  *  and lips that part. Built on the model's own measured eye + brow positions (buildFace). */
 const SPH = new THREE.SphereGeometry(1, 20, 14);
-const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number }> = ({ data, p, s }) => {
+const BOB_GEO = (() => {
+  const prof: [number, number][] = [[0.001, 0.232], [0.05, 0.226], [0.088, 0.205], [0.114, 0.17], [0.127, 0.125], [0.13, 0.08], [0.128, 0.04], [0.126, 0.01], [0.13, -0.012], [0.118, -0.02]];
+  const g = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 40, Math.PI * 0.32, Math.PI * 1.36);
+  g.computeVertexNormals();
+  return g;
+})();
+const WHITE_MAT = new THREE.MeshStandardMaterial({ color: "#f4efe9", roughness: 0.35, emissive: "#2a2420", emissiveIntensity: 0.4 });
+const PUPIL_MAT = new THREE.MeshBasicMaterial({ color: "#0a0606" });
+const irisMats = new Map<string, THREE.MeshStandardMaterial>();
+const irisMat = (c: string) => {
+  let m = irisMats.get(c);
+  if (!m) irisMats.set(c, (m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.3, emissive: new THREE.Color(c).multiplyScalar(0.25) })));
+  return m;
+};
+const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number; toon?: boolean; eyeColor?: string }> = ({ data, p, s, toon, eyeColor }) => {
   const blink = clamp(p.blink ?? 0, 0, 1);
   const wide = clamp(p.eyesWide ?? 0, 0, 1);
   const worry = clamp(p.worry ?? 0, -1, 1);
@@ -421,12 +443,23 @@ const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number }> = ({ data, p, s 
         const hh = e.hh * 1.25, h = Math.max(0.0004, close * hh * 2);
         return (
           <group key={`e${i}`} position={[e.c.x, e.c.y, e.c.z]} rotation={[0, e.yaw, 0]}>
+            {/* v2 r10 toon eyes: sclera + iris + pupil sit over the model's painted slit, so the eye reads as an eye
+                (whites, a colored iris, a catchlight) instead of a dark painted stroke; the skin lid still covers the top */}
+            {toon && (
+              <group position={[0, 0, 0.0005]}>
+                <mesh geometry={SPH} material={WHITE_MAT} scale={[e.hw * 1.02, hh * 1.0, 0.006]} />
+                <group position={[(p.eyeX ?? 0) * e.hw * 0.25, (p.eyeY ?? 0) * hh * 0.2, 0]}>
+                  <mesh geometry={SPH} material={irisMat(eyeColor ?? "#4a2e1e")} position={[0, -hh * 0.06, 0.0052]} scale={[Math.min(e.hw * 0.52, hh * 0.92), Math.min(e.hw * 0.52, hh * 0.92), 0.0016]} />
+                  <mesh geometry={SPH} material={PUPIL_MAT} position={[0, -hh * 0.06, 0.0066]} scale={[Math.min(e.hw * 0.25, hh * 0.45), Math.min(e.hw * 0.25, hh * 0.45), 0.0008]} />
+                </group>
+              </group>
+            )}
             {/* upper lid: skin-colored shell sliding down from the top of the eye */}
             <mesh geometry={SPH} material={data.skinMat} position={[0, hh - h / 2, 0.0035]} scale={[e.hw * 1.22, h / 2 + 0.0008, 0.011]} />
             {/* lash line rides the lid edge */}
             <mesh geometry={SPH} material={data.lashMat} position={[0, hh - h + 0.0006, 0.0075]} rotation={[0, 0, side * 0.08]} scale={[e.hw * 1.1, 0.0011, 0.004]} />
             {/* catchlight: the single biggest "alive" cue on a stylized eye */}
-            {close < 0.7 && <mesh geometry={SPH} position={[side * e.hw * 0.28, e.hh * 0.2 - Math.max(0, close - 0.3) * e.hh, 0.011]} scale={[e.hh * 0.3, e.hh * 0.3, 0.0012]}><meshBasicMaterial color="#ffffff" transparent opacity={0.85} /></mesh>}
+            {close < 0.7 && <mesh geometry={SPH} position={[side * e.hw * (toon ? 0.18 : 0.28), e.hh * 0.2 - Math.max(0, close - 0.3) * e.hh, toon ? 0.0082 : 0.011]} scale={[e.hh * (toon ? 0.36 : 0.3), e.hh * (toon ? 0.36 : 0.3), 0.0012]}><meshBasicMaterial color="#ffffff" transparent opacity={0.85} /></mesh>}
           </group>
         );
       })}
@@ -450,7 +483,14 @@ const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number }> = ({ data, p, s 
 };
 
 // ---------------------------------------------------------------------------------------------------------------
-export type GltfCharacterProps = CharacterProps & { look?: LookCast };
+export type GltfCharacterProps = CharacterProps & {
+  look?: LookCast;
+  /** v2 r10 (opt-in, off for v3): eye whites + iris, warmer skin, 15% smaller hands with curled fingers (a closed grip
+   *  around a held phone / cup), and the smooth bob shell for casts that carry the "bobShell" extra. */
+  toon?: boolean;
+  /** 0..1 extra finger curl (e.g. a fist / clutch); held props always get a full grip in toon mode. */
+  grip?: number;
+};
 
 export const GltfCharacter: React.FC<GltfCharacterProps> = (props) => {
   const { look, rim: rimIn } = props;
@@ -458,7 +498,8 @@ export const GltfCharacter: React.FC<GltfCharacterProps> = (props) => {
   const def = MODELS[cast.model];
   const asset = useAsset(def.file, def.anims);
   const rim: Rim | null = rimIn === null ? null : { color: rimIn?.color ?? "#b4c8ff", strength: Math.min(0.5, (rimIn?.strength ?? 0.22) * 0.9) };
-  const rig = useMemo(() => (asset ? buildRig(asset, cast, rim, def.height) : null), [asset, cast, rim?.color, rim?.strength, def.height]); // eslint-disable-line react-hooks/exhaustive-deps
+  const toon = !!props.toon;
+  const rig = useMemo(() => (asset ? buildRig(asset, cast, rim, def.height, toon) : null), [asset, cast, rim?.color, rim?.strength, def.height, toon]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!rig) return null;
   return <Posed {...props} rig={rig} cast={cast} />;
 };
@@ -467,7 +508,7 @@ type Anchors = { phoneR: THREE.Group | null; cupR: THREE.Group | null; phoneL: T
 
 const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
   rig, cast, clips, pose: poseIn, frameOffset = 0, seed = 0, position = [0, 0, 0], rotationY = 0, holdR = "none", holdL = "none",
-  phoneScreen, phoneGlow = 0, faceFill = 0.35, face, act = 0, ikOffR, ikOffL, castShadow = true,
+  phoneScreen, phoneGlow = 0, faceFill = 0.35, face, act = 0, ikOffR, ikOffL, castShadow = true, toon = false, grip = 0, look,
 }) => {
   const frame = useCurrentFrame() + frameOffset;
   const anchors = useRef<Anchors>({ phoneR: null, cupR: null, phoneL: null, cupL: null, head: null, chest: null, face: null });
@@ -615,6 +656,34 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
     ik(1);
     ik(-1);
 
+    // ---- 3b. v2 toon hands: 15% smaller, fingers curled (relaxed by default, a closed grip around a held prop)
+    if (toon) {
+      for (const side of [1, -1] as const) {
+        const L = side === 1;
+        const wr = B(L ? NAMES.wrL : NAMES.wrR);
+        wr.scale.setScalar(0.85);
+        const held = (L ? holdL : holdR) !== "none";
+        const c = held ? 1 : clamp(0.42 + grip * 0.58, 0, 1);
+        const sfx = L ? "L" : "R";
+        for (const fn of ["Index", "Middle", "Ring", "Pinky"]) {
+          for (let j = 1; j <= 3; j++) {
+            const bi = idx.get(`${fn}${j}${sfx}`);
+            if (bi === undefined) continue;
+            const ang = c * (j === 1 ? 0.95 : j === 2 ? 1.05 : 0.7) * (fn === "Index" ? 0.85 : fn === "Pinky" ? 1.1 : 1);
+            const ax = Z.clone().applyQuaternion(rig.bindQ[bi].clone().invert());
+            bones[bi].quaternion.multiply(qAxis(ax, -side * ang));
+          }
+        }
+        for (let j = 1; j <= 2; j++) {
+          const bi = idx.get(`Thumb${j}${sfx}`);
+          if (bi === undefined) continue;
+          const ax = Y.clone().applyQuaternion(rig.bindQ[bi].clone().invert());
+          bones[bi].quaternion.multiply(qAxis(ax, side * c * 0.35));
+        }
+      }
+      root.updateMatrixWorld(true);
+    }
+
     // ---- 4. anchors for props + extras (model space)
     const setAnchor = (g: THREE.Group | null, bone: THREE.Object3D, bindIdx: number, offset: V3, extra?: THREE.Quaternion) => {
       if (!g) return;
@@ -669,7 +738,21 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
 
   const extras = new Set<Extra>(cast.extras ?? []);
   const s = rig.scale;
-  const ponyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: cast.hair ?? "#2a1a12", roughness: 0.75 }), [cast.hair]);
+  const hairMat = useMemo(() => {
+    let m: THREE.Material | null = null;
+    rig.root.traverse((o) => {
+      const mm = o as THREE.Mesh;
+      if (!m && mm.isMesh && String(mm.userData.srcMat ?? "").startsWith("Hair_Blond")) m = (Array.isArray(mm.material) ? mm.material[0] : mm.material) as THREE.Material;
+    });
+    if (!m) return null;
+    const c = (m as THREE.MeshStandardMaterial).clone();
+    c.side = THREE.DoubleSide;
+    c.color.multiplyScalar(1.18);
+    c.emissive = c.color.clone().multiplyScalar(0.1);
+    c.roughness = 0.55;
+    return c;
+  }, [rig]);
+  const ponyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: cast.hair ?? "#2a1a12", roughness: 0.62, side: THREE.DoubleSide }), [cast.hair]);
   // r9 face rig values (same pose library as the body: blinks, brows, worry, wide eyes, mouth)
   const FP = useMemo(() => {
     const P0 = poseIn ?? evalClips(list, frame, seed);
@@ -686,7 +769,7 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
         {holdL === "phone" && <group ref={(g) => { anchors.current.phoneL = g; }}><Phone screen={phoneScreen} glow={phoneGlow} scale={0.95} /></group>}
         {holdL === "cup" && <group ref={(g) => { anchors.current.cupL = g; }}><Cup scale={0.95} /></group>}
         <group ref={(g) => { anchors.current.head = g; }}>
-          {rig.face ? <FaceRig data={rig.face} p={FP} s={s} /> : null}
+          {rig.face ? <FaceRig data={rig.face} p={FP} s={s} toon={toon} eyeColor={look?.eyes} /> : null}
           {extras.has("ponytail") && (
             <group position={[0, 0.135, -0.09]} rotation={[0.55 + sway * 0.3, 0, sway * 0.4]} scale={0.8}>
               <mesh material={ponyMat} position={[0, 0, 0]} castShadow={castShadow}>
@@ -704,8 +787,17 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
               </mesh>
             </group>
           )}
+          {extras.has("bobShell") && (
+            // v2 r10: one smooth bob for Maya from every angle. A lathed bob shell (crown -> flared ends at the jaw) over
+            // the model's sculpted strand clumps, which read as rope / dreadlocks from behind and a ridged helmet from
+            // above; it is open at the front so the model's own fringe and face stay as they are.
+            <group position={[0, 0, -0.008]}>
+              <mesh material={hairMat ?? ponyMat} castShadow={castShadow} geometry={BOB_GEO} />
+            </group>
+          )}
           {extras.has("policeCap") && (
-            <group position={[0, 0.215, 0.005]} rotation={[-0.08, 0, 0]}>
+            // v3 fix r2: seated ON the head (was floating ~2.5 cm above it) and 12% wider so the brim + band hide the hair
+            <group position={[0, 0.185, 0.008]} rotation={[-0.1, 0, 0]} scale={1.12}>
               <mesh castShadow={castShadow}>
                 <cylinderGeometry args={[0.122, 0.112, 0.075, 24]} />
                 <meshStandardMaterial color="#141b33" roughness={0.6} />

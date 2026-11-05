@@ -55,9 +55,11 @@ const high = (f: number) =>
   (f >= W(9, "A") - 2 && f < W(9, "If") + 2) || // dispatcher shot: caption in the dark band above her
   (f >= S.cup && f < S.tilt) || // drink-spike close-up (counter + cup fill the bottom)
   (f >= S.duress && f < W(21, "It")); // PIN pad
-const captionY = (f: number) => (high(f) ? HIGH : undefined);
+const splitDivider = (f: number) => f >= W(21, "It") && f < S.montage; // r10: the duress split puts captions on its divider
+const captionY = (f: number) => (splitDivider(f) ? 0.505 : high(f) ? HIGH : undefined);
 const backingAt = (f: number) => (f >= S.cup && f < S.tilt) || (f >= S.duress && f < W(21, "It"));
 export const _be = BE;
+const CUTS = [...SCENES.map((x) => x[0]), W(9, "A") - 2, W(9, "If") + 2, W(8, "ring.") - 2, W(8, "gets") - 4].sort((a, b) => a - b);
 
 export const ReelV2: React.FC = () => {
   const frame = useCurrentFrame();
@@ -75,7 +77,7 @@ export const ReelV2: React.FC = () => {
         );
       })}
       {!clean && <ReelHud />}
-      {showCaptions && <Captions timeline={TIMELINE} y={CAPTION_Y} fontSize={86} maxWords={3} tightPop clean hideAt={hideCaptions} yAt={captionY} backingAt={backingAt} />}
+      {showCaptions && <Captions timeline={TIMELINE} y={CAPTION_Y} fontSize={86} maxWords={3} tightPop clean hideAt={hideCaptions} yAt={captionY} backingAt={backingAt} cutFrames={CUTS} />}
       <ReelAudio />
     </AbsoluteFill>
   );

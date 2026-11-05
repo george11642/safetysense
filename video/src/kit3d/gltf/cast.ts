@@ -26,7 +26,7 @@ export const MODELS: Record<ModelKey, ModelDef> = {
 /** Material recolor: key = material name (or "mesh/material" to target one mesh), value = color. */
 export type Recolor = Record<string, string>;
 
-export type Extra = "ponytail" | "policeCap" | "badge" | "headset" | "hood" | "bun";
+export type Extra = "ponytail" | "policeCap" | "badge" | "headset" | "hood" | "bun" | "bobShell";
 
 export type CastDef = { model: ModelKey; colors: Recolor; extras?: Extra[]; hair?: string; darkFace?: boolean };
 
@@ -40,6 +40,13 @@ export const CAST = {
     colors: { "Suit_Body/Black": "#1d8f91", "Suit_Legs/Black": "#2c3658", White: "#ef7b9b", Hair_Blond: "#3a2418", Hair_Brown: "#24160f", "Suit_Feet/Black": "#eeeaf4" },
     extras: ["ponytail"],
     hair: "#3a2418",
+  },
+  /** v2 r10: Maya with ONE hair design everywhere: the SuitFemale bob plus a smooth back shell, no ponytail. */
+  maya2: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#1d8f91", "Suit_Legs/Black": "#2c3658", White: "#ef7b9b", Hair_Blond: "#4a2c1c", Hair_Brown: "#2e1b12", "Suit_Feet/Black": "#eeeaf4" },
+    extras: ["bobShell"],
+    hair: "#4a2c1c",
   },
   /** Roommate: blonde, mustard top. */
   roommate: { model: "casualF", colors: { White: "#f0b55a", Orange: "#4b3f6b", Grey: "#e9e3f2" } },

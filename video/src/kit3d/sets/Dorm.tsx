@@ -11,7 +11,7 @@ import { P } from "../palette";
 /** Root position for a character sitting on the bed edge (facing +Z). */
 export const BED_SEAT: V3 = [-1.1, 0.1, -0.42];
 
-export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: "cozy" | "alert"; fairyLights?: boolean; posterArt?: boolean }> = ({ lampOn = true, phoneLight = 0, mood = "cozy", fairyLights = true, posterArt = false }) => {
+export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: "cozy" | "alert"; fairyLights?: boolean; posterArt?: boolean; accentPoster?: boolean }> = ({ lampOn = true, phoneLight = 0, mood = "cozy", fairyLights = true, posterArt = false, accentPoster = true }) => {
   const frame = useCurrentFrame();
   const wall = flatMat(P.wallDorm, { rough: 0.95 });
   const wood = flatMat("#7a5640", { rough: 0.6 });
@@ -69,12 +69,16 @@ export const DormRoom: React.FC<{ lampOn?: boolean; phoneLight?: number; mood?: 
           <mesh position={[0, -0.36, 0.008]} material={flatMat("#f4efe6")}><planeGeometry args={[0.36, 0.035]} /></mesh>
         </group>
       )}
-      <mesh position={[-1.4, 1.75, -2.14]} rotation={[0, 0, 0.04]} material={flatMat(P.accent)}>
-        <planeGeometry args={[0.55, 0.75]} />
-      </mesh>
-      <mesh position={[-1.4, 1.85, -2.13]} material={glowMat("#ffe08a", 0.9)}>
-        <circleGeometry args={[0.14, 16]} />
-      </mesh>
+      {accentPoster && (
+        <>
+          <mesh position={[-1.4, 1.75, -2.14]} rotation={[0, 0, 0.04]} material={flatMat(P.accent)}>
+            <planeGeometry args={[0.55, 0.75]} />
+          </mesh>
+          <mesh position={[-1.4, 1.85, -2.13]} material={glowMat("#ffe08a", 0.9)}>
+            <circleGeometry args={[0.14, 16]} />
+          </mesh>
+        </>
+      )}
       <mesh position={[-2.54, 1.6, -0.8]} rotation={[0, Math.PI / 2, -0.03]} material={flatMat(P.calm)}>
         <planeGeometry args={[0.6, 0.45]} />
       </mesh>

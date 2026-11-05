@@ -4,7 +4,7 @@ import type { Look } from "../kit3d/CharacterHD";
 import { P } from "../kit3d/palette";
 import type { LookCast } from "../kit3d/gltf/cast";
 
-export const MAYA: Look = { ...LOOKS_HD.maya, hairStyle: "bob", eyes: "#4a2e1e", lashes: true };
+export const MAYA: LookCast = { cast: "maya2", ...LOOKS_HD.maya, hairStyle: "bob", eyes: "#5a3a22", lashes: true };
 /** r5: one roommate design everywhere: long blonde hair (same read from front, side and back), mustard top. */
 export const ROOMMATE_HD: Look = { ...LOOKS_HD.roommate, hairStyle: "long", eyes: "#3d6a8a" };
 /** r5: Mom gets a bun and a cardigan over her top so she does not share the roommate's silhouette. */
