@@ -358,8 +358,8 @@ export const _unused = { clamp, NightLights };
  *  the camera inside a character's head. Phone screen faces +Z before orientation.
  *  r4: real HD hand (palm behind the phone, fingers wrapping the right edge, thumb resting on the lower-left of the
  *  screen); `tap` 0..1 dips the thumb onto the glass (PIN entry). */
-export const PhoneInHand: React.FC<{ position: V3; toward: V3; screen?: string | THREE.Texture; glow?: number; flash?: number; skin?: string; sleeve?: string; roll?: number; tap?: number; thumbAt?: [number, number] }> = ({
-  position, toward, screen, glow = 1, flash = 0, skin = P.skin[1], sleeve = "#2e2a48", roll = 0, tap = 0, thumbAt,
+export const PhoneInHand: React.FC<{ position: V3; toward: V3; screen?: string | THREE.Texture; glow?: number; flash?: number; skin?: string; sleeve?: string; roll?: number; tap?: number; thumbAt?: [number, number]; noHand?: boolean }> = ({
+  position, toward, screen, glow = 1, flash = 0, skin = P.skin[1], sleeve = "#2e2a48", roll = 0, tap = 0, thumbAt, noHand = false,
 }) => {
   const q = useMemo(() => {
     const m = new THREE.Matrix4().lookAt(new THREE.Vector3(...toward), new THREE.Vector3(...position), new THREE.Vector3(0, 1, 0));
@@ -379,6 +379,20 @@ export const PhoneInHand: React.FC<{ position: V3; toward: V3; screen?: string |
   const ang = Math.atan2(tipX - hx, tipY - hy); // angle of the thumb from +Y
   const lenT = 0.05;
   const baseX = tipX - Math.sin(ang) * lenT, baseY = tipY - Math.cos(ang) * lenT;
+  if (noHand) {
+    // r9: no mitten hand; a tap shows as a soft touch glow on the glass
+    return (
+      <group position={position} quaternion={q}>
+        <Phone screen={screen} glow={glow} flash={flash} />
+        {tap > 0.01 && (
+          <mesh position={[tipX, tipY, 0.011]}>
+            <circleGeometry args={[0.006 + 0.008 * tap, 24]} />
+            <meshBasicMaterial color="#ffffff" transparent opacity={0.55 * tap} toneMapped={false} depthWrite={false} />
+          </mesh>
+        )}
+      </group>
+    );
+  }
   return (
     <group position={position} quaternion={q}>
       <Phone screen={screen} glow={glow} flash={flash} />

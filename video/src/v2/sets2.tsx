@@ -308,6 +308,7 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
   const ease = whip * whip;
   const rays = Array.from({ length: 18 });
   const mid = new THREE.Color(color).multiplyScalar(0.45).getStyle();
+  const shake = f >= 2 && f < 12 ? 1 - (f - 2) / 10 : 0;
   return (
     <AbsoluteFill style={{ background: "#0d0b16" }}>
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 44%, ${color} 0%, ${mid} 38%, #0d0b16 82%)`, transform: `translateX(${(variant % 2 ? -1 : 1) * ease * 1100}px) scale(${1.25 - 0.25 * punch})`, filter: ease > 0.01 ? `blur(${ease * 24}px)` : "none" }}>
@@ -341,7 +342,24 @@ export const ChapterCard: React.FC<{ text: string; color: string; at?: number; d
             </g>
           )}
         </svg>
-        <StickerTitle text={text} at={at - 5} color={color} size={190} y={0.44} rotate={variant % 2 ? 4 : -4} sub={sub} />
+      </AbsoluteFill>
+      {/* r9: printed-poster texture (halftone dots + grain) so the burst is not a flat vector fill */}
+      <svg width="1080" height="1920" style={{ position: "absolute", inset: 0, mixBlendMode: "overlay", opacity: 0.35 }}>
+        <defs>
+          <pattern id={`ht${variant}`} width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(22)">
+            <circle cx="9" cy="9" r="4.2" fill="#000" />
+          </pattern>
+          <radialGradient id={`htm${variant}`} cx="50%" cy="44%" r="70%">
+            <stop offset="0.25" stopColor="#fff" stopOpacity="0" /><stop offset="1" stopColor="#fff" stopOpacity="1" />
+          </radialGradient>
+          <mask id={`htk${variant}`}><rect width="1080" height="1920" fill={`url(#htm${variant})`} /></mask>
+        </defs>
+        <rect width="1080" height="1920" fill={`url(#ht${variant})`} mask={`url(#htk${variant})`} />
+      </svg>
+      <AbsoluteFill style={{ opacity: 0.09, backgroundImage: "repeating-radial-gradient(circle at 17% 31%, #fff 0 1px, transparent 1px 3px), repeating-radial-gradient(circle at 71% 63%, #000 0 1px, transparent 1px 4px)", mixBlendMode: "overlay" }} />
+      {/* r9: the sticker sits OUTSIDE the whip (it never enters clipped) and the stamp shakes the frame on impact */}
+      <AbsoluteFill style={{ transform: `translate(${shake * Math.sin(f * 7.3) * 14}px, ${shake * Math.cos(f * 5.1) * 10}px)` }}>
+        <StickerTitle text={text} at={at} color={color} size={190} y={0.44} rotate={variant % 2 ? 4 : -4} sub={sub} />
       </AbsoluteFill>
     </AbsoluteFill>
   );

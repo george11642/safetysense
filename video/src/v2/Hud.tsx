@@ -64,7 +64,7 @@ const PILL: [number, Pill][] = [
   [T.relief, { label: "SAFE", sub: "Help reached her", color: C.calm, icon: "shield" }],
   [T.party, L("Night Out")],
   [T.youOkay, { label: "CHECK-IN", sub: "“You okay?” · 45 s", color: C.warn, icon: "clock" }],
-  [T.noAnswer, { label: "ALERTED", sub: "No answer in 45 s", color: C.accent, icon: "people" }],
+  [T.noAnswer, { label: "ALERTED", sub: "1 contact · live map", color: C.accent, icon: "people" }], // r9: per-mode contact count explicit
   [T.phone, { label: "LISTENING", sub: "Server check-in · 60 s", color: C.calm, icon: "server" }], // r8: a server check-in, never a biometric
   [T.dark, { label: "SIGNAL LOST", sub: "Phone went dark", color: C.danger, icon: "server" }],
   [T.alarm, { label: "ALERTED", sub: "Server raised alarm", color: C.accent, icon: "server" }],
@@ -76,7 +76,7 @@ const PILL: [number, Pill][] = [
 ];
 const CLOCK: [number, string][] = [
   [0, "12:06 AM"], [S.arm, "12:04 AM"], [S.walk, "12:05 AM"], [B(6), "12:06 AM"], [T.contactsRing - 10, "+0:08"], [T.party, "10:48 PM"], [T.t1102, "11:02 PM"], [T.t1120, "11:20 PM"],
-  [T.t1131, "11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "1:12 AM"], [T.ride, "1:40 AM"],
+  [T.t1131, "11:31 PM"], [T.noAnswer, "+0:45"], [T.phone, "1:12 AM"], [T.alarm, "1:13 AM"], [T.ride, "1:40 AM"],
 ];
 /** RISK meter (game-like bar, like the references' BAC / REMEMBERED meters): [frame, value 0..100]; eased between keys. */
 const RISK: [number, number][] = [
@@ -120,10 +120,21 @@ const Icon: React.FC<{ kind: Pill["icon"]; color: string; size: number }> = ({ k
   );
 };
 
+/** r9: the HUD steps out of the way on close-ups and stat beats (one caption + at most one callout per shot). */
+const HIDE: [number, number][] = [
+  [S.freeze, S.contacts], // freeze close-ups + the 70% card
+  [S.dispatch, W(9, "If")], // dispatcher close-up
+];
+/** r9: the right-hand cluster is not sticky any more: the clock shows for ~2 s when the scene time changes (and during
+ *  fast-forwards); the CALLS SHE MADE 0 counter pops in at each escalation that did not need her to call, then leaves. */
+const CLOCK_HOLD = 60;
+const CALLS_HOLD = 54;
+
 export const ReelHud: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   if (frame < T.hudIn || frame >= T.hudOff + 12) return null;
+  if (HIDE.some(([a, b]) => frame >= a && frame < b)) return null;
   if ([S.walk, S.party, S.phone, S.ride].some((t) => frame >= t && frame < t + TITLE)) return null; // clean chapter cards
 
   const slam = spring({ frame: frame - T.hudIn, fps, config: { damping: 11, stiffness: 260, mass: 0.7 } });
@@ -151,6 +162,13 @@ export const ReelHud: React.FC = () => {
     clock = `+0:${String(secs).padStart(2, "0")}`;
     ff = true;
   }
+  // r9: the server's 60 s check-in window fast-forwards on screen (never reads as an instant alarm)
+  const srv0 = T.dark + 4;
+  if (frame >= srv0 && frame < T.alarm) {
+    const secs = Math.round(interpolate(frame, [srv0, T.alarm - 2], [0, 60], { extrapolateRight: "clamp" }));
+    clock = `+${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+    ff = true;
+  }
   const isPlus = clock.startsWith("+");
   const rewind = frame >= S.arm && frame < S.arm + 24; // r5: the cold open was a flash-forward (12:06); rewind to 12:04
   const clockK = spring({ frame: frame - clockChanged, fps, config: { damping: 10, stiffness: 220 } });
@@ -161,10 +179,13 @@ export const ReelHud: React.FC = () => {
   const tapPop = frame - esc < 30 ? spring({ frame: frame - esc, fps, config: { damping: 7, stiffness: 300, mass: 0.6 } }) : 1;
   const escGlow = Math.max(0, 1 - (frame - esc) / 24);
   const pinChip = frame >= T.types && frame < S.montage;
-  const risk = riskAt(frame);
-  const riskCol = risk < 35 ? C.calm : risk < 70 ? C.warn : C.danger;
-  const riskK = spring({ frame: frame - T.armOn, fps, config: { damping: 12, stiffness: 200 } });
   const gl = frame >= T.isnt && frame < T.isnt + 8 ? (frame % 2 ? 10 : -8) : 0;
+  const sinceClock = frame - lastChange(frame, CLOCK.map((c) => c[0]));
+  const clockVis = ff || isPlus || pinChip ? 1 : interpolate(sinceClock, [0, 6, CLOCK_HOLD, CLOCK_HOLD + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const callsVis = Math.max(
+    interpolate(frame - T.hudIn, [0, 4, 70, 80], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
+    interpolate(frame - esc, [-2, 2, CALLS_HOLD, CALLS_HOLD + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
+  );
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none", opacity: gone }}>
@@ -180,27 +201,18 @@ export const ReelHud: React.FC = () => {
               <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 44, color: C.ink, opacity: 0.95, marginTop: 4, whiteSpace: "nowrap" }}>{pill.sub}</span>
             </div>
           </div>
-          {frame >= T.armOn && (
-            <div style={{ marginTop: 14, marginLeft: 8, display: "flex", alignItems: "center", gap: 14, opacity: riskK, transform: `translateX(${(1 - riskK) * -60}px)` }}>
-              <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 40, color: C.ink, letterSpacing: 2 }}>RISK</span>
-              <div style={{ ...glass, width: 330, height: 34, borderRadius: 99, padding: 4, borderColor: `${riskCol}88` }}>
-                <div style={{ width: `${Math.max(6, risk)}%`, height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${C.calm}, ${riskCol})`, boxShadow: `0 0 ${risk > 70 ? 18 + 14 * pulse : 8}px ${riskCol}` }} />
-              </div>
-              <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 42, color: riskCol, fontVariantNumeric: "tabular-nums", minWidth: 70 }}>{Math.round(risk)}</span>
-            </div>
-          )}
         </div>
       )}
       {/* TAPS + clock */}
       <div style={{ position: "absolute", right: 34, top: 146, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12, opacity: slam, transform: `translateX(${(1 - slam) * 180}px) scale(0.7)`, transformOrigin: "right top" }}>
-        <div style={{ ...glass, borderRadius: 30, padding: "8px 26px 10px", display: "flex", alignItems: "center", gap: 16, borderColor: `${tapCol}99` }}>
+        <div style={{ ...glass, borderRadius: 30, padding: "8px 26px 10px", display: "flex", alignItems: "center", gap: 16, borderColor: `${tapCol}99`, opacity: callsVis, transform: `translateX(${(1 - callsVis) * 60}px)` }}>
           <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.0, fontFamily: OF.caption, fontWeight: 900, fontSize: 38, color: C.ink, letterSpacing: 1.5, textAlign: "right" }}><span>CALLS</span><span>SHE MADE</span></span>
           <span style={{ display: "inline-block", fontFamily: OF.caption, fontWeight: 900, fontSize: 124, lineHeight: 1, color: tapCol, transform: `scale(${1 + 0.8 * (1 - tapPop) + 0.25 * escGlow})`, textShadow: `0 0 ${26 + 50 * escGlow}px ${tapCol}`, fontVariantNumeric: "tabular-nums" }}>0</span>
         </div>
         {pinChip ? (
           <div style={{ ...glass, borderRadius: 999, padding: "8px 22px", borderColor: `${C.warn}aa`, fontFamily: OF.caption, fontWeight: 900, fontSize: 36, color: C.warn }}>🔒 DURESS PIN</div>
         ) : (
-          <div style={{ ...glass, display: "inline-flex", alignItems: "center", gap: 10, padding: "8px 22px", borderRadius: 999, borderColor: `${isPlus ? C.warn : C.calm}99`, transform: `scale(${0.8 + 0.2 * clockK})`, transformOrigin: "right center" }}>
+          <div style={{ ...glass, display: "inline-flex", alignItems: "center", gap: 10, padding: "8px 22px", borderRadius: 999, borderColor: `${isPlus ? C.warn : C.calm}99`, transform: `scale(${0.8 + 0.2 * clockK})`, transformOrigin: "right center", opacity: clockVis }}>
             <span style={{ color: isPlus ? C.warn : C.calm, fontSize: 26, fontWeight: 900, fontFamily: OF.caption }}>{rewind ? "◀◀" : isPlus || ff ? "▶▶" : "◷"}</span>
             <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 54, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{clock}</span>
           </div>
@@ -212,3 +224,4 @@ export const ReelHud: React.FC = () => {
 
 export const HUD_T = T;
 export { BE };
+export const _risk = riskAt; // r9: the risk bar left the HUD (kept for reference)

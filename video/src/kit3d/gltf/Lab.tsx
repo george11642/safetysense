@@ -51,11 +51,14 @@ export const GltfLab: React.FC = () => {
         const clips: Clip[] = sitting ? [{ anim: a, start: 0 }] : [{ anim: "idle", start: 0 }, { anim: a, start: (seg - 1) * 60 + 40 }];
         return <GltfCharacter key={a} look={{ cast: "maya" }} position={[(i - 2.5) * 1.1, 0, 0]} rotationY={0.35} holdR={h} clips={clips} seed={i} />;
       })}
+      {seg === 4 && (["maya", "mom", "dispatcher", "roommate", "brother"] as CastKey[]).map((c, i) => (
+        <GltfCharacter key={c} look={{ cast: c }} position={[(i - 2) * 0.42, 0, 0]} clips={[{ anim: "idle", start: 0 }]} seed={i} face={frame % 60 > 30 ? { worry: 1, brow: 0.8, eyesWide: 1, mouth: 0.6 } : undefined} />
+      ))}
       {seg === 3 && <Raw file="models/src/UAL1_Standard.glb" clip="Sitting_Idle_Loop" x={-1.2} />}
       {seg === 3 && <GltfCharacter look={{ cast: "maya" }} position={[0.6, 0, 0]} clips={[{ anim: "sit", start: 0 }]} />}
       {seg === 3 && <GltfCharacter look={{ cast: "maya" }} position={[2.0, 0, -1.5]} clips={[{ anim: "kneel", start: 0 }]} />}
       {seg >= 1 && seg < 3 && [0, 1, 2, 3, 4, 5].map((i) => <mesh key={i} position={[(i - 2.5) * 1.1, 0.23, -0.25]}><boxGeometry args={[0.5, 0.46, 0.4]} /><meshStandardMaterial color="#3a3550" /></mesh>)}
-      <CameraRig handheld={0} rig={() => (seg === 0 ? { pos: [0, 1.25, 8.2], look: [0, 0.95, 0], fov: 38 } : frame % 60 > 50 || seg === 3 ? { pos: [6.5, 1.3, 4.2], look: [0, 0.9, 0], fov: 38 } : { pos: [0, 1.3, 7.2], look: [0, 0.9, 0], fov: 38 })} />
+      <CameraRig handheld={0} rig={() => (seg === 4 ? { pos: [0, 1.55, 2.3], look: [0, 1.5, 0], fov: 30 } : seg === 0 ? { pos: [0, 1.25, 8.2], look: [0, 0.95, 0], fov: 38 } : frame % 60 > 50 || seg === 3 ? { pos: [6.5, 1.3, 4.2], look: [0, 0.9, 0], fov: 38 } : { pos: [0, 1.3, 7.2], look: [0, 0.9, 0], fov: 38 })} />
     </Scene3D>
   );
 };

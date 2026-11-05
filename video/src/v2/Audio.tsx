@@ -37,7 +37,7 @@ export const ReelAudio: React.FC = () => {
     [S.walk, sfx("impact_hit"), 0.3],
     [S.walk + TITLE - 4, sfx("footsteps_behind"), 0.42, W(5, "She") - S.walk - TITLE + 4],
     [W(5, "She") - 2, sfx("whoosh_hard"), 0.4],
-    [scream, sfx("distant_cry_abstract"), 0.2, 36],
+    [scream, sfx("distant_cry_abstract"), 0.14, 26],
     [W(5, "She") - 1, sfx("impact_hit"), 0.38], // the dropped phone hits the sidewalk on the cut
     // detection
     [S.detect, sfx("whoosh_soft"), 0.3],
@@ -53,6 +53,7 @@ export const ReelAudio: React.FC = () => {
     // contacts
     [S.contacts, sfx("whoosh_hard"), 0.35],
     [S.contacts + 1, sfx("impact_hit"), 0.4],
+    [S.contacts + 2, sfx("phone_ring"), 0.16, 16], // r9: Mom's phone rings on the cut (no empty 0.6 s before "Three")
     // r5: the three rings start just after the word "ring." (they masked it by 7.5 dB), staggered, and get ducked
     [WE(8, "ring.") + 1, sfx("phone_ring"), 0.2, 40],
     [WE(8, "ring.") + 5, sfx("phone_ring"), 0.15, 36],
@@ -117,6 +118,8 @@ export const ReelAudio: React.FC = () => {
     [W(22, "When") + 4, sfx("impact_hit"), 0.5],
     [W(22, "When") - 34, sfx("riser"), 0.34, 38], // r7: a real swell into the "CALLS SHE HAD TO MAKE 0" payoff
     [W(22, "When") + 5, sfx("chime"), 0.3],
+    // r9: each polaroid lands with its own small hit
+    ...[0, 1, 2, 3].map((i) => [S.montage + 6 + i * 7, sfx("sticker_pop"), 0.16] as Hit),
     [W(25, "fault.") + 16, sfx("notify_ping"), 0.16],
     [S.logo, sfx("notify_ping"), 0.25],
   ];
@@ -140,7 +143,7 @@ export const ReelAudio: React.FC = () => {
       <Bed src={sfx("night_ambience_loop")} from={0} to={B(3)} vol={(g) => ramp(g, [[0, 0.35], [B(3) - 6, 0.35], [B(3), 0]])} duck={0.15} />
       <Bed src={sfx("footsteps_walk")} from={0} to={W(1, "help.") + 6} vol={() => 0.26} duck={0} />
       <Bed src={sfx("heartbeat_calm")} from={0} to={B(3)} vol={(g) => ramp(g, [[0, 0.55], [W(1, "call"), 0.55], [W(1, "Her"), 0.3], [B(3), 0]])} duck={0} />
-      <Bed src={sfx("night_ambience_loop")} from={B(3) - 4} to={S.detect} vol={(g) => ramp(g, [[B(3) - 4, 0], [B(3) + 8, 0.6], [scream, 0.45], [scream + 3, 0], [S.detect, 0]])} duck={0.15} />
+      <Bed src={sfx("night_ambience_loop")} from={B(3) - 4} to={S.detect} vol={(g) => ramp(g, [[B(3) - 4, 0], [B(3) + 8, 0.6], [WE(5, "screams.") - 2, 0.45], [WE(5, "screams.") + 1, 0], [S.detect, 0]])} duck={0.15} />
       <Bed src={sfx("night_ambience_loop")} from={S.freeze} to={S.contacts} vol={(g) => ramp(g, [[S.freeze, 0], [S.freeze + 10, 0.1], [notHave, 0.1], [notHave + 10, 0.35], [S.contacts - 6, 0.35], [S.contacts, 0]])} duck={0.15} />
             <Bed src={sfx("footsteps_walk")} from={W(3, "It")} to={S.walk} vol={() => 0.28} duck={0} />
       <Bed src={sfx("heartbeat_fast")} from={freeze - 6} to={notHave + 10} vol={(g) => ramp(g, [[freeze - 6, 0], [freeze + 4, 0.65], [notHave - 4, 0.65], [notHave + 8, 0]])} duck={0} />
@@ -157,7 +160,8 @@ export const ReelAudio: React.FC = () => {
       <Bed src="music/tension_loop.wav" from={S.walk - 2} to={S.contacts + 14} duck={0.6} vol={(g) => {
         const base = ramp(g, [[S.walk - 2, 0], [S.walk + 14, 1], [S.contacts - 2, 1], [S.contacts + 14, 0]]);
         const cut = g >= scream && g < S.detect + 6 ? 0 : 1; // silence after "She screams" (the 0.55 s pause before the next line)
-        const hush = g >= freeze && g < notHave ? 0.0 : g >= notHave && g < notHave + 40 ? 1.25 : 1; // r4: heartbeat-only freeze, swell back on "She doesn't have to"
+        const preF = W(7, "Then") - 8; // r9: a real dip into "Then she freezes"
+        const hush = g >= preF && g < notHave ? 0.0 : g >= notHave && g < notHave + 40 ? 1.25 : 1; // r4: heartbeat-only freeze, swell back on "She doesn't have to"
         const drop = ramp(g, [[W(5, "comes") - 4, 1], [W(5, "behind") - 2, 0.12], [W(5, "She") - 1, 0.12], [W(5, "She"), 1]]); // r3: near-silence before the hit
         return base * cut * drop * hush;
       }} />
@@ -169,7 +173,7 @@ export const ReelAudio: React.FC = () => {
         return base * hush * tech;
       }} />
       <Bed src="music/tension_build.wav" from={S.cancel - 6} to={S.montage + 20} duck={0.6} vol={(g) => ramp(g, [[S.cancel - 6, 0], [S.cancel + 10, 0.9], [W(20, "The") - 4, 0.9], [W(20, "The") + 4, 0.35], [S.duress - 2, 0.35], [S.duress + 8, 1], [W(21, "like") - 4, 1], [W(21, "like") + 6, 0.08], [W(21, "It") - 1, 0.08], [W(21, "It"), 1.1], [S.montage - 6, 1], [S.montage + 20, 0]])} />
-      <Bed src="music/resolve_pad.wav" from={S.montage - 8} to={end} loop={false} vol={(g) => ramp(g, [[S.montage - 8, 0], [S.montage + 40, 0.8], [W(22, "When"), 0.8], [W(22, "When") + 6, 1.6], [W(22, "When") + 50, 1.1], [B(25) - 20, 1], [B(25) - 2, 1.26], [end - 30, 1.26], [end, 0]])} duck={0.25} />
+      <Bed src="music/resolve_pad.wav" from={S.montage - 8} to={end} loop={false} vol={(g) => ramp(g, [[S.montage - 8, 0], [S.montage + 40, 0.8], [W(22, "When") - 12, 0.8], [W(22, "When") - 6, 0.15], [W(22, "When"), 0.15], [W(22, "When") + 6, 1.6], [W(22, "When") + 50, 1.1], [B(25) - 20, 1], [B(25) - 2, 1.26], [end - 30, 1.26], [end, 0]])} duck={0.25} />
 
       {/* hits */}
       {hits.map(([f, file, vol, dur, rate], i) => (

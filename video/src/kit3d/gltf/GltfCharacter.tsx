@@ -104,25 +104,34 @@ const charMat = (base: THREE.MeshStandardMaterial, color: string | null, rim: Ri
     metalness: 0,
     flatShading: false,
   });
-  if (opts.skin && !opts.dark) {
-    // a touch of subsurface-like warmth so faces never go grey under night light
-    m.emissive = m.color.clone().multiplyScalar(0.12);
+  const skinLit = !!opts.skin && !opts.dark;
+  if (skinLit) {
+    // r9: warmer, less flat skin: a small emissive floor plus a wrapped "subsurface" term (warm red bleed where light
+    // falls off, and at grazing angles), so cheeks, nose and jaw read as rounded forms instead of a flat cream plane
+    m.emissive = m.color.clone().multiplyScalar(0.06);
+    m.roughness = 0.5;
   }
-  if (rim && rim.strength > 0) {
-    const col = new THREE.Color(rim.color);
-    const u = { value: new THREE.Vector4(col.r, col.g, col.b, rim.strength * (opts.hair ? 0.4 : 1)) };
+  const rimU = rim && rim.strength > 0 ? (() => { const col = new THREE.Color(rim.color); return { value: new THREE.Vector4(col.r, col.g, col.b, rim.strength * (opts.hair ? 0.4 : 1)) }; })() : null;
+  if (rimU || skinLit) {
+    const skinU = { value: new THREE.Vector3(1.0, 0.42, 0.32) };
     m.onBeforeCompile = (sh) => {
-      sh.uniforms.uRim = u;
-      sh.fragmentShader = "uniform vec4 uRim;\n" + sh.fragmentShader.replace(
+      sh.uniforms.uRim = rimU ?? { value: new THREE.Vector4(0, 0, 0, 0) };
+      sh.uniforms.uSss = skinU;
+      sh.fragmentShader = "uniform vec4 uRim;\nuniform vec3 uSss;\n" + sh.fragmentShader.replace(
         "#include <opaque_fragment>",
         `#include <opaque_fragment>
         {
           float ndv = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
           gl_FragColor.rgb += uRim.rgb * uRim.a * pow(1.0 - ndv, 3.2);
+          ${skinLit ? `
+          float lum = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
+          // shadowed skin goes warm instead of grey; grazing edges pick up a soft red bleed
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * uSss * 1.35, 0.22 * (1.0 - smoothstep(0.05, 0.5, lum)));
+          gl_FragColor.rgb += diffuseColor.rgb * uSss * 0.07 * pow(1.0 - ndv, 1.6);` : ""}
         }`,
       );
     };
-    m.customProgramCacheKey = () => "gltfRim";
+    m.customProgramCacheKey = () => (skinLit ? "gltfRimSkin" : "gltfRim");
   }
   matCache.set(key, m);
   return m;
@@ -177,6 +186,22 @@ type Rig = {
   scale: number;
   minY: number;
   meshes: THREE.SkinnedMesh[];
+  /** Procedural face rig data (native model units, relative to the head bone's bind position, bind orientation). */
+  face: FaceData | null;
+};
+
+/** One eye / brow: bind-space center, half extents along the face surface, yaw of the surface there. */
+type FacePart = { c: THREE.Vector3; hw: number; hh: number; yaw: number };
+type FaceData = {
+  eyes: FacePart[];
+  brows: FacePart[];
+  /** front of the face on the mid line at nose and mouth height */
+  nose: THREE.Vector3;
+  mouth: THREE.Vector3;
+  skinMat: THREE.Material;
+  browMat: THREE.Material;
+  lipMat: THREE.Material;
+  lashMat: THREE.Material;
 };
 
 const NAMES = {
@@ -208,6 +233,7 @@ const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number)
       const skin = n.startsWith("Skin");
       const hair = n.startsWith("Hair");
       const dark = !!cast.darkFace && skin && parentName.includes("Head");
+      m.userData.srcMat = n;
       return charMat(b, dark ? "#0d0c12" : (col as string | null), dark ? null : rim, { skin, hair, dark });
     });
     m.material = Array.isArray(m.material) ? out : out[0];
@@ -247,12 +273,69 @@ const buildRig = (asset: Asset, cast: CastDef, rim: Rim | null, targetH: number)
     const bb = m.geometry.boundingBox!.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(rootInv, m.matrixWorld));
     box.union(bb);
   }
-  const rig: Rig = { root, bones, idx, bindQ, restLocalQ, restLocalP, samplers: new Map(), clips, scale: 1, minY: 0, meshes };
+  const rig: Rig = { root, bones, idx, bindQ, restLocalQ, restLocalP, samplers: new Map(), clips, scale: 1, minY: 0, meshes, face: null };
+  if (!cast.darkFace && cast.model !== "formalF") {
+    const hi = sk.bones.findIndex((x) => x.name === NAMES.head);
+    const hb = new THREE.Matrix4().multiplyMatrices(rootInv, mesh.matrixWorld).multiply(new THREE.Matrix4().copy(sk.boneInverses[Math.max(0, hi)]).invert());
+    rig.face = buildFace(root, rootInv, new THREE.Vector3().setFromMatrixPosition(hb), cast);
+  }
   // measure the standing height in the idle clip (bind geometry bounds include the T-pose arms only in x)
   const h = box.max.y - box.min.y;
   rig.scale = targetH / Math.max(0.01, h);
   rig.minY = box.min.y;
   return rig;
+};
+
+/** r9: measures the model's own eyes / brows / face profile in bind pose, so the procedural lids, brows, nose and lips
+ *  sit exactly on each model (no per-model hand tuning). The model's painted brows are hidden and replaced by movable ones. */
+const buildFace = (root: THREE.Object3D, rootInv: THREE.Matrix4, hp: THREE.Vector3, cast: CastDef): FaceData | null => {
+  const pts: Record<string, THREE.Vector3[]> = {};
+  const mats: Record<string, THREE.Mesh> = {};
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || !(m.parent?.name ?? "").includes("Head")) return;
+    const name = ((Array.isArray(m.material) ? m.material[0] : m.material) as THREE.Material).name || (m.userData.srcMat as string) || "";
+    const src = (m.userData.srcMat as string) ?? name;
+    const M = new THREE.Matrix4().multiplyMatrices(rootInv, m.matrixWorld);
+    const pa = m.geometry.getAttribute("position");
+    const arr: THREE.Vector3[] = [];
+    for (let i = 0; i < pa.count; i++) arr.push(new THREE.Vector3().fromBufferAttribute(pa, i).applyMatrix4(M));
+    pts[src] = (pts[src] ?? []).concat(arr);
+    mats[src] = m;
+  });
+  const eyeKey = pts.Eye ? "Eye" : pts.Brown ? "Brown" : null;
+  const browKey = pts.Eyebrows ? "Eyebrows" : pts.Hair_Brown && pts.Hair_Brown.length < 400 ? "Hair_Brown" : null;
+  const skin = pts.Skin;
+  if (!eyeKey || !browKey || !skin) return null;
+  const part = (arr: THREE.Vector3[], side: 1 | -1): FacePart => {
+    const s = arr.filter((v) => v.x * side > 0);
+    const bb = new THREE.Box3().setFromPoints(s);
+    const dx = bb.max.x - bb.min.x, dz = bb.max.z - bb.min.z;
+    // the surface recedes toward the outer corner: yaw so the part's local +Z is the face normal there
+    const yaw = side * Math.atan2(dz, dx) * 0.8;
+    const c = bb.getCenter(new THREE.Vector3());
+    c.z = bb.max.z - dz * 0.45;
+    return { c: c.sub(hp), hw: Math.hypot(dx, dz) / 2, hh: (bb.max.y - bb.min.y) / 2, yaw };
+  };
+  const eyes = [part(pts[eyeKey], 1), part(pts[eyeKey], -1)];
+  const brows = [part(pts[browKey], 1), part(pts[browKey], -1)];
+  // mid-line face profile: max z of skin vertices near x = 0, per height
+  const prof = (y: number) => {
+    let z = -1;
+    for (const v of skin) if (Math.abs(v.x) < 0.02 && Math.abs(v.y - y) < 0.012 && v.z > z) z = v.z;
+    return z;
+  };
+  const eyeY = eyes[0].c.y + hp.y;
+  const ny = eyeY - 0.04, my = eyeY - 0.082;
+  const nose = new THREE.Vector3(0, ny, prof(ny)).sub(hp);
+  const mouth = new THREE.Vector3(0, my, prof(my)).sub(hp);
+  mats[browKey].visible = false;
+  const skinMat = mats.Skin.material as THREE.MeshStandardMaterial;
+  const browMat = mats[browKey].material as THREE.Material;
+  const lipCol = (skinMat as THREE.MeshStandardMaterial).color.clone().lerp(new THREE.Color("#a8464f"), 0.5);
+  const lipMat = new THREE.MeshStandardMaterial({ color: lipCol, roughness: 0.45 });
+  const lashMat = new THREE.MeshStandardMaterial({ color: cast.hair ? new THREE.Color(cast.hair).multiplyScalar(0.5) : "#1a1210", roughness: 0.6 });
+  return { eyes, brows, nose, mouth, skinMat, browMat, lipMat, lashMat };
 };
 
 const sampler = (rig: Rig, name: string): Sampler | null => {
@@ -316,6 +399,54 @@ const aimBone = (b: THREE.Object3D, childPos: THREE.Vector3, target: THREE.Vecto
   const r = new THREE.Quaternion().setFromUnitVectors(cur, want);
   if (w < 1) r.slerp(new THREE.Quaternion(), 1 - w);
   rotateModel(b, r);
+};
+
+// ---------------------------------------------------------------------------------------------------------------
+/** r9 procedural face: eyelids that blink / narrow / open wide, brows that raise and knit with worry, a sculpted nose
+ *  and lips that part. Built on the model's own measured eye + brow positions (buildFace). */
+const SPH = new THREE.SphereGeometry(1, 20, 14);
+const FaceRig: React.FC<{ data: FaceData; p: Pose; s: number }> = ({ data, p, s }) => {
+  const blink = clamp(p.blink ?? 0, 0, 1);
+  const wide = clamp(p.eyesWide ?? 0, 0, 1);
+  const worry = clamp(p.worry ?? 0, -1, 1);
+  const brow = clamp(p.brow ?? 0, -1, 1);
+  const mouth = clamp(p.mouth ?? 0, 0, 1);
+  const smile = clamp(p.smile ?? 0, -1, 1);
+  // resting upper lid covers the top ~22% of the eye; wide eyes pull it up, blinks close it
+  const close = clamp(0.22 - 0.22 * wide + 0.78 * blink + 0.1 * Math.max(0, -smile), 0, 1);
+  return (
+    <group scale={s}>
+      {data.eyes.map((e, i) => {
+        const side = i === 0 ? 1 : -1;
+        const hh = e.hh * 1.25, h = Math.max(0.0004, close * hh * 2);
+        return (
+          <group key={`e${i}`} position={[e.c.x, e.c.y, e.c.z]} rotation={[0, e.yaw, 0]}>
+            {/* upper lid: skin-colored shell sliding down from the top of the eye */}
+            <mesh geometry={SPH} material={data.skinMat} position={[0, hh - h / 2, 0.0035]} scale={[e.hw * 1.22, h / 2 + 0.0008, 0.011]} />
+            {/* lash line rides the lid edge */}
+            <mesh geometry={SPH} material={data.lashMat} position={[0, hh - h + 0.0006, 0.0075]} rotation={[0, 0, side * 0.08]} scale={[e.hw * 1.1, 0.0011, 0.004]} />
+            {/* catchlight: the single biggest "alive" cue on a stylized eye */}
+            {close < 0.7 && <mesh geometry={SPH} position={[side * e.hw * 0.28, e.hh * 0.2 - Math.max(0, close - 0.3) * e.hh, 0.011]} scale={[e.hh * 0.3, e.hh * 0.3, 0.0012]}><meshBasicMaterial color="#ffffff" transparent opacity={0.85} /></mesh>}
+          </group>
+        );
+      })}
+      {data.brows.map((b, i) => {
+        const side = i === 0 ? 1 : -1;
+        const lift = 0.0075 * brow + 0.0025 * worry - 0.002 * Math.max(0, -brow);
+        return (
+          <group key={`b${i}`} position={[b.c.x, b.c.y + lift, b.c.z + 0.0025]} rotation={[0, b.yaw, -side * (0.34 * worry + 0.03)]}>
+            <mesh geometry={SPH} material={data.browMat} scale={[b.hw * 0.95, Math.max(0.0035, b.hh * 0.42), 0.0035]} />
+          </group>
+        );
+      })}
+      {/* nose: bridge + tip, half sunk into the face so it reads as form, not a stuck-on ball */}
+      <mesh geometry={SPH} material={data.skinMat} position={[data.nose.x, data.nose.y + 0.012, data.nose.z - 0.004]} scale={[0.0065, 0.017, 0.008]} />
+      <mesh geometry={SPH} material={data.skinMat} position={[data.nose.x, data.nose.y, data.nose.z - 0.0005]} scale={[0.009, 0.0072, 0.0085]} />
+      {/* lips: upper + lower, part with `mouth`, widen with a smile */}
+      <mesh geometry={SPH} material={data.lipMat} position={[0, data.mouth.y + 0.0035 + 0.003 * mouth + 0.0015 * smile, data.mouth.z - 0.002]} scale={[0.017 * (1 + 0.18 * smile), 0.0032, 0.005]} />
+      <mesh geometry={SPH} material={data.lipMat} position={[0, data.mouth.y - 0.0025 - 0.005 * mouth, data.mouth.z - 0.0025]} scale={[0.015 * (1 + 0.12 * smile), 0.0042, 0.0055]} />
+    </group>
+  );
 };
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -539,6 +670,11 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
   const extras = new Set<Extra>(cast.extras ?? []);
   const s = rig.scale;
   const ponyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: cast.hair ?? "#2a1a12", roughness: 0.75 }), [cast.hair]);
+  // r9 face rig values (same pose library as the body: blinks, brows, worry, wide eyes, mouth)
+  const FP = useMemo(() => {
+    const P0 = poseIn ?? evalClips(list, frame, seed);
+    return face ? { ...P0, ...face } : P0;
+  }, [poseIn, list, frame, seed, face]);
   // secondary motion for the ponytail: lagged sway from the frame
   const sway = Math.sin(frame / 9 + seed) * 0.12 + noise1(frame / 25, seed + 3) * 0.1;
   return (
@@ -550,6 +686,7 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
         {holdL === "phone" && <group ref={(g) => { anchors.current.phoneL = g; }}><Phone screen={phoneScreen} glow={phoneGlow} scale={0.95} /></group>}
         {holdL === "cup" && <group ref={(g) => { anchors.current.cupL = g; }}><Cup scale={0.95} /></group>}
         <group ref={(g) => { anchors.current.head = g; }}>
+          {rig.face ? <FaceRig data={rig.face} p={FP} s={s} /> : null}
           {extras.has("ponytail") && (
             <group position={[0, 0.135, -0.09]} rotation={[0.55 + sway * 0.3, 0, sway * 0.4]} scale={0.8}>
               <mesh material={ponyMat} position={[0, 0, 0]} castShadow={castShadow}>
@@ -587,21 +724,39 @@ const Posed: React.FC<GltfCharacterProps & { rig: Rig; cast: CastDef }> = ({
               </mesh>
             </group>
           )}
+          {extras.has("bun") && (
+            <group position={[0, 0.15, -0.085]}>
+              <mesh material={ponyMat} castShadow={castShadow} scale={[1, 0.9, 0.85]}><sphereGeometry args={[0.052, 18, 14]} /></mesh>
+              <mesh material={ponyMat} position={[0, -0.03, 0.02]} scale={[1.3, 0.5, 0.7]}><sphereGeometry args={[0.04, 14, 10]} /></mesh>
+            </group>
+          )}
           {extras.has("headset") && (
-            <group position={[0, 0.085, 0.005]} scale={0.82}>
-              <mesh rotation={[0, 0, 0]}>
-                <torusGeometry args={[0.105, 0.007, 6, 24, Math.PI]} />
-                <meshStandardMaterial color="#1a1a24" roughness={0.4} />
+            // r9: sized to this rig's head (skull ~0.2 m wide, ears ~0.105 m out at eye height); the band hugs the crown,
+            // the cups sit on the ears and the mic boom runs to the mouth
+            <group position={[0, 0.1, 0.025]}>
+              <mesh rotation={[0, 0, 0]} scale={[1, 1.05, 1]}>
+                <torusGeometry args={[0.11, 0.008, 8, 28, Math.PI]} />
+                <meshStandardMaterial color="#20202c" roughness={0.35} metalness={0.3} />
               </mesh>
               {[1, -1].map((sd) => (
-                <mesh key={sd} position={[sd * 0.1, -0.02, 0]} rotation={[0, 0, Math.PI / 2]}>
-                  <cylinderGeometry args={[0.03, 0.03, 0.02, 14]} />
-                  <meshStandardMaterial color="#22222e" roughness={0.4} />
-                </mesh>
+                <group key={sd} position={[sd * 0.108, -0.005, 0.0]}>
+                  <mesh rotation={[0, 0, Math.PI / 2]}>
+                    <cylinderGeometry args={[0.036, 0.036, 0.026, 18]} />
+                    <meshStandardMaterial color="#2a2a38" roughness={0.4} />
+                  </mesh>
+                  <mesh position={[sd * 0.012, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                    <cylinderGeometry args={[0.024, 0.024, 0.006, 16]} />
+                    <meshStandardMaterial color="#5cc7b2" emissive="#5cc7b2" emissiveIntensity={0.6} />
+                  </mesh>
+                </group>
               ))}
-              <mesh position={[-0.075, -0.07, 0.07]} rotation={[0.6, -0.6, 0]}>
-                <cylinderGeometry args={[0.005, 0.005, 0.11, 6]} />
-                <meshStandardMaterial color="#1a1a24" />
+              <mesh position={[-0.095, -0.075, 0.075]} rotation={[0.25, 0.75, 0.9]}>
+                <cylinderGeometry args={[0.0045, 0.0045, 0.13, 6]} />
+                <meshStandardMaterial color="#20202c" />
+              </mesh>
+              <mesh position={[-0.05, -0.115, 0.125]}>
+                <sphereGeometry args={[0.011, 10, 8]} />
+                <meshStandardMaterial color="#20202c" />
               </mesh>
             </group>
           )}

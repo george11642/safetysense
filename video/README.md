@@ -18,3 +18,8 @@ Sources
   DRY-RUN alert created by `scripts/make_demo_share.sh` (dry runs place no calls or texts).
 - `public/img/*.png`: screens from `design/screens/`.
 - `public/vo/*.wav`: macOS `say` voiceover (`scripts/make_vo.sh`). `public/sfx/*.wav`: tones generated with ffmpeg (no third-party audio).
+
+## Credits
+- 3D characters and animation clips (v2 reel, v3 hybrid): **Quaternius** (CC0; the SuitFemale file is listed on
+  poly.pizza as CC-BY 3.0, so it is credited). Full table: `public/models/LICENSES.md`. The end cards carry the same
+  credit line; repeat it on the deck's credits slide.

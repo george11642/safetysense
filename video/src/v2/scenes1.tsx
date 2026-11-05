@@ -55,7 +55,11 @@ export const ColdOpen: React.FC = () => {
   const help = lockTex({ time: "12:06", title: "Calling for help", body: "3 contacts alerted · live location shared", tint: "#5cc7b2", alert: true });
   // r8: frame 1 is Maya herself on the night street, phone glowing in her hand (character-led hook, like the
   // references); the slam to her phone on the sidewalk lands on "Her phone will."
-  const face = f < cutB;
+  // r9 hook: frame 1 is the IMPOSSIBLE image (her phone alone on the wet sidewalk, a shadow over it, the camera slamming
+  // in); on "Maya" cut to her walking with a fast push toward the glowing phone in her hand; on "Her phone will" slam
+  // back to the phone, which is now calling for help.
+  const hookEnd = maya - 1;
+  const face = f >= hookEnd && f < cutB;
   const clips = [{ anim: "walk" as const, start: 0, offset: 4 }, { anim: "phoneUp" as const, start: -30, mask: "armR" as const }];
   const G = GROUND_PHONE;
   // r7 ground shots: close and high over the phone, so it fills ~55% of the frame width and its "Calling for help" lock
@@ -83,7 +87,8 @@ export const ColdOpen: React.FC = () => {
             <SidewalkCloseup center={[G[0], Y, G[2]]} size={5} />
             <WetPatch position={[G[0] + 0.35, Y + 0.008, G[2] - 0.35]} size={0.42} />
             <LightPool position={[G[0] - 0.1, Y + 0.02, G[2] - 0.2]} color={P.lampWarm} radius={1.6} opacity={0.22} />
-            <Phone position={G} rotation={[-Math.PI / 2, 0, 0.1]} screen={help} glow={1} />
+            <Phone position={G} rotation={[-Math.PI / 2, 0, 0.1]} screen={f < hookEnd ? lock : help} glow={1} />
+            {f < hookEnd && <FollowerShadow head={[G[0] - 0.05, Y, G[2] - 0.25]} length={3.2} width={1.0} opacity={0.7 * prog(f, 2, 20)} />}
             <pointLight position={[G[0] - 0.5, Y + 2.4, G[2] - 0.9]} color={P.lampWarm} intensity={2.6} distance={5} decay={1.4} />
             <pointLight position={[G[0] + 1.2, Y + 1.2, G[2] + 1.4]} color="#9fb6ff" intensity={1.4} distance={4} decay={1.6} />
             <pointLight position={[G[0], Y + 0.3, G[2] + 0.1]} color={P.calm} intensity={0.8} distance={0.9} decay={2} />
@@ -91,25 +96,29 @@ export const ColdOpen: React.FC = () => {
         )}
         <CameraRig
           rig={cuts([
-            [0, (fr) => {
-              const k = prog(fr, 0, cutB, "glide");
+            [0, groundShot(0, hookEnd, 0.95, 0.5)],
+            [hookEnd, (fr) => {
+              // fast push from a medium (head to hips) to her hands + glowing phone, from her right so the screen glow reads
+              const k = prog(fr, hookEnd, cutB, "out");
               const zz = z(fr);
-              return { pos: [0.6 - 0.15 * k, Y + 1.5, zz + lerp(3.4, 2.3, k)], look: [0.1, Y + 1.36, zz], fov: 32 };
+              return { pos: [lerp(1.25, 0.62, k), Y + lerp(1.55, 1.42, k), zz + lerp(2.9, 1.35, k)], look: [0.12, Y + lerp(1.35, 1.22, k), zz], fov: lerp(36, 30, k) };
             }],
             [cutB, groundShot(cutB, her + 20, 0.44, 0.39)],
           ])}
           handheld={0.006}
-          shakes={[[tonight + 1, 0.01], [her, 0.014]]}
+          shakes={[[1, 0.02], [hookEnd, 0.012], [her, 0.014]]}
         />
       </Scene3D>
       <Grade vignette={0.6} />
-      {f < maya + 30 && (
-        <div style={{ position: "absolute", left: 0, right: 0, top: 250, display: "flex", justifyContent: "center", opacity: fadeIn(f, 3, 6) * (1 - fadeIn(f, maya + 22, 8)) }}>
+      {/* r9: the flash-forward chip sits ONLY on the phone shots (12:06), never over the 12:04 walking shot */}
+      {!face && (
+        <div style={{ position: "absolute", left: 0, right: 0, top: 250, display: "flex", justifyContent: "center", opacity: fadeIn(f, 2, 5) }}>
           <div style={{ ...glass, borderRadius: 999, padding: "10px 30px", fontFamily: OF.caption, fontWeight: 900, fontSize: 40, letterSpacing: 3, color: C.ink, borderColor: `${C.accent}88` }}>LATER TONIGHT · 12:06 AM</div>
         </div>
       )}
-      {face && <StickerTitle text="MAYA" at={maya + 3} sub="UNM STUDENT" size={130} y={0.8} rotate={-5} color={C.accent} />}
-      {!face && <CallingSticker f={f} pulseFrom={f >= cutB ? her : 0} />}
+      {face && <StickerTitle text="MAYA" at={maya + 3} sub="UNM STUDENT" size={110} x={0.72} y={0.6} rotate={-6} color={C.accent} />}
+      {f >= cutB && <CallingSticker f={f} pulseFrom={her} />}
+      <Flash at={0} dur={5} color="#ffffff" max={0.2} />
       <Flash at={her} dur={6} color={C.calm} max={0.22} />
     </AbsoluteFill>
   );
@@ -182,8 +191,8 @@ export const Arm: React.FC = () => {
             }} handheld={0.01} />
           </Scene3D>
           <Grade />
-          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="Audio stays on this phone" y={0.8} size={46} />
-          <InfoPill at={W(3, "Nothing") - F0} icon="🔒" text="No audio saved unless something's wrong" y={0.8} size={42} />
+          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="Audio stays on this phone" y={0.845} size={46} />
+          <InfoPill at={W(3, "Nothing") - F0} icon="🔒" text="No audio saved unless something's wrong" y={0.845} size={42} />
         </>
       )}
     </AbsoluteFill>
@@ -243,6 +252,8 @@ export const Walk: React.FC = () => {
             <>
               <SidewalkCloseup center={[drop[0], Y, drop[2]]} size={3} />
               <Phone position={[drop[0], drop[1] + py, drop[2]]} rotation={[-Math.PI / 2 + spin * 0.3, spin * 0.2, 0.55 + spin]} screen={sv("guard-walk")} glow={0.9} />
+              {/* r9: cause -> effect: her scream hits the phone's mic as red sound rings rippling out of it */}
+              <ListenRings center={[drop[0], Y, drop[2]]} start={shotC + 6} every={7} life={24} maxR={1.4} y={Y + 0.016} color="#ff5a6a" />
               {/* her shoes at the top edge of frame (she has turned toward the follower), the shadow across the slab */}
               <Character look={MAYA} clips={[{ anim: "freeze", start: -2 }]} position={[0.12, Y, drop[2] + 0.85]} rotationY={Math.PI} seed={1} act={0} life={0.2} />
               <FollowerShadow head={[0.05, Y, drop[2] + 0.55]} length={4.2} width={1.1} opacity={0.86} />
@@ -261,7 +272,7 @@ export const Walk: React.FC = () => {
               }],
               [shotC, (fr) => {
                 const k = prog(fr, shotC, shotC + 40, "out");
-                return { pos: [drop[0] - 0.05, Y + lerp(0.66, 0.54, k), drop[2] - lerp(0.5, 0.4, k)], look: [drop[0], Y + 0.02, drop[2] + 0.1], fov: 40, roll: deg(-8) };
+                return { pos: [drop[0] - 0.05, Y + lerp(0.8, 0.46, k), drop[2] - lerp(0.6, 0.34, k)], look: [drop[0], Y + 0.02, drop[2] + 0.1], fov: 40, roll: deg(-8) };
               }],
             ])}
             handheld={0.008}
@@ -404,8 +415,8 @@ export const FreezeScene: React.FC = () => {
       )}
       <AbsoluteFill style={{ background: "#6fa8ff", mixBlendMode: "soft-light", opacity: cold, pointerEvents: "none" }} />
       <Grade vignette={0.65} />
-      <InfoPill at={W(7, "freezes.") - F0} out={sIn - 8} icon="❄" text="FREEZE RESPONSE" color="#8fd3ff" y={0.8} size={44} />
-      <StatCard at={W(7, "298") - F0 - 4} out={W(7, "freezing.") - F0 + 2} top={1410} />
+      <InfoPill at={W(7, "freezes.") - F0} out={sIn - 8} icon="❄" text="FREEZE RESPONSE" color="#8fd3ff" y={0.845} size={44} />
+      <StatCard at={W(7, "of") - F0 - 2} out={W(7, "freezing.") - F0 + 2} top={1410} />
       <Flash at={back} dur={10} color={C.calm} max={0.25} />
     </AbsoluteFill>
   );
@@ -490,17 +501,19 @@ export const Contacts: React.FC = () => {
 // ---------------------------------------------------------------------------
 /** r5: the "simulated" disclosure as one clear card (readable at phone size), kept up from the dispatcher through the
  *  relief beat so nobody reads the police arrival as real. */
-export const SimCard: React.FC<{ at?: number; top?: number }> = ({ at = 0, top = 1668 }) => {
+export const SimCard: React.FC<{ at?: number; top?: number }> = ({ at = 0 }) => {
+  // r9: one compact corner line (was a two-line plate in the lower third)
   const f = useCurrentFrame();
   return (
-    <div style={{ position: "absolute", left: 0, right: 0, top, display: "flex", justifyContent: "center", opacity: fadeIn(f, at, 6) }}>
-      <div style={{ ...glass, borderRadius: 22, padding: "12px 28px", fontFamily: OF.caption, fontWeight: 900, fontSize: 44, color: C.warn, borderColor: `${C.warn}aa`, textAlign: "center", lineHeight: 1.15 }}>
-        SIMULATED IN OUR DEMO<br /><span style={{ fontSize: 36, color: C.ink }}>Noonlight sandbox · no real police called</span>
+    <div style={{ position: "absolute", left: 34, bottom: 120, opacity: fadeIn(f, at, 6) }}>
+      <div style={{ ...glass, borderRadius: 999, padding: "8px 22px", fontFamily: OF.caption, fontWeight: 900, fontSize: 30, color: C.warn, borderColor: `${C.warn}88` }}>
+        SIMULATED · Noonlight sandbox · no real police
       </div>
     </div>
   );
 };
 
+// ---------------------------------------------------------------------------
 /** r5: readable top-down street map (replaces the abstract 3D block grid). Streets with lane lines, blocks, a park,
  *  street names, Maya's live pin, and a police car (light bar, wheels) driving a drawn route line to her pin. The map is
  *  tilted a little in perspective and the view follows the car, then settles on the pin. */
@@ -552,7 +565,7 @@ const TopDownMap: React.FC<{ start: number; end: number }> = ({ start, end }) =>
   const pulse = (f % 30) / 30;
   return (
     <AbsoluteFill style={{ background: "#0e1424", perspective: 1800, overflow: "hidden" }}>
-      <div style={{ position: "absolute", left: 0, top: 0, width: 1080, height: 1920, transformOrigin: "540px 1000px", transform: `rotateX(24deg) scale(${zoom}) translate(${540 - camX}px, ${1000 - camY}px)` }}>
+      <div style={{ position: "absolute", left: 0, top: 0, width: 1080, height: 1920, transformOrigin: "540px 1000px", transform: `rotateX(34deg) scale(${zoom}) translate(${540 - camX}px, ${1000 - camY}px)` }}>
         <svg width={1080} height={1920} viewBox="0 0 1080 1920" style={{ overflow: "visible" }}>
           <rect x={-600} y={-600} width={2280} height={3120} fill="#141b2e" />
           {/* blocks */}
@@ -577,9 +590,11 @@ const TopDownMap: React.FC<{ start: number; end: number }> = ({ start, end }) =>
           <circle cx={PIN[0]} cy={PIN[1]} r={34} fill={C.accent} stroke="#fff" strokeWidth={8} />
           <circle cx={PIN[0]} cy={PIN[1]} r={12} fill="#fff" />
           <g transform={`translate(${PIN[0]} ${PIN[1] - 86})`}>
-            <rect x={-118} y={-34} width={236} height={60} rx={30} fill="#14131f" stroke={C.accent} strokeWidth={4} />
-            <text x={0} y={8} textAnchor="middle" fontFamily={OF.caption} fontWeight={900} fontSize={32} fill="#fff">MAYA · LIVE</text>
+            <rect x={-150} y={-38} width={300} height={68} rx={34} fill="#14131f" stroke={C.accent} strokeWidth={5} />
+            <text x={0} y={10} textAnchor="middle" fontFamily={OF.caption} fontWeight={900} fontSize={40} fill="#fff">MAYA · LIVE</text>
           </g>
+          {/* r9: the car leaves a light trail along the route it has driven */}
+          <polyline points={[...ROUTE.filter((_, i) => { let d = 0; for (let k = 1; k <= i; k++) d += Math.hypot(ROUTE[k][0] - ROUTE[k - 1][0], ROUTE[k][1] - ROUTE[k - 1][1]); return d / routeLen <= t; }), [cx, cy]].map((p) => p.slice(0, 2).join(",")).join(" ")} fill="none" stroke={f % 10 < 5 ? "#ff5a6a" : "#5a8cff"} strokeOpacity={0.75} strokeWidth={22} strokeLinejoin="round" strokeLinecap="round" />
           <PoliceCarTop x={cx} y={cy} a={ca} f={f} />
         </svg>
       </div>
@@ -606,17 +621,21 @@ export const Dispatch: React.FC = () => {
     <AbsoluteFill style={{ background: "#0e1424" }}>
       {f < desk ? (
         <>
-          <div style={{ position: "absolute", inset: 0, filter: "blur(5px) brightness(0.62) saturate(0.85)" }}>
+          <div style={{ position: "absolute", inset: 0, filter: "saturate(0.9)" }}>
             <Scene3D fog={{ color: P.fogNight, near: 5, far: 30 }}>
-              <CampusHD dim={0.4} />
+              <CampusHD dim={0.55} />
+              {/* r9: she is lit (warm key from the lamp side, cool rim behind), never a faint silhouette */}
+              <pointLight position={[1.1, Y + 2.2, 1.4]} color="#ffd9b0" intensity={4.5} distance={4.5} decay={1.5} />
+              <pointLight position={[-0.6, Y + 2.0, -1.0]} color="#9fc8ff" intensity={4} distance={3.2} decay={1.6} />
+              <LightPool position={[0.2, Y + 0.02, 0.3]} color={P.lampWarm} radius={1.8} opacity={0.3} />
               <Character look={MAYA} clips={[{ anim: "lockUp", start: -2 }]} position={[0.1, Y, 0]} seed={1} faceFill={0.4} face={{ eyesWide: 0.7, worry: 0.9, brow: 0.6 }} />
               <Phone position={PH} rotation={[-Math.PI / 2, 0, 0.55]} screen={help} glow={1} />
               <ListenRings center={PH} start={-40} every={14} life={40} maxR={2.4} y={Y + 0.016} />
               <pointLight position={[0.7, Y + 1.9, 1.5]} color="#ffe2cc" intensity={1.8} distance={3.2} decay={1.6} />
-              <CameraRig rig={pushIn(0, desk, [0.2, 0.9, 0.3], [0.5, 0.75, 1], 4.4, 3.6, 36)} handheld={0.006} />
+              <CameraRig rig={pushIn(0, desk, [0.15, 1.15, 0.2], [0.5, 0.35, 1], 4.6, 2.7, 36, "glide")} handheld={0.006} />
             </Scene3D>
           </div>
-          <div style={{ position: "absolute", left: 0, right: 0, top: 560, display: "flex", justifyContent: "center" }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: 330, display: "flex", justifyContent: "center" }}>
             <div style={{ ...glass, borderRadius: 30, padding: "14px 40px", fontFamily: OF.caption, fontWeight: 900, fontSize: 130, color: f < 40 ? C.warn : C.ink, fontVariantNumeric: "tabular-nums", borderColor: `${C.warn}88`, transform: `scale(${0.7 + 0.3 * fadeIn(f, 0, 5)})` }}>
               +{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}
             </div>
@@ -629,7 +648,6 @@ export const Dispatch: React.FC = () => {
             <Studio top="#222a4a" bottom="#0f1224" floor="#1a1e34" bokeh />
             <DispatchDesk screen={scr("17b-alert-active-timeline")} screenTex={mapTex()} />
             <Character look={DISPATCHER_HD} position={[0, 0.0, 0.75]} rotationY={Math.PI - 0.35} clips={[{ anim: "sit", start: 0 }, { anim: "talk", start: 6, mask: "head" }]} seed={11} faceFill={0.6} face={{ worry: 0.35, brow: 0.3 }} act={0.4} />
-            <Headset position={[0, 1.235, 0.76]} rotationY={Math.PI - 0.35} />
             {/* r7: a side monitor with Maya's live pin, in frame behind her shoulder, so "a dispatcher" reads at once */}
             <group position={[-0.62, 1.12, 1.05]} rotation={[0, 2.25, 0]}>
               <mesh><boxGeometry args={[0.62, 0.4, 0.03]} /><meshStandardMaterial color="#14131f" roughness={0.3} metalness={0.4} /></mesh>
@@ -640,10 +658,11 @@ export const Dispatch: React.FC = () => {
             {/* monitor glow on her face + warm key */}
             <pointLight position={[0.15, 1.2, 0.25]} color="#bfd6ff" intensity={2.4} distance={1.6} decay={1.6} />
             <pointLight position={[1.2, 1.8, 1.6]} color="#ffe2cc" intensity={1.6} distance={4} decay={1.6} />
-            <CameraRig rig={dolly(desk, mapAt, [0.95, 1.42, -0.3], [0.85, 1.4, -0.18], [[-0.18, 1.12, 0.9], [-0.18, 1.13, 0.9]], 40)} handheld={0.004} />
+            {/* r9: eye-level medium shot (no high angle, so her fringe never covers her eyes); face in the upper third */}
+            <CameraRig rig={dolly(desk, mapAt, [0.86, 1.3, -0.18], [0.8, 1.28, -0.1], [[-0.14, 1.1, 0.88], [-0.15, 1.11, 0.88]], 40)} handheld={0.004} />
           </Scene3D>
           <Grade vignette={0.45} />
-          <InfoPill at={desk + 4} icon="📞" text="Dispatcher calling Maya…" y={0.8} size={46} color={C.warn} />
+          <InfoPill at={desk + 4} icon="📞" text="Dispatcher calling Maya…" y={0.845} size={46} color={C.warn} />
         </>
       ) : (
         <>
@@ -678,7 +697,7 @@ export const Relief: React.FC = () => {
         <CameraRig rig={dolly(0, 36, [1.4, 1.62, 4.4], [0.75, 1.55, 2.25], [[-0.5, 1.05, -0.2], [0.05, 1.42, 0.45]], 42)} handheld={0.005} />
       </Scene3D>
       <Grade vignette={0.55} />
-      <InfoPill at={2} icon="✓" text="HELP REACHED HER" color={C.calm} y={0.8} size={48} />
+      <InfoPill at={2} icon="✓" text="HELP REACHED HER" color={C.calm} y={0.845} size={48} />
       <SimCard />
     </AbsoluteFill>
   );

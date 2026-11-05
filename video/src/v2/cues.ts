@@ -82,5 +82,6 @@ export const S = {
   montage: B(22) - 6,
   logo: W(22, "SafetySense") - 3,
   end: B(25) - 4,
-  total: TOTAL_FRAMES,
+  // r9: the end hold is trimmed to ~2.4 s after "fault." (the old 3.6 s static hold read as a freeze)
+  total: Math.min(TOTAL_FRAMES, WE(25, "fault.") + 72),
 } as const;

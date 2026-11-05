@@ -43,7 +43,7 @@ export const Party: React.FC = () => {
         <CameraRig rig={dolly(TITLE, 93 + TITLE, [0.75, 1.62, 4.6], [0.5, 1.58, 3.6], [[-0.05, 1.45, 0.4], [0.1, 1.5, 0.6]], 38)} handheld={0.008} />
       </Scene3D>
       <Grade vignette={0.55} />
-      <InfoPill at={TITLE + 3} icon="🛡" text="Night Out Guard · on" color={C.calm} y={0.8} size={46} />
+      <InfoPill at={TITLE + 3} icon="🛡" text="Night Out Guard · on" color={C.calm} y={0.845} size={46} />
     </AbsoluteFill>
   );
 };
@@ -152,7 +152,7 @@ export const Tilt: React.FC = () => {
       </div>
       <EdgeBlur amount={3 + 10 * k} />
       <Grade wash="#ef4fa0" washOpacity={0.1 + 0.12 * k} vignette={0.7} />
-      <div style={{ position: "absolute", left: 70, right: 70, top: 1420, ...glass, borderRadius: 34, padding: "28px 34px", opacity: fadeIn(f, W(13, "drug.") - F0 - 10, 8) }}>
+      <div style={{ position: "absolute", left: 70, right: 70, top: 1540, ...glass, borderRadius: 34, padding: "22px 34px", opacity: fadeIn(f, W(13, "drug.") - F0 - 10, 8) }}>
         <SensorRow at={W(13, "drug.") - F0 - 8} ok={false} text="Can't detect a drug" />
       </div>
     </AbsoluteFill>
@@ -203,7 +203,8 @@ export const Notice: React.FC = () => {
         </Scene3D>
       </div>
       <OverlayScene3D>
-        <PhoneInHand position={P0} toward={[P0[0] + 0.1, P0[1] + 0.3, P0[2] + 0.6]} screen={sv("guard-night")} roll={0.1 + sway * 2} />
+        {/* r9: product-shot phone (no mitten hand): it sways with her, so the motion trace has a visible cause */}
+        <Phone position={P0} rotation={[-0.42, 0.16 + sway * 2, 0.1 + sway * 3]} screen={sv("guard-night")} glow={0.9} scale={1.15} />
         <XRayPhone position={[P0[0], P0[1], P0[2]]} rotation={[-0.42, 0.16, 0]} strength={prog(f, 4, 14)} color={col} />
         <pointLight position={[0.6, 1.8, 2.0]} color="#ffe2cc" intensity={2.2} distance={3} decay={1.6} />
         <ambientLight intensity={0.5} color="#c8b8e8" />
@@ -214,7 +215,7 @@ export const Notice: React.FC = () => {
         <div style={{ marginLeft: 28, fontFamily: OF.caption, fontWeight: 900, fontSize: 30, letterSpacing: 2, color: col }}>MOTION · ON-DEVICE</div>
         <svg width="960" height="160"><polyline points={pts} fill="none" stroke={col} strokeWidth={6} strokeLinejoin="round" strokeLinecap="round" /></svg>
       </div>
-      <div style={{ position: "absolute", left: 70, right: 70, top: 1420, ...glass, borderRadius: 34, padding: "28px 34px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ position: "absolute", left: 70, right: 70, top: 1540, ...glass, borderRadius: 34, padding: "22px 34px", display: "flex", flexDirection: "column", gap: 20 }}>
         <SensorRow at={-20} ok={false} text="Can't detect a drug" />
         <SensorRow at={notices} ok text="Can notice she stopped responding" />
         <div style={{ display: "flex", gap: 14, marginTop: 4 }}>
@@ -283,13 +284,14 @@ export const HallwayScene: React.FC = () => {
       <Grade wash="#ef4fa0" washOpacity={0.08} vignette={0.75} />
       <AbsoluteFill style={{ background: "#07060c", opacity: dark * 0.5, pointerEvents: "none" }} />
       {f >= ask && (
-        <div style={{ position: "absolute", left: 56, top: 480 + (1 - phoneIn) * 900, transform: `translateX(${buzz}px) rotate(${-3 + buzz * 0.2}deg)`, transformOrigin: "50% 30%" }}>
-          <ScreenPhone src={sv("checkin-night")} width={250} glow={C.warn}>
-            <CheckInRing at={drainA} end={noAns} width={250} />
+        // r9: the check-in phone sits on the right, over her shoulder and the dark wall, so her closed eyes stay visible
+        <div style={{ position: "absolute", left: 800, top: 860 + (1 - phoneIn) * 900, transform: `translateX(${buzz}px) rotate(${4 + buzz * 0.2}deg)`, transformOrigin: "50% 30%" }}>
+          <ScreenPhone src={sv("checkin-night")} width={230} glow={C.warn}>
+            <CheckInRing at={drainA} end={noAns} width={230} />
           </ScreenPhone>
         </div>
       )}
-      <Stamp text="NO ANSWER" at={noAns} y={0.45} size={92} from={1.5} damping={12} shake={14} rotate={-8} />
+      <Stamp text="NO ANSWER" at={noAns} y={0.62} size={92} from={1.5} damping={12} shake={14} rotate={-8} />
       {/* r7: a red vignette pulse, not a flat full-frame fill */}
       <AbsoluteFill style={{ pointerEvents: "none", boxShadow: `inset 0 0 ${380 * Math.max(0, 1 - Math.abs(f - noAns - 2) / 10)}px ${C.danger}` }} />
     </AbsoluteFill>
@@ -360,7 +362,7 @@ export const Roommate: React.FC = () => {
           <Grade vignette={0.6} />
         </>
       )}
-      <InfoPill at={run} icon="🏃‍♀️" text="ROOMMATE: ON THE WAY" color={C.calm} y={0.8} size={44} />
+      <InfoPill at={run} icon="🏃‍♀️" text="ROOMMATE: ON THE WAY" color={C.calm} y={0.845} size={44} />
     </AbsoluteFill>
   );
 };

@@ -59,7 +59,8 @@ export const PhoneDark: React.FC = () => {
           </>
         ) : f < fallFrom ? (
           <>
-            <PhoneInHand position={P0} toward={[P0[0] + 0.12, P0[1] + 0.32, P0[2] + 0.6]} screen={sv("guard-night")} roll={0.12} />
+            {/* r9: no mitten hands: her phone (screen to camera) is plucked away by a shadowed, sleeved hand */}
+            <Phone position={[P0[0] + 0.06 * reach, P0[1] + 0.01 * reach, P0[2]]} rotation={[-0.4, 0.08 + 0.3 * reach, 0.1 - 0.25 * reach]} screen={sv("guard-night")} glow={1} />
             <ReachingHand position={[P0[0] + lerp(0.42, 0.1, reach), P0[1] + 0.02, P0[2] + lerp(-0.05, 0.03, reach)]} rotation={[0.3, 0.25, 0.1]} curl={lerp(0.2, 0.55, reach)} rimColor="#8fa8ff" />
             <pointLight position={[0.6, 1.8, 1.4]} color="#e8ecff" intensity={2.4} distance={3} decay={1.6} />
             <pointLight position={[0.9, 1.4, -0.6]} color="#8fa8ff" intensity={3} distance={3} decay={1.6} />
@@ -180,8 +181,8 @@ export const Server: React.FC = () => {
         <CameraRig rig={cuts([[0, dolly(0, alarm, [1.9, 1.4, 4.0], [1.1, 1.38, 3.0], [[0, 1.15, 0.2], [0.05, 1.25, 0.3]], 38)], [alarm, pushIn(alarm, alarm + 60, [0, 1.2, 0.4], [0.3, 0.08, 1], 2.9, 2.3, 36)]])} handheld={0.006} shakes={[[dark, 0.025], [alarm, 0.02]]} />
       </Scene3D>
       <Grade vignette={0.6} />
-      <Stamp text="NO CHECK-IN" at={dark} out={alarm - 4} y={0.74} size={92} sub="PHONE SILENT · 60 s" from={1.8} damping={9} shake={12} rotate={-3} />
-      <Stamp text="SERVER ALERT" at={alarm} y={0.74} size={92} color={C.danger} sub="CONTACTS GET HER LAST LOCATION" from={1.6} damping={10} shake={8} rotate={3} />
+      <Stamp text="NO CHECK-IN" at={dark} out={alarm - 4} y={0.56} size={92} sub="PHONE SILENT · 60 s" from={1.8} damping={9} shake={12} rotate={-3} />
+      <Stamp text="SERVER ALERT" at={alarm} y={0.56} size={92} color={C.danger} sub="CONTACTS GET HER LAST LOCATION" from={1.6} damping={10} shake={8} rotate={3} />
       <Flash at={alarm} dur={8} color={C.danger} max={0.3} />
     </AbsoluteFill>
   );
@@ -189,7 +190,7 @@ export const Server: React.FC = () => {
 
 // ---------------------------------------------------------------------------
 /** r4: the driver is a neutral silhouette (same near-black as the other threat figures): no skin tone anywhere. */
-const DRIVER = { ...GUY_HD, skin: "#16141d", hair: "#0d0c13", top: "#1b1a28", bottom: "#15141e", eyes: "#0d0c13", stubble: false };
+const DRIVER = { ...GUY_HD, cast: "driverSil" as const, skin: "#16141d", hair: "#0d0c13", top: "#1b1a28", bottom: "#15141e", eyes: "#0d0c13", stubble: false };
 const MAYA_SEAT: [number, number, number] = [-0.16, 0.05, -0.75]; // r3: rear middle, so a clean front shot fits between the front seats
 
 /** Rear-view mirror reflection: only the driver's eyes and brow band (no other face detail), dim skin tone falling
@@ -246,10 +247,43 @@ const RearMirror: React.FC<{ eyes: number }> = ({ eyes }) => (
   </group>
 );
 
+/** r9: the city seen through the rear glass behind Maya: layered bokeh (street lamps, signs, windows) drifting with
+ *  parallax and a passing-lamp flare, so the cabin never reads as a flat wall. */
+const RearCity: React.FC<{ speed?: number }> = ({ speed = 0.4 }) => {
+  const f = useCurrentFrame();
+  const cols = ["#ffd39a", "#ff9ac8", "#8fd3ff", "#ffe8c0", "#c8a8ff"];
+  return (
+    <group>
+      {/* the street behind the car, dark blue */}
+      <mesh position={[0, 1.1, -2.6]}><planeGeometry args={[4, 1.6]} /><meshBasicMaterial color="#141a38" toneMapped={false} /></mesh>
+      {Array.from({ length: 46 }).map((_, i) => {
+        const layer = i % 3; // 0 near, 2 far
+        const z = -2.0 - layer * 0.25;
+        const sp = speed * (0.05 - layer * 0.013);
+        const x = (((hash(i * 1.7) * 3.2 + f * sp) % 3.2) + 3.2) % 3.2 - 1.6;
+        const y = 0.95 + 0.55 * hash(i * 3.1) + (layer === 2 ? 0.1 : 0);
+        const r = (0.012 + 0.03 * hash(i * 5.3)) * (layer === 0 ? 1.6 : 1);
+        const tw = 0.6 + 0.4 * Math.sin(f / (6 + layer * 3) + i);
+        return (
+          <mesh key={i} position={[x, y, z]}>
+            <circleGeometry args={[r, 18]} />
+            <meshBasicMaterial color={cols[i % cols.length]} transparent opacity={(layer === 0 ? 0.55 : 0.8) * tw} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+};
+const hash = (n: number) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
 /** Back seat of the rideshare: Maya rear right, the driver seen from behind. */
 const BackSeat: React.FC<{ speed?: number; tension?: number; phone?: string; eyes?: number; worry?: number; sweep?: number; dome?: number; mayaClips?: { anim: "sit" | "phoneUp"; start: number; mask?: "armR" }[] }> = ({ speed = 0.4, tension = 0, phone, eyes = 0.15, worry = 0, sweep = 0.6, dome = 0.35, mayaClips }) => (
   <>
     <CarInterior speed={speed} tension={tension} sweep={sweep} dome={dome} passengerSeat={false} plush detail />
+    <RearCity speed={speed} />
+    {/* r9: her own seat belt (shoulder strap + buckle), so she is sitting IN a car */}
+    <mesh position={[MAYA_SEAT[0] - 0.02, 0.98, MAYA_SEAT[2] + 0.13]} rotation={[0.12, 0, -0.62]}><boxGeometry args={[0.05, 0.6, 0.008]} /><meshStandardMaterial color="#141320" roughness={0.75} /></mesh>
+    <mesh position={[MAYA_SEAT[0] + 0.15, 0.7, MAYA_SEAT[2] + 0.17]}><boxGeometry args={[0.05, 0.03, 0.02]} /><meshStandardMaterial color="#b9bccc" metalness={0.8} roughness={0.25} /></mesh>
     <Character look={DRIVER} clips={[{ anim: "drive", start: 0 }]} position={SEATS.driver} seed={2} faceFill={0} rim={{ color: "#6fd6c8", strength: 0.35 }} />
     <Character look={MAYA} clips={mayaClips ?? [{ anim: "sit", start: 0 }]} position={MAYA_SEAT} holdR="phone" phoneScreen={phone} phoneGlow={0.6} seed={1} faceFill={0.45} act={0.6} ikOffR={[0.02, -0.06, 0.03]} face={worry > 0 ? { worry, brow: 0.5 * worry, smile: 0.1 - 0.4 * worry, eyesWide: 0.3 * worry } : undefined} />
     <RearMirrorHD eyes={eyes} />
@@ -282,7 +316,7 @@ export const Ride: React.FC = () => {
       {f < inside ? (
         <Scene3D fog={{ color: "#1a1834", near: 12, far: 70 }}>
           <StreetNight />
-          <Sedan position={[cx, 0, cz]} rotationY={yaw} wheelSpin={f * 0.28} lit rideshareSign detail hd color="#b06a88" bob={0.008 * Math.sin(f / 3)} />
+          <Sedan position={[cx, 0, cz]} rotationY={yaw} wheelSpin={f * 0.28} lit rideshareSign detail hd color="#39405e" bob={0.008 * Math.sin(f / 3)} />
           <pointLight position={[cx + 3, 3, cz + 3]} color="#c8d4ff" intensity={16} distance={10} decay={1.3} />
           <pointLight position={[cx + 1.5, 1.2, cz - 2]} color="#ffc8e0" intensity={6} distance={5} decay={1.4} />
           <CameraRig rig={(fr) => {
@@ -293,8 +327,8 @@ export const Ride: React.FC = () => {
       ) : (
         <div style={{ position: "absolute", inset: 0 }}>
           <Scene3D fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
-            <BackSeat phone={sv(f < on ? "home-ride" : "guard-ride")} worry={prog(f, wrong, wrong + 14)} />
-            <CameraRig rig={(fr) => ({ ...dolly(inside, 116 + TITLE, [-0.1, 1.24, 1.0], [-0.1, 1.22, 0.82], [[-0.16, 1.13, -0.7], [-0.16, 1.14, -0.7]], 38)(fr), roll: lean })} handheld={0.01} near={0.12} />
+            <BackSeat phone={sv(f < on ? "home-ride" : "guard-ride")} worry={prog(f, wrong, wrong + 14)} dome={0.18} />
+            <CameraRig rig={(fr) => ({ ...dolly(inside, 116 + TITLE, [-0.06, 1.22, 1.05], [-0.08, 1.2, 0.8], [[-0.16, 1.1, -0.7], [-0.16, 1.12, -0.7]], 46)(fr), roll: lean })} handheld={0.01} near={0.12} />
           </Scene3D>
         </div>
       )}
@@ -305,14 +339,14 @@ export const Ride: React.FC = () => {
           <TapRipple at={on - 4} x={10.4 + 209 * 0.5} y={10.4 + 455 * 0.463} color={C.calm} size={50} />
         </div>
       )}
-      {!zoomed && <RouteMap at={phoneAt + 4} offAt={wrong} style={{ right: 44, top: 1430 }} />}
+      {/* r9: one overlay at a time: the phone card explains "Ride Guard is on"; the route map only appears for the turn */}
       {/* r8: on "the wrong way" the route map blows up to full frame: the teal planned route vs the red turn the car takes */}
       {zk > 0 && (
         <AbsoluteFill style={{ background: `rgba(10,9,20,${0.8 * zk})` }}>
           <div style={{ position: "absolute", left: 540 - 165, top: 790 - 180, width: 330, height: 360, transformOrigin: "50% 50%", transform: `scale(${lerp(0.4, 2.2, zk)}) rotate(${lerp(-6, 0, zk)}deg)`, opacity: Math.min(1, zk * 2) }}>
             <RouteMap at={phoneAt + 4} offAt={wrong} style={{ left: 0, top: 0 }} />
           </div>
-          <Stamp text="OFF ROUTE" at={wrong + 14} y={0.79} size={96} color={C.warn} sub="RIDE GUARD NOTICED" from={1.8} damping={10} shake={8} rotate={-4} />
+          <Stamp text="OFF ROUTE" at={wrong + 14} y={0.665} size={96} color={C.warn} sub="RIDE GUARD NOTICED" from={1.8} damping={10} shake={8} rotate={-4} />
         </AbsoluteFill>
       )}
     </AbsoluteFill>
@@ -351,12 +385,12 @@ export const Cancel: React.FC = () => {
           <div style={{ position: "absolute", left: 50, top: 480, transform: `translateX(${buzz}px) translateY(${(1 - Math.min(1, f / 8)) * 800}px) rotate(-3deg)` }}>
             <ScreenPhone src={sv("checkin-ride")} width={220} glow={C.warn} />
           </div>
-          <InfoPill at={you - 4} icon="🟡" text="Off route · check-in" color={C.warn} y={0.8} size={42} />
+          <InfoPill at={you - 4} icon="🟡" text="Off route · check-in" color={C.warn} y={0.845} size={42} />
         </>
       ) : (
         <>
           <Scene3D fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
-            <BackSeat phone={sv("checkin-ride")} tension={0.5} sweep={0.3} dome={0.3} worry={0.8} eyes={interpolate(f, [driver, driver + 10], [0.3, 1.25], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} />
+            <BackSeat phone={sv("checkin-ride")} tension={0.5} sweep={0.6} dome={0.12} worry={0.8} eyes={0.12} />
             {/* r5: lifted cabin light; cool rim from the dash so the driver's headrest + shoulder read as a silhouette */}
             <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={2} distance={1.4} decay={1.8} />
             <pointLight position={[0.0, 1.55, 0.2]} color="#c8c0ff" intensity={1.4} distance={2} decay={1.6} />
@@ -364,12 +398,11 @@ export const Cancel: React.FC = () => {
             <WindshieldFrame f={f} />
             {/* r7: from the back seat straight at the rear-view mirror: the mirror sits centre frame (~35-45% of the width),
                 the driver's eyes readable in it, slow push; seat / pillar / headrest stay soft in the foreground (blur mask) */}
-            <CameraRig rig={dolly(driver, 150, [-0.3, 1.3, -0.55], [-0.12, 1.3, -0.05], [[0.02, 1.27, 0.78], [0.02, 1.29, 0.78]], 60)} handheld={0.004} near={0.05} />
+            {/* r9: from the back seat over Maya's shoulder: the driver is only the back of a head and a shoulder against the
+                lit windshield (no face, no eyes), dash glow and passing street lights; slow push */}
+            <CameraRig rig={dolly(driver, 150, [-0.5, 1.22, -0.42], [-0.4, 1.21, -0.22], [[0.32, 1.12, 0.6], [0.3, 1.13, 0.6]], 52)} handheld={0.004} near={0.05} />
           </Scene3D>
-          <AbsoluteFill style={{
-            pointerEvents: "none", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)",
-            maskImage: "radial-gradient(ellipse 48% 20% at 50% 50%, transparent 60%, black 100%)", WebkitMaskImage: "radial-gradient(ellipse 48% 20% at 50% 50%, transparent 60%, black 100%)",
-          }} />
+
           <Grade vignette={0.8} />
           <SpeechBubble at={W(20, "cancel") - F0 - 2} text="Cancel it." />
         </>
@@ -423,7 +456,7 @@ export const Duress: React.FC = () => {
   // r8: the pad sits lower in frame, so the caption band above it never touches the "You okay?" header
   const camPov = { f: 0, pos: [-0.13, 1.27, -0.55] as [number, number, number], look: [-0.075, 1.075, -0.2] as [number, number, number], fov: 46 };
   const povPhone = (
-    <PhoneInHand position={[-0.09, 1.09, -0.32]} toward={[-0.12, 1.24, -0.48]} screen={calm ? sv("guard-ride") : pinpadTex(filled)} tap={calm ? 0 : tap} thumbAt={calm ? undefined : thumbAt} roll={-0.08} />
+    <PhoneInHand position={[-0.09, 1.09, -0.32]} toward={[-0.12, 1.24, -0.48]} screen={calm ? sv("guard-ride") : pinpadTex(filled)} tap={calm ? 0 : tap} thumbAt={calm ? undefined : thumbAt} roll={-0.08} noHand />
   );
   const glitch = f >= isnt && f < isnt + 6;
   return (
@@ -449,8 +482,9 @@ export const Duress: React.FC = () => {
           {/* top half: the driver's eyes in the mirror, unaware */}
           <div style={{ position: "absolute", left: 0, top: 0, width: 1080, height: 958, overflow: "hidden" }}>
             <Scene3D width={1080} height={958} fog={{ color: "#0d0c16", near: 10, far: 70 }} background="#0d0c16">
-              <BackSeat phone={sv("guard-ride")} tension={0.4} sweep={0.15} dome={0.08} eyes={1.1} />
-              <CameraRig rig={dolly(isnt, isnt + 120, [0.07, 1.31, 0.3], [0.06, 1.305, 0.38], [[0.03, 1.3, 0.78], [0.03, 1.3, 0.78]], 36)} handheld={0.003} near={0.03} />
+              <BackSeat phone={sv("guard-ride")} tension={0.2} sweep={0.6} dome={0.1} eyes={0.12} />
+              <pointLight position={[0.2, 1.05, 0.7]} color="#6fd6c8" intensity={2} distance={1.4} decay={1.8} />
+              <CameraRig rig={dolly(isnt, isnt + 120, [-0.5, 1.22, -0.42], [-0.42, 1.21, -0.28], [[0.32, 1.12, 0.6], [0.3, 1.13, 0.6]], 50)} handheld={0.003} near={0.03} />
             </Scene3D>
             <div style={{ position: "absolute", left: 40, top: 560, fontFamily: OF.caption, fontWeight: 900, fontSize: 40, color: C.ink, opacity: fadeIn(f, isnt + 8, 6), ...glass, borderRadius: 999, padding: "8px 26px" }}>Driver sees: nothing</div>
           </div>
@@ -466,7 +500,7 @@ export const Duress: React.FC = () => {
             <svg width="1080" height="958" style={{ position: "absolute", inset: 0, opacity: 0.25 }}>
               {Array.from({ length: 40 }).map((_, i) => <line key={i} x1={0} y1={(i * 24 + f * 3) % 958} x2={1080} y2={(i * 24 + f * 3) % 958} stroke={C.danger} strokeWidth={2} />)}
             </svg>
-            <div style={{ position: "absolute", left: 60, right: 60, top: 400, ...glass, borderRadius: 30, padding: "22px 28px", borderColor: C.danger, background: "linear-gradient(180deg, rgba(239,106,92,.3), rgba(20,19,31,.94))", boxShadow: `0 0 60px ${C.danger}55`, opacity: fadeIn(f, isnt + 4, 6) }}>
+            <div style={{ position: "absolute", left: 60, right: 60, top: 560, ...glass, borderRadius: 30, padding: "18px 28px", borderColor: C.danger, background: "linear-gradient(180deg, rgba(239,106,92,.3), rgba(20,19,31,.94))", boxShadow: `0 0 60px ${C.danger}55`, opacity: fadeIn(f, isnt + 4, 6) }}>
               <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 30, letterSpacing: 3, color: C.danger }}>HIDDEN · SILENT ALERT</div>
               {[["🚨", "Duress PIN used", isnt + 8], ["🎧", "Dispatch notified", dispatch], ["📍", "Live location shared", dispatch + 10]].map(([ic, t, at]) => (
                 <div key={t as string} style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, opacity: fadeIn(f, at as number, 6), transform: `translateX(${(1 - fadeIn(f, at as number, 6)) * 30}px)` }}>

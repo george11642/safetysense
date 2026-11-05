@@ -37,28 +37,26 @@ const SCENES: [number, React.FC, string][] = [
   [S.logo, Close, "22b-25 close (one locked end layout)"],
 ];
 
-/** Captions live in ONE lower-middle band (like the references). Hidden on chapter title cards (clean frames), on the
- *  logo lockup (the words are typed there), in the beat before the contacts' first cut (so a line never spills across
- *  the cut), and from just after the last line, so the end card never sits on a caption. */
-const CAPTION_Y = 0.66;
+/** r9: captions use exactly TWO bands, picked per shot: LOW (under faces, the default) and HIGH (above the action, on
+ *  dark sky / wall). Hidden on chapter cards, during the 70% stat card (the card carries the line), in the beat before
+ *  the contacts' first cut, under the driver's "Cancel it." bubble, and through the whole end card (its own text slot). */
+const LOW = 0.75;
+const HIGH = 0.26;
+const CAPTION_Y = LOW;
 const TITLE_CARDS = [S.walk, S.party, S.phone, S.ride];
-const hideCaptions = (f: number) =>
-  TITLE_CARDS.some((t) => f >= t && f < t + TITLE) || (f >= S.contacts && f < B(8) - 1) || cancelBubble(f) || f >= WE(25, "fault.") + 6;
-/** r8: while the driver's "Cancel it." speech bubble is up, the bubble IS the caption (no doubled words). */
 const cancelBubble = (f: number) => f >= W(20, "cancel") - 3 && f < S.duress;
-/** r4: the drink-spike close-up puts the caption high, on the dark wall above the counter, on a dark plate.
- *  r5: same for the duress PIN pad (the caption sat on the thumb and keys): above the pad until the split screen. */
-const spike = (f: number) => f >= S.cup && f < S.tilt; // r8: the whole cup close-up uses the high band (one deliberate position)
-const pinPad = (f: number) => f >= S.duress && f < W(21, "It");
-/** r7: "She screams." sits high (the dropped phone is the only image in that beat and lies in the caption band). */
-const scream = (f: number) => f >= W(5, "She") - 2 && f < S.detect;
-const split = (f: number) => f >= W(21, "It") && f < S.montage;
-/** r8: the big "One tap" phone fills the middle of the frame; its line sits low, under the phone. */
-const tapShot = (f: number) => f >= S.arm && f < W(3, "It");
-/** r8: the montage line sits under the polaroids, which tuck into a row above it (never through the caption band). */
-const montage = (f: number) => f >= S.montage && f < S.logo;
-const captionY = (f: number) => (spike(f) ? 0.34 : pinPad(f) ? 0.29 : scream(f) ? 0.37 : split(f) ? 0.62 : tapShot(f) ? 0.875 : montage(f) ? 0.868 : undefined);
-const backingAt = (f: number) => spike(f) || pinPad(f);
+const statCard = (f: number) => f >= W(7, "of") - 2 && f < WE(7, "freezing.") + 4;
+const endCard = (f: number) => f >= W(24, "It") - 1;
+const hideCaptions = (f: number) =>
+  TITLE_CARDS.some((t) => f >= t && f < t + TITLE) || (f >= S.contacts && f < B(8) - 1) || cancelBubble(f) || statCard(f) || endCard(f);
+const high = (f: number) =>
+  (f >= W(5, "She") - 2 && f < S.detect) || // "She screams": the phone lies in the low band
+  (f >= W(7, "In") - 2 && f < W(7, "of") - 2) || // freeze close-up: her hand-to-mouth lockUp sits low
+  (f >= W(9, "A") - 2 && f < W(9, "If") + 2) || // dispatcher shot: caption in the dark band above her
+  (f >= S.cup && f < S.tilt) || // drink-spike close-up (counter + cup fill the bottom)
+  (f >= S.duress && f < W(21, "It")); // PIN pad
+const captionY = (f: number) => (high(f) ? HIGH : undefined);
+const backingAt = (f: number) => (f >= S.cup && f < S.tilt) || (f >= S.duress && f < W(21, "It"));
 export const _be = BE;
 
 export const ReelV2: React.FC = () => {

@@ -14,10 +14,10 @@ import { OF } from "../kit3d/overlay/fonts";
 
 // ---------------------------------------------------------------------------
 const POLAROIDS: { src: string; label: string; how: string; x: number; y: number; r: number }[] = [
-  { src: "v2/pol_walk.jpg", label: "THE WALK", how: "0 calls · scream heard", x: 190, y: 700, r: -7 },
-  { src: "v2/pol_drink.jpg", label: "THE DRINK", how: "0 calls · no answer", x: 890, y: 710, r: 6 },
-  { src: "v2/pol_phone.jpg", label: "THE PHONE", how: "0 calls · phone went dark", x: 200, y: 1440, r: 5 },
-  { src: "v2/pol_ride.jpg", label: "THE RIDE", how: "0 calls · duress PIN", x: 880, y: 1450, r: -6 },
+  { src: "v2/pol_walk.jpg", label: "THE WALK", how: "0 calls · scream heard", x: 190, y: 620, r: -7 },
+  { src: "v2/pol_drink.jpg", label: "THE DRINK", how: "0 calls · no answer", x: 890, y: 630, r: 6 },
+  { src: "v2/pol_phone.jpg", label: "THE PHONE", how: "0 calls · phone went dark", x: 200, y: 1150, r: 5 },
+  { src: "v2/pol_ride.jpg", label: "THE RIDE", how: "0 calls · duress PIN", x: 880, y: 1160, r: -6 },
 ];
 
 /** v2_22: the four scenarios as polaroids pinned on a real New Mexico outline; "NO TEXT-TO-911" stamp; on "When you
@@ -73,7 +73,7 @@ export const Montage: React.FC = () => {
         const inK = spring({ frame: f - land + 10, fps: 30, config: { damping: 7, stiffness: 170, mass: 0.8 } });
         const squash = 1 + 0.08 * Math.max(0, Math.sin(Math.min(1, Math.max(0, (f - land) / 8)) * Math.PI)) * (f >= land ? 1 : 0);
         const tx = 140 + i * 267, ty = 1215;
-        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(0.66, 0.62, te); // r8: all four fully in frame, clear of the caption band
+        const x = lerp(p.x, tx, te), y = lerp(p.y, ty, te), sc = lerp(0.86, 0.62, te); // r9: +30% at phone size; tuck back to the row on "When"
         return (
           <div key={p.label} style={{ position: "absolute", left: x - 170 + (i % 2 ? 1 : -1) * (1 - inK) * 760, top: y - 205, transform: `rotate(${p.r * (1 - 0.5 * te) + (1 - inK) * (i % 2 ? -35 : 35)}deg) scale(${sc * squash}, ${sc / squash})`, background: "#f6f4fb", padding: "14px 14px 86px", borderRadius: 6, boxShadow: "0 20px 50px rgba(0,0,0,.6)" }}>
             <Img src={staticFile(p.src)} style={{ width: 312, height: 312, objectFit: "cover", display: "block", filter: f >= nm && f < when ? "grayscale(0.6)" : "none" }} />
@@ -111,10 +111,10 @@ const ComfortPlate: React.FC<{ g0: number; blur?: number; dim?: number; inset?: 
         <ambientLight color="#ffe2c4" intensity={0.9} />
         <directionalLight position={[1.5, 2.5, 3]} color="#ffd8b0" intensity={1.4} />
         <MorningWindow />
-        <Character look={MAYA} position={mayaSeat} rotationY={0.18} clips={[{ anim: "sit", start: -A }, { anim: "relief", start: -A, mask: "head" }]} frameOffset={g0 - A} seed={1} faceFill={0.4} face={{ smile: 0.45, worry: 0.25 }} />
+        <Character look={MAYA} position={mayaSeat} rotationY={0.18} clips={[{ anim: "sit", start: -A }, { anim: "relief", start: -A, mask: "head" }]} frameOffset={g0 - A} seed={1} faceFill={0.4} act={0.6} face={{ smile: 0.45, worry: 0.15 }} />
         {/* r7: no blanket blob: her arms and hands stay visible, her head tips toward her roommate */}
-        <Character look={ROOMMATE_HD} position={roomSeat} rotationY={-0.3} clips={[{ anim: "sit", start: -A }]} frameOffset={g0 - A} seed={6} faceFill={0.4} face={{ smile: 0.5, worry: 0.3 }} />
-        <CameraRig rig={inset ? pushIn(0, Z - A, [-0.72, 1.0, -0.35], [0.2, 0.05, 1], 3.0, 2.5, 30, "linear") : pushIn(0, Z - A, [-0.72, 1.12, -0.35], [0.3, -0.02, 1], 4.9, 3.5, 32, "linear")} frameOffset={g0 - A} handheld={0.004} />
+        <Character look={ROOMMATE_HD} position={roomSeat} rotationY={-0.3} clips={[{ anim: "sit", start: -A }]} frameOffset={g0 - A} seed={6} faceFill={0.4} act={0.7} face={{ smile: 0.5, worry: 0.1 }} />
+        <CameraRig rig={inset ? pushIn(0, Z - A, [-0.72, 1.0, -0.35], [0.2, 0.05, 1], 3.0, 2.5, 30, "linear") : pushIn(0, Z - A, [-0.72, 1.12, -0.35], [0.3, -0.02, 1], 5.0, 3.6, 32, "glide")} frameOffset={g0 - A} handheld={0.004} />
       </Scene3D>
     </div>
   );
@@ -251,15 +251,22 @@ export const Close: React.FC = () => {
   const f = useCurrentFrame();
   const F0 = S.logo;
   const tagAt = WE(22, "you.", 1) - F0 + 4;
-  const plateAt = W(24, "It") - F0 - 6;
+  const plateAt = W(24, "It") - F0 - 1;
   const nine = WE(24, "it", 2) - F0 + 4;
   const rainnAt = W(25, "And") - F0 + 2;
   const tailAt = WE(25, "fault.") - F0 + 8;
-  const mix = Math.min(1, Math.max(0, (f - plateAt) / 10));
+  // r9: HARD cut to the two-shot on the "It" onset (no crossfade double exposure); the tagline lands after the cut
+  const cut = f >= plateAt;
+  const sup = W(24, "It") - F0, never = W(24, "It", 1) - F0;
+  const ifAt = W(25, "And") - F0;
+  const lineA = f < ifAt - 2;
+  const words24 = ["It", "supplements", "911."].map((w, i) => ({ w, at: [sup, W(24, "supplements") - F0, W(24, "911.") - F0][i] }));
+  const words24b = ["It", "never", "replaces", "it."].map((w, i) => ({ w, at: [never, W(24, "never") - F0, W(24, "replaces") - F0, W(24, "it", 2) - F0][i], hi: i > 0 }));
+  const notFault = W(25, "it's") - F0;
   return (
     <AbsoluteFill style={{ background: C.bgDeep }}>
-      {f < plateAt + 12 && <AbsoluteFill><SafeWalk full /></AbsoluteFill>}
-      {f >= plateAt - 2 && <AbsoluteFill style={{ opacity: mix }}><ComfortPlate g0={F0 + plateAt} a0={F0 + plateAt} /></AbsoluteFill>}
+      {!cut && <AbsoluteFill><SafeWalk full /></AbsoluteFill>}
+      {cut && <AbsoluteFill><ComfortPlate g0={F0 + plateAt} a0={F0 + plateAt} /></AbsoluteFill>}
       <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(13,11,22,.82) 0%, rgba(13,11,22,.15) 34%, rgba(13,11,22,0) 52%, rgba(13,11,22,.25) 66%, rgba(13,11,22,.85) 100%)" }} />
       <Drift />
       <div style={{ position: "absolute", top: 230, left: 0, right: 0, display: "flex", justifyContent: "center", opacity: fadeIn(f, 0, 6) }}>
@@ -268,15 +275,32 @@ export const Close: React.FC = () => {
           <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 104, color: C.ink, letterSpacing: -1, textShadow: "0 6px 24px rgba(0,0,0,.6)" }}>SafetySense</span>
         </div>
       </div>
-      <div style={{ position: "absolute", top: 390, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 86, lineHeight: 1.02, color: C.accent, WebkitTextStroke: "9px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, tagAt, 8) }}>
+      <div style={{ position: "absolute", top: 390, left: 40, right: 40, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 86, lineHeight: 1.02, color: C.accent, WebkitTextStroke: "9px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, Math.max(tagAt, plateAt + 2), 6) }}>
         Calls for help<br />when you can't.
       </div>
-      {f >= tailAt && (
-        <div style={{ position: "absolute", top: 1215, left: 50, right: 50, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 70, lineHeight: 1.08, color: C.ink, WebkitTextStroke: "8px #120f1e", paintOrder: "stroke fill", opacity: fadeIn(f, tailAt, 8) }}>
-          It supplements 911.<br /><span style={{ color: C.calm }}>It never replaces it.</span>
+      {/* r9: one locked text slot UNDER the characters (never over their bodies); it types the VO line by line */}
+      {cut && (
+        <div style={{ position: "absolute", top: 1250, left: 40, right: 40, height: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 70, lineHeight: 1.08, color: C.ink, WebkitTextStroke: "8px #120f1e", paintOrder: "stroke fill" }}>
+          {lineA ? (
+            <>
+              <WordReveal words={words24} size={70} stroke />
+              <WordReveal words={words24b} size={70} hiColor={C.calm} stroke />
+            </>
+          ) : f < notFault - 1 ? (
+            <WordReveal words={[{ w: "And", at: ifAt }, { w: "if", at: W(25, "if") - F0 }, { w: "something", at: W(25, "something") - F0 }, { w: "happened", at: W(25, "happened") - F0 }, { w: "to", at: W(25, "to") - F0 }, { w: "you,", at: W(25, "you,") - F0 }]} size={66} stroke />
+          ) : (
+            <div style={{ transform: `scale(${0.9 + 0.1 * fadeIn(f, notFault, 6)})`, opacity: fadeIn(f, notFault, 4) }}>
+              <WordReveal words={[{ w: "it's", at: notFault }, { w: "not", at: W(25, "not") - F0, hi: true }, { w: "your", at: W(25, "your") - F0, hi: true }, { w: "fault.", at: W(25, "fault.") - F0, hi: true }]} size={84} hiColor={C.accent} stroke />
+            </div>
+          )}
         </div>
       )}
-      <div style={{ position: "absolute", top: 1480, left: 70, right: 70, textAlign: "center", padding: "18px 24px", borderRadius: 26, background: C.danger, fontFamily: OF.caption, fontWeight: 900, fontSize: 58, color: "#fff", boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${20 + 18 * Math.sin(f / 9)}px ${C.danger}88`, opacity: fadeIn(f, nine, 8), transform: `scale(${0.92 + 0.08 * fadeIn(f, nine, 8)})` }}>
+      {f >= tailAt && (
+        <div style={{ position: "absolute", top: 1418, left: 0, right: 0, textAlign: "center", fontFamily: OF.caption, fontWeight: 900, fontSize: 40, color: C.ink, opacity: fadeIn(f, tailAt, 8) }}>
+          SafetySense supplements 911. It never replaces it.
+        </div>
+      )}
+      <div style={{ position: "absolute", top: 1490, left: 70, right: 70, textAlign: "center", padding: "18px 24px", borderRadius: 26, background: C.danger, fontFamily: OF.caption, fontWeight: 900, fontSize: 58, color: "#fff", boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${20 + 18 * Math.sin(f / 9)}px ${C.danger}88`, opacity: fadeIn(f, nine, 8), transform: `scale(${0.92 + 0.08 * fadeIn(f, nine, 8)})` }}>
         In an emergency, call 911
       </div>
       <div style={{ position: "absolute", top: 1620, left: 70, right: 70, boxSizing: "border-box", padding: "16px 26px", borderRadius: 30, background: "rgba(8,26,24,.92)", border: `6px solid ${C.calm}`, fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.ink, textAlign: "center", lineHeight: 1.12, boxShadow: `0 12px 34px rgba(0,0,0,.5), 0 0 ${16 + 14 * Math.sin(f / 11)}px ${C.calm}66`, opacity: fadeIn(f, rainnAt, 8) }}>

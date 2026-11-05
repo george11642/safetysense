@@ -49,6 +49,21 @@ export const CAST = {
   mom: { model: "formalF", colors: { Red: "#7a3a2a", LimeGreen: "#6a4c9c", Gold: "#d9c07a" } },
   /** Dispatcher: navy top, headset. */
   dispatcher: { model: "casualF", colors: { White: "#2b3f6a", Orange: "#1d2238", Hair_Blond: "#1b1414", Hair_Brown: "#1b1414", Grey: "#1f1a24" }, extras: ["headset"] },
+  /** r9 (v2): Mom on the SuitFemale rig (soft shoulder-length hair instead of the spiky FormalFemale helmet). */
+  mom2: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#6a4c9c", "Suit_Legs/Black": "#33294a", White: "#e2c98a", Hair_Blond: "#7a4a2e", Hair_Brown: "#3a2218", "Suit_Feet/Black": "#2a2232" },
+    hair: "#7a4a2e",
+  },
+  /** r9 (v2): dispatcher with side-swept hair (eyes clear of the fringe), a bun and a fitted headset. */
+  dispatcher2: {
+    model: "suitF",
+    colors: { "Suit_Body/Black": "#2b3f6a", "Suit_Legs/Black": "#1d2238", White: "#c9d4ea", Hair_Blond: "#1e1616", Hair_Brown: "#140e0e", "Suit_Feet/Black": "#1f1a24" },
+    extras: ["headset", "bun"],
+    hair: "#1e1616",
+  },
+  /** r9 (v2): the rideshare driver as a neutral rim-lit silhouette (seen only from behind; no face). */
+  driverSil: { model: "casualM", colors: { LightBrown: "#1c1b26", LightBlue: "#16151e", Red_Dark: "#16151e", Skin: "#1a1820", Skin_Darker: "#141219", Hair: "#0d0c12", Eyebrows: "#0d0c12" }, darkFace: true },
   /** Brother: green tee. */
   brother: { model: "casualM", colors: { LightBrown: "#3f6a5a", LightBlue: "#2a3346" } },
   /** Party guy. */

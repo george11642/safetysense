@@ -125,14 +125,15 @@ export const StatCard: React.FC<{ at: number; out: number; top?: number }> = ({ 
   if (frame < at || frame > out + 10) return null;
   const o = fadeOut(frame, out, 10);
   const n = 70; // shown exactly (no count-up: never display a wrong number)
+  // r9: ONE big number card (the captions step aside while it is up): 70% + FROZE, one plain line, one readable source
   return (
-    <div style={{ position: "absolute", left: 70, right: 70, top, ...glass, borderRadius: 34, padding: "26px 36px", opacity: o * k, transform: `translateY(${(1 - k) * 60}px) rotate(${-1.5 * (1 - k)}deg)`, display: "flex", alignItems: "center", gap: 28, borderColor: `${C.warn}88` }}>
-      <div style={{ fontFamily: OF.sticker, fontSize: 140, color: C.warn, lineHeight: 0.9, textShadow: `0 0 40px ${C.warn}66` }}>{n}%</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {/* r8: the claim reads at phone size; the citation stays small */}
-        <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 46, color: C.ink, lineHeight: 1.06 }}>of 298 women reported significant tonic immobility</span>
-        <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 26, color: C.warn }}>Möller et al., 2017 · Acta Obstet Gynecol Scand</span>
+    <div style={{ position: "absolute", left: 60, right: 60, top, ...glass, borderRadius: 40, padding: "28px 40px 30px", opacity: o * k, transform: `translateY(${(1 - k) * 60}px) rotate(${-1.5 * (1 - k)}deg)`, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, borderColor: `${C.warn}99`, textAlign: "center" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 24 }}>
+        <span style={{ fontFamily: OF.sticker, fontSize: 210, color: C.warn, lineHeight: 0.88, textShadow: `0 0 50px ${C.warn}66` }}>{n}%</span>
+        <span style={{ fontFamily: OF.sticker, fontSize: 120, color: C.ink, lineHeight: 0.9 }}>FROZE</span>
       </div>
+      <span style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 48, color: C.ink, lineHeight: 1.08 }}>of 298 women reported significant tonic immobility</span>
+      <span style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 36, color: C.warn, marginTop: 4 }}>Möller et al., 2017 · Acta Obstet Gynecol Scand</span>
     </div>
   );
 };

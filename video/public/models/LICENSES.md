@@ -8,7 +8,7 @@ CC0 requires no attribution; Quaternius is credited here as a courtesy. Material
 
 | File | Asset (pack) | Source URL | License |
 |---|---|---|---|
-| chars/SuitFemale.glb (Maya / Ava) | "Suit" by Quaternius, Animated Women Pack | https://poly.pizza/m/sOUciDsoVV (pack: https://quaternius.com/packs/animatedwomen.html, CC0) | **Poly Pizza lists this file as CC-BY 3.0**, so we treat it as CC-BY and credit it |
+| chars/SuitFemale.glb (Maya / Ava; v2 also Mom + dispatcher) | "Suit" by Quaternius, Animated Women Pack | https://poly.pizza/m/sOUciDsoVV (pack: https://quaternius.com/packs/animatedwomen.html, CC0) | **Poly Pizza lists this file as CC-BY 3.0**, so we treat it as CC-BY and credit it |
 | chars/CasualFemale.glb (roommate, dispatcher) | "Animated Woman" casual, Animated Women Pack | https://poly.pizza/m/qJ2gsTUBHL | CC0 |
 | chars/FormalFemale.glb (party friend, mom) | "Animated Woman" formal, Animated Women Pack | https://poly.pizza/m/nIItLV9nxS | CC0 |
 | chars/CasualMale.glb (brother, driver) | "Casual Character", Animated Men Pack | https://poly.pizza/m/kZ3DmIoGip (pack: https://quaternius.com/packs/animatedmen.html) | CC0 |
