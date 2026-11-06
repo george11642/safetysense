@@ -21,6 +21,16 @@ const LOCATION_KEEP_DAYS = 30;
 const ALERT_KEEP_DAYS = 90;
 const DRY_RUN_KEEP_S = SHARE_MAX_AGE_S;
 const DAY_MS = 86_400_000;
+// The relay line only treats alerts this recent as dispatched alarms. Alerts never reach "resolved".
+const RELAY_ALERT_MAX_AGE_S = SHARE_MAX_AGE_S;
+// A forwarded call can still be live this long after it started when duress lands.
+const RELAY_CALL_MAX_AGE_S = 3600;
+// On the shared number, a duress alarm stops calls being forwarded for ANOTHER person's alarm this long
+// after the duress PIN. Her own phone number stays blocked for RELAY_ALERT_MAX_AGE_S.
+const RELAY_DURESS_BLOCK_S = 3600;
+const RELAY_REDIRECT_TRIES = 3;
+const RELAY_REDIRECT_WAIT_MS = 400;
+const DURESS_NOTE = "DURESS: person may be coerced. Do not call or text this phone. Send police.";
 
 const db: SupabaseClient = createClient(PROJECT_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -252,8 +262,12 @@ type Notified = { name: string; channel: "call" | "sms"; status: string };
 
 async function notifyContacts(alert: Alert, device: Device): Promise<Notified[]> {
   // contacts/set writes them in the phone's order, primary first.
-  const contacts = must(await db.from("contacts").select("id,name,phone").eq("device_id", device.id).order("created_at")) as
+  const saved = must(await db.from("contacts").select("id,name,phone").eq("device_id", device.id).order("created_at")) as
     { id: string; name: string; phone: string }[];
+  // Never her own phone, on any run. contacts/set refuses it, but profile/update can create the match
+  // later and older rows can hold it. With no phone on file there's nothing to compare against.
+  const contacts = device.phone ? saved.filter((c) => c.phone !== device.phone) : saved;
+  if (contacts.length < saved.length) await addEvent(alert.id, "SafetySense", "contact_skipped", "Their own number is on the contact list", true);
   const url = await shareUrl(alert.share_token);
   const from = await secret("twilio_from");
   const who = firstName(device.name);
@@ -264,8 +278,13 @@ async function notifyContacts(alert: Alert, device: Device): Promise<Notified[]>
     let smsStatus = "dry_run";
     let smsSid: string | null = null, smsDelivery: string | null = null, smsError: string | null = null;
     if (!alert.dry_run) {
-      const body = `SafetySense: ${who} may need help (${alert.reason}). Live location and what to do: ${url}\n` +
-        `If you think ${who} is in danger, call 911.`;
+      // Any alert can turn out to be coerced, so even the first text steers contacts away from her phone.
+      const body = alert.duress
+        ? `SafetySense: Do NOT call or text ${who}'s phone. ${who} may not be free to talk, and a call or text could put them at risk. ` +
+          `Live location and what to do: ${url}\nIf you think ${who} is in danger, call 911.`
+        : `SafetySense: ${who} may need help (${alert.reason}). Live location and what to do: ${url}\n` +
+          `Please use the link instead of calling or texting their phone: a call could put them at risk. ` +
+          `If you think ${who} is in danger, call 911.`;
       try {
         const r = await twilio("/Messages.json", new URLSearchParams({
           To: c.phone, From: from ?? "", Body: body,
@@ -304,38 +323,63 @@ async function notifyContacts(alert: Alert, device: Device): Promise<Notified[]>
 }
 
 // ------------------------------------------------------------------ dispatch (Noonlight sandbox or simulated)
+// Noonlight never gets the person's real number: every alarm's phone is the SafetySense relay line,
+// and twilio/relay/voice decides at call time whether a call may reach her. Noonlight has no duress
+// or no-callback field, so that check is the protection, and the notes below are extra layers that
+// nothing guarantees a dispatcher reads.
+function relayDigits(from: string | null): string | null {
+  const d = (from ?? "").replace(/\D/g, "").replace(/^(\d{10})$/, "1$1");
+  return /^1\d{10}$/.test(d) ? d : null;
+}
+
+// A failed request is not a dispatch. It returns provider null and the alert stays active with no
+// provider, so cron/watchdog tries again every minute. Only "no Noonlight token" is simulated.
 async function escalate(alert: Alert, reason: string, by: string, internal = false) {
   if (alert.dispatch_provider) {
     return { provider: alert.dispatch_provider, alarm_id: alert.dispatch_alarm_id, status: alert.dispatch_status };
   }
-  const device = must(await db.from("devices").select("name,phone").eq("id", alert.device_id).single()) as { name: string; phone: string | null };
+  const device = must(await db.from("devices").select("name").eq("id", alert.device_id).single()) as { name: string };
   const loc = await latestLocation(alert);
   const nl = alert.dry_run ? null : await secret("noonlight_token");
   let provider = "simulated", alarmId = `sim_${randomToken(9)}`, status = "simulated_dispatch";
+  let failure: string | null = null, ownerId: string | null = null;
   if (nl) {
-    try {
-      const res = await fetch(`${NOONLIGHT_BASE}/alarms`, {
-        method: "POST",
-        headers: { authorization: `Bearer ${nl}`, "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({
-          name: device.name,
-          phone: (device.phone ?? "").replace(/\D/g, "").replace(/^(\d{10})$/, "1$1"),
-          pin: "1234",
-          location: { coordinates: { lat: loc?.lat ?? 35.0844, lng: loc?.lng ?? -106.6504, accuracy: loc?.accuracy ?? 50 } },
-          // Noonlight has no duress or no-callback field. This free-text note is the only channel to
-          // dispatchers, and only reaches a new alarm: an alarm already sent can't be updated.
-          ...(alert.duress ? { instructions: { entry: "DURESS: person may be coerced. Do not call or text this phone. Send police." } } : {}),
-        }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok && body.id) {
-        provider = "noonlight_sandbox"; alarmId = String(body.id); status = String(body.status ?? "ACTIVE");
-      } else {
-        status = `simulated_dispatch (noonlight error ${res.status})`;
+    const relay = relayDigits(await secret("twilio_from"));
+    if (!relay) failure = "no relay number configured"; // Never fall back to the real number.
+    else {
+      try {
+        const res = await fetch(`${NOONLIGHT_BASE}/alarms`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${nl}`, "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify({
+            name: device.name,
+            phone: relay,
+            pin: "1234",
+            location: { coordinates: { lat: loc?.lat ?? 35.0844, lng: loc?.lng ?? -106.6504, accuracy: Math.round(loc?.accuracy ?? 50) } },
+            ...(alert.duress ? { instructions: { entry: DURESS_NOTE } } : {}),
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && body.id) {
+          provider = "noonlight_sandbox"; alarmId = String(body.id); status = String(body.status ?? "ACTIVE");
+          ownerId = typeof body.owner_id === "string" ? body.owner_id : null;
+        } else {
+          failure = `noonlight error ${res.status}`;
+        }
+      } catch {
+        failure = "noonlight unreachable";
       }
-    } catch {
-      status = "simulated_dispatch (noonlight unreachable)";
     }
+  }
+  if (failure) {
+    must(await db.from("alerts").update({ level: 3, dispatch_status: `retrying (${failure})` })
+      .eq("id", alert.id).is("dispatch_provider", null));
+    if (!alert.dispatch_status) {
+      await addEvent(alert.id, "SafetySense", "dispatch_failed",
+        "Professional monitoring couldn't be reached yet. SafetySense is still trying. If you think they are in danger, call 911.", internal);
+    }
+    console.error("dispatch failed", alert.id, failure);
+    return { provider: null, alarm_id: null, status: `retrying (${failure})` };
   }
   // Only claim the row if nobody else escalated meanwhile.
   const upd = must(await db.from("alerts").update({
@@ -346,12 +390,87 @@ async function escalate(alert: Alert, reason: string, by: string, internal = fal
     const cur = must(await db.from("alerts").select("dispatch_provider,dispatch_alarm_id,dispatch_status").eq("id", alert.id).single()) as Alert;
     return { provider: cur.dispatch_provider, alarm_id: cur.dispatch_alarm_id, status: cur.dispatch_status };
   }
+  if (ownerId) await addEvent(alert.id, "SafetySense", "noonlight_owner", null, true, { provider_sid: ownerId });
   await addEvent(alert.id, by, "dispatch_requested",
     provider === "simulated"
       ? `Emergency dispatch requested (SIMULATED for the demo; no responders were sent). ${reason}`
       : `Professional monitoring (Noonlight sandbox) requested. ${reason}`,
     internal);
   return { provider, alarm_id: alarmId, status };
+}
+
+// /alarms/{id}/events has no free text, but the alarm's person record takes additional_info. It is the
+// only way to add a note to an alarm already dispatched. Noonlight's docs don't say dispatchers see it.
+async function noteNoonlightDuress(alert: Alert) {
+  if (alert.dispatch_provider !== "noonlight_sandbox" || !alert.dispatch_alarm_id) return;
+  const nl = await secret("noonlight_token");
+  const owner = (must(await db.from("events").select("provider_sid").eq("alert_id", alert.id).eq("action", "noonlight_owner")
+    .limit(1)) as { provider_sid: string | null }[])[0]?.provider_sid;
+  if (!nl || !owner) return;
+  const res = await fetch(`${NOONLIGHT_BASE}/alarms/${alert.dispatch_alarm_id}/people/${owner}`, {
+    method: "PUT",
+    headers: { authorization: `Bearer ${nl}`, "content-type": "application/json" },
+    body: JSON.stringify({ additional_info: { value: DURESS_NOTE } }),
+  });
+  await addEvent(alert.id, "SafetySense", "duress_note", `Duress note added to the alarm: ${res.status}`, true);
+}
+
+// A dispatcher's call may already be ringing or connected when duress lands. Taking the call back
+// ends the forwarded leg, and the dispatcher hears the duress message instead. A refused or failed
+// redirect is retried, then her leg is stopped directly, which ends the Dial so dial-done plays the
+// message. If Twilio hasn't started the Dial yet there's no leg to stop: it can ring until the Dial
+// times out, and screen and accept keep it from connecting.
+export async function takeBackRelayCall(sid: string, wait = (ms: number) => new Promise((r) => setTimeout(r, ms))): Promise<string> {
+  const path = `/Calls/${sid}.json`;
+  for (let i = 0; i < RELAY_REDIRECT_TRIES; i++) {
+    if (i > 0) await wait(i * RELAY_REDIRECT_WAIT_MS);
+    const cur = await twilio(path, null, "GET").catch(() => null);
+    if (cur?.status === 404 || ["completed", "busy", "failed", "no-answer", "canceled"].includes(String(cur?.body.status))) return "ended";
+    const r = await twilio(path, new URLSearchParams({ Url: `${API_BASE}/twilio/relay/voice`, Method: "POST" })).catch(() => null);
+    if (r?.ok) return "redirected";
+  }
+  const kids = await twilio(`/Calls.json?ParentCallSid=${sid}`, null, "GET").catch(() => null);
+  const legs = (Array.isArray(kids?.body.calls) ? kids.body.calls : []) as { sid: string; status: string }[];
+  let stopped = 0;
+  for (const leg of legs) {
+    const status = leg.status === "in-progress" ? "completed" : leg.status === "queued" || leg.status === "ringing" ? "canceled" : null;
+    if (!status) continue;
+    const r = await twilio(`/Calls/${leg.sid}.json`, new URLSearchParams({ Status: status })).catch(() => null);
+    if (r?.ok) stopped++;
+  }
+  return stopped > 0 ? "leg_stopped" : kids?.ok ? "no_leg_found" : "failed";
+}
+
+// Covers every alert on her phone number, since duress is about the person and not the one alert.
+async function redirectRelayCalls(alert: Alert) {
+  const callsSince = new Date(Date.now() - RELAY_CALL_MAX_AGE_S * 1000).toISOString();
+  const alertsSince = new Date(Date.now() - RELAY_ALERT_MAX_AGE_S * 1000).toISOString();
+  const alerts = must(await db.from("alerts").select("id").in("device_id", await samePhoneDevices(alert.device_id)).gte("created_at", alertsSince)) as { id: string }[];
+  const rows = must(await db.from("events").select("provider_sid").in("alert_id", alerts.map((a) => a.id)).eq("action", "relay_call")
+    .gte("created_at", callsSince)) as { provider_sid: string | null }[];
+  await Promise.all([...new Set(rows.map((r) => r.provider_sid).filter((v): v is string => !!v))].map(async (sid) => {
+    const outcome = await takeBackRelayCall(sid);
+    await addEvent(alert.id, "SafetySense", "relay_redirect", `Forwarded call: ${outcome}`, true, { provider_sid: sid });
+  }));
+}
+
+// Marks an alert as coerced and sends help. The flag is written first, and everything after it is best
+// effort so one failure can't stop the others. The flag alone stops the relay ringing her. Taking back
+// forwarded calls runs on every call, so a repeated duress cancel retries it. The note and the contact
+// warning run only the first time.
+async function applyDuress(alert: Alert, device: Device) {
+  const first = !alert.duress;
+  const marked = { ...alert, duress: true };
+  if (first) {
+    must(await db.from("alerts").update({ duress: true }).eq("id", alert.id));
+    await addEvent(alert.id, "SafetySense", "duress", "Cancel entered with the duress PIN", true);
+  }
+  await redirectRelayCalls(marked).catch(() => console.error("relay redirect failed", alert.id));
+  if (first) await noteNoonlightDuress(marked).catch(() => console.error("duress note failed", alert.id));
+  // If this fails, the alert is still active with no provider, so the watchdog keeps trying.
+  await escalate(marked, "The alert was escalated.", "SafetySense").catch(() => console.error("duress escalate failed", alert.id));
+  // Contacts were told before this was duress: tell them again not to call her.
+  if (first) await notifyContacts(marked, device).catch(() => console.error("duress notice failed", alert.id));
 }
 
 async function pushNoonlightLocation(alert: Alert, lat: number, lng: number, accuracy: number | null) {
@@ -361,7 +480,7 @@ async function pushNoonlightLocation(alert: Alert, lat: number, lng: number, acc
   await fetch(`${NOONLIGHT_BASE}/alarms/${alert.dispatch_alarm_id}/locations`, {
     method: "POST",
     headers: { authorization: `Bearer ${nl}`, "content-type": "application/json" },
-    body: JSON.stringify({ coordinates: { lat, lng, accuracy: accuracy ?? 50 } }),
+    body: JSON.stringify({ coordinates: { lat, lng, accuracy: Math.round(accuracy ?? 50) } }), // Noonlight rejects a decimal
   }).catch(() => {});
 }
 
@@ -380,20 +499,24 @@ async function cancelNoonlight(alert: Alert) {
 async function createAlert(opts: {
   device: Device; session: Session | null; level: 2 | 3; reason: string; trigger: string;
   lat: number | null; lng: number | null; accuracy: number | null; battery: number | null;
-  dryRun: boolean; policy: string; clientAlertId?: string | null;
+  dryRun: boolean; policy: string; clientAlertId?: string | null; duress?: boolean;
 }) {
   const { device, session } = opts;
   // The phone retries until it hears back. A repeat of an alert that landed must not call anyone again.
   if (opts.clientAlertId) {
     const repeat = must(await db.from("alerts").select("*").eq("id", opts.clientAlertId).maybeSingle()) as Alert | null;
-    if (repeat?.device_id === device.id) return { alert: repeat, notified: [] as Notified[], reused: true };
+    if (repeat?.device_id === device.id) {
+      if (opts.duress) await applyDuress(repeat, device);
+      return { alert: repeat, notified: [] as Notified[], reused: true };
+    }
   }
   // One live alert per session: re-use it (and upgrade to level 3 if asked).
   if (session) {
     const existing = (must(await db.from("alerts").select("*").eq("session_id", session.id)
       .in("status", ["active", "dispatched"]).order("created_at", { ascending: false }).limit(1)) as Alert[])[0];
     if (existing) {
-      if (opts.level === 3 || opts.policy === "dispatch_immediately") await escalate(existing, opts.reason, "SafetySense");
+      if (opts.duress) await applyDuress(existing, device);
+      else if (opts.level === 3 || opts.policy === "dispatch_immediately") await escalate(existing, opts.reason, "SafetySense");
       if (opts.lat !== null && opts.lng !== null) {
         await db.from("locations").insert({ alert_id: existing.id, session_id: session.id, lat: opts.lat, lng: opts.lng, accuracy: opts.accuracy, battery: opts.battery });
       }
@@ -409,8 +532,10 @@ async function createAlert(opts: {
   const alert = must(await db.from("alerts").insert({
     ...(opts.clientAlertId ? { id: opts.clientAlertId } : {}),
     session_id: session?.id ?? null, device_id: device.id, level: opts.level, reason: opts.reason, trigger: opts.trigger,
-    dispatch_policy: opts.policy, share_token: randomToken(24), dry_run: opts.dryRun,
+    dispatch_policy: opts.policy, share_token: randomToken(24), dry_run: opts.dryRun, duress: opts.duress === true,
   }).select("*").single()) as Alert;
+  // Logged first: alert/status shows the phone nothing from this point on.
+  if (opts.duress) await addEvent(alert.id, "SafetySense", "duress", "Duress PIN entered with no alert running", true);
   if (session) await db.from("sessions").update({ status: "alerted" }).eq("id", session.id);
 
   const lat = opts.lat ?? session?.last_lat ?? null, lng = opts.lng ?? session?.last_lng ?? null;
@@ -422,7 +547,8 @@ async function createAlert(opts: {
   }
   await addEvent(alert.id, "SafetySense", "alert_started", `${opts.reason}${opts.dryRun ? " (TEST: no one was contacted)" : ""}`);
   const notified = await notifyContacts(alert, device);
-  if (opts.level === 3 || opts.policy === "dispatch_immediately") {
+  if (opts.duress) await escalate(alert, "The alert was escalated.", "SafetySense");
+  else if (opts.level === 3 || opts.policy === "dispatch_immediately") {
     await escalate(alert, opts.trigger === "manual_sos" ? "SOS held." : "Immediate dispatch policy.", "SafetySense");
   }
   return { alert, notified, reused: false };
@@ -552,6 +678,8 @@ const routes: Record<string, Handler> = {
     const rows = (body.contacts as Record<string, unknown>[]).map((c, i) => ({
       device_id: device.id, name: str(c?.name, `contacts[${i}].name`, 60)!, phone: phone(c?.phone, `contacts[${i}].phone`),
     }));
+    // Refused before the delete, so the list already saved stays in place.
+    if (device.phone && rows.some((r) => r.phone === device.phone)) throw new HttpError(400, "a trusted contact can't be your own number");
     must(await db.from("contacts").delete().eq("device_id", device.id));
     // One at a time: created_at keeps their order, and the first one gets the phone call.
     for (const row of rows) must(await db.from("contacts").insert(row));
@@ -652,6 +780,9 @@ const routes: Record<string, Handler> = {
       accuracy: num(body.accuracy, "accuracy", 0, 100000), battery: num(body.battery, "battery", 0, 1),
       dryRun: body.dry_run === true || session?.dry_run === true, policy,
       clientAlertId: body.client_alert_id ? uuid(body.client_alert_id, "client_alert_id") : null,
+      // The phone raises these when a duress PIN is entered with no alert running. Builds already
+      // installed never follow it with a duress cancel, and this also closes the gap for those that do.
+      duress: /^Duress PIN entered/.test(reason),
     });
     return json({ alert_id: alert.id, share_url: await shareUrl(alert.share_token), notified });
   },
@@ -659,9 +790,12 @@ const routes: Record<string, Handler> = {
   async "alert/escalate"({ req, body }) {
     const device = await authDevice(req);
     const alert = await ownedAlert(device, uuid(body.alert_id, "alert_id"));
-    if (alert.status === "cancelled" || alert.status === "resolved") throw new HttpError(409, "alert is no longer active");
+    // A duress alert already reads as cancelled on the phone, so it answers like a cancelled one.
+    if (alert.duress || alert.status === "cancelled" || alert.status === "resolved") throw new HttpError(409, "alert is no longer active");
     const reason = str(body.reason, "reason", 140, false) ?? "Escalated from the phone.";
     const dispatch = await escalate(alert, reason, "SafetySense");
+    // The phone retries this and says "Couldn't confirm dispatch yet. If you can, call 911."
+    if (!dispatch.provider) throw new HttpError(503, "dispatch could not be confirmed yet");
     return json({ dispatch });
   },
 
@@ -671,11 +805,11 @@ const routes: Record<string, Handler> = {
     if (body.duress === true) {
       // Duress PIN: looks exactly like a normal cancel to whoever holds the phone,
       // but silently escalates to dispatch. Contacts still see help is on the way.
-      must(await db.from("alerts").update({ duress: true }).eq("id", alert.id));
-      await addEvent(alert.id, "SafetySense", "duress", "Cancel entered with the duress PIN", true);
-      await escalate({ ...alert, duress: true }, "The alert was escalated.", "SafetySense");
+      await applyDuress(alert, device);
       return json({ ok: true, status: "cancelled" });
     }
+    // Duress is one-way: a later normal cancel must not call off the help it asked for.
+    if (alert.duress) return json({ ok: true, status: "cancelled" });
     if (alert.status === "active" || alert.status === "dispatched") {
       must(await db.from("alerts").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", alert.id));
       await cancelNoonlight(alert);
@@ -702,10 +836,16 @@ const routes: Record<string, Handler> = {
     const events = must(await db.from("events").select(EVENT_COLS).eq("alert_id", alert.id)
       .eq("internal", false).order("created_at")) as EventRow[];
     if (alert.duress) {
-      // Never reveal the silent escalation on the (possibly coerced) phone.
+      // Never reveal the silent escalation on the (possibly coerced) phone: this is what a normal
+      // cancel returns at the same moment, and nothing that happened afterwards shows.
+      const at = (await duressAt(alert.id)) ?? alert.created_at;
+      const before = events.filter((e) => Date.parse(e.created_at) < Date.parse(at));
       return json({
-        status: "cancelled", level: alert.level, dispatch: null,
-        events: events.filter((e) => e.action !== "dispatch_requested").map((e) => eventOut(e, false)),
+        status: "cancelled", level: before.some((e) => e.action === "dispatch_requested") ? 3 : 2, dispatch: null,
+        events: [
+          ...before.filter((e) => e.action !== "dispatch_requested").map((e) => eventOut(e)),
+          { who: firstName(device.name), action: "marked_safe", detail: "Cancelled with their Safety PIN", at, delivery_status: null, error_code: null },
+        ],
       });
     }
     return json({
@@ -738,23 +878,29 @@ const routes: Record<string, Handler> = {
   async "share/get"({ body }) {
     const alert = await alertByToken(body.token);
     const device = must(await db.from("devices").select("name").eq("id", alert.device_id).single()) as { name: string };
-    const ended = alert.status === "cancelled" || alert.status === "resolved";
+    // A duress alert is never over for contacts, whatever the phone was told.
+    const ended = !alert.duress && (alert.status === "cancelled" || alert.status === "resolved");
     const live = !ended;
     const loc = live ? await latestLocation(alert) : null;
     const events = must(await db.from("events").select(EVENT_COLS).eq("alert_id", alert.id)
       .eq("internal", false).order("created_at", { ascending: false }).limit(40)) as EventRow[];
-    let sealed: string | null = null;
-    if (live && alert.session_id) {
-      const s = must(await db.from("sessions").select("sealed_details").eq("id", alert.session_id).maybeSingle()) as { sealed_details: string | null } | null;
-      sealed = await unseal(s?.sealed_details ?? null);
+    let sealed: string | null = null, mode: string | null = null;
+    if (alert.session_id) {
+      const s = must(await db.from("sessions").select("mode,sealed_details").eq("id", alert.session_id).maybeSingle()) as
+        { mode: string; sealed_details: string | null } | null;
+      mode = s?.mode ?? null;
+      if (live) sealed = await unseal(s?.sealed_details ?? null);
     }
     return json({
       first_name: firstName(device.name),
-      status: alert.status,
+      status: alert.duress ? (alert.dispatch_provider ? "dispatched" : "active") : alert.status,
       level: alert.level,
       reason: alert.reason,
       started_at: alert.created_at,
       dry_run: alert.dry_run,
+      duress: alert.duress,
+      duress_at: alert.duress ? await duressAt(alert.id) : null,
+      mode,
       dispatch: alert.dispatch_provider ? { provider: alert.dispatch_provider, status: alert.dispatch_status } : null,
       location: loc ? { lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy, at: loc.created_at } : null,
       battery: loc?.battery ?? null,
@@ -786,13 +932,16 @@ const routes: Record<string, Handler> = {
     if (!alert) return twiml(`<Say>This SafetySense alert has expired. Goodbye.</Say>`);
     const device = must(await db.from("devices").select("name").eq("id", alert.device_id).single()) as { name: string };
     const who = xml(firstName(device.name));
-    if (alert.status === "cancelled" || alert.status === "resolved") {
+    if (!alert.duress && (alert.status === "cancelled" || alert.status === "resolved")) {
       return twiml(`<Say>This is SafetySense. ${who} has marked themselves safe. No action is needed. Goodbye.</Say>`);
     }
     const action = xml(`${API_BASE}/twilio/gather?token=${encodeURIComponent(alert.share_token)}&c=${q.get("c") ?? ""}`);
     return twiml(
-      `<Say voice="Polly.Joanna">SafetySense alert. ${who} may need help. Reason: ${xml(alert.reason)}. ` +
-        `A live location link has been sent to you.</Say>` +
+      (alert.duress
+        ? `<Say voice="Polly.Joanna">SafetySense alert. Do not call or text ${who}'s phone. ${who} may not be free to talk, ` +
+          `and a call or text could put them at risk. A live location link has been sent to you.</Say>`
+        : `<Say voice="Polly.Joanna">SafetySense alert. ${who} may need help. Reason: ${xml(alert.reason)}. ` +
+          `A live location link has been sent to you. Please use the link instead of calling or texting their phone.</Say>`) +
         `<Gather numDigits="1" timeout="8" method="POST" action="${action}">` +
         `<Say voice="Polly.Joanna">Press 1 if you are on your way. Press 9 to send emergency help.</Say></Gather>` +
         `<Say voice="Polly.Joanna">We did not get a response. If you think ${who} is in danger, call 9 1 1. Goodbye.</Say>`,
@@ -809,15 +958,16 @@ const routes: Record<string, Handler> = {
     const digits = form.get("Digits");
     if (digits === "1") {
       await addEvent(alert.id, who, "on_my_way", `${who} is on the way (phone call)`);
-      return twiml(`<Say voice="Polly.Joanna">Thank you. We have let them know you are on your way. If they are in immediate danger, call 9 1 1. Goodbye.</Say>`);
+      return twiml(`<Say voice="Polly.Joanna">Thank you. ${alert.duress ? "Please do not call or text their phone." : "We have let them know you are on your way."} If they are in immediate danger, call 9 1 1. Goodbye.</Say>`);
     }
     if (digits === "9") {
       await addEvent(alert.id, who, "send_help", `${who} asked for emergency help (phone call)`);
       const d = await escalate(alert, `Requested by ${who} by phone.`, who);
-      const sim = d.provider === "simulated";
-      return twiml(`<Say voice="Polly.Joanna">${sim
+      return twiml(`<Say voice="Polly.Joanna">${d.provider === "simulated"
         ? "Emergency dispatch was requested. This is a demo, so dispatch is simulated. If this is a real emergency, hang up and call 9 1 1."
-        : "Professional monitoring has been asked to send help. Please also call 9 1 1 if you can."} Goodbye.</Say>`);
+        : d.provider === "noonlight_sandbox"
+        ? "Emergency dispatch was requested. This build uses a test monitoring service, so no responders are sent. If this is a real emergency, hang up and call 9 1 1."
+        : "We could not reach the monitoring service yet and are still trying. Please hang up and call 9 1 1."} Goodbye.</Say>`);
     }
     return twiml(`<Say voice="Polly.Joanna">Sorry, that was not an option. If you think they are in danger, call 9 1 1. Goodbye.</Say>`);
   },
@@ -853,6 +1003,100 @@ const routes: Record<string, Handler> = {
     const detail = failed ? `Text to ${name}: not delivered${code ? ` (error ${code})` : ""}` : `Text to ${name}: ${st}`;
     must(await db.from("events").update({ delivery_status: st, error_code: failed ? code : null, detail }).eq("id", ev.id));
     return new Response(null, { status: 204 });
+  },
+
+  // ---------- relay line: the only number Noonlight has for anyone
+  // Inbound call. Each caller type hears fixed words, so only a caller who is neither a contact nor
+  // a device can learn anything, and no reply carries a name or location.
+  async "twilio/relay/voice"({ req }) {
+    return relayRoute(req, "twilio/relay/voice", relayDuressTwiml, async (form) => {
+      const from = form.get("From") ?? "", callSid = form.get("CallSid") ?? "";
+      const caller = await relayCaller(from);
+      if (caller === "contact") return relaySay(RELAY_CONTACT);
+      if (caller === "device") return relaySay(RELAY_NEUTRAL);
+      const candidates = await relayCandidates();
+      if (candidates.length === 0) return relaySay(RELAY_NEUTRAL);
+      const alerts = await relayBlockers(candidates);
+      // Only long-past duress alarms left: they still get the duress message, never a forward.
+      const coerced = alerts.find((a) => a.duress) ?? (alerts.length === 0 ? candidates[0] : undefined);
+      if (coerced || alerts.length > 1 || !/^CA[0-9a-f]{32}$/i.test(callSid)) {
+        await addEvent((coerced ?? alerts[0]).id, "SafetySense", "relay_blocked",
+          coerced ? "Monitoring call not forwarded: duress" : "Monitoring call not forwarded: can't tell which alarm it's for", true);
+        return relayDuressTwiml();
+      }
+      const alert = alerts[0];
+      const device = must(await db.from("devices").select("phone").eq("id", alert.device_id).single()) as { phone: string | null };
+      // Recorded before the second look, so duress lands either on this read or on applyDuress's
+      // redirect. No record, no Dial: a failed insert falls through to relayRoute's fail-safe.
+      must(await db.from("events").insert({
+        alert_id: alert.id, who: "SafetySense", action: "relay_call", detail: "Monitoring call being forwarded", internal: true, provider_sid: callSid,
+      }));
+      if (await alertIsCoerced(alert.id)) return relayDuressTwiml();
+      if (!device.phone) return relaySay(RELAY_NO_ANSWER);
+      const back = `alert=${alert.id}&parent=${callSid}`;
+      // No callerId: her phone shows the caller's number, never the relay line's.
+      return twiml(
+        `<Dial timeout="20" method="POST" action="${xml(`${API_BASE}/twilio/relay/dial-done?alert=${alert.id}`)}">` +
+          `<Number method="POST" url="${xml(`${API_BASE}/twilio/relay/screen?${back}`)}">${xml(device.phone)}</Number></Dial>`,
+      );
+    });
+  },
+
+  // Plays to whoever picks up her phone, so it names nothing: a voicemail can record it, and a carrier
+  // voicemail can't press 1, so that counts as no answer.
+  async "twilio/relay/screen"({ req }) {
+    return relayRoute(req, "twilio/relay/screen", () => twiml(`<Hangup/>`), async (_form, q) => {
+      const id = uuid(q.get("alert"), "alert"), parent = q.get("parent") ?? "";
+      if (await alertIsCoerced(id)) return twiml(`<Hangup/>`);
+      const action = `${API_BASE}/twilio/relay/accept?alert=${id}&parent=${encodeURIComponent(parent)}`;
+      return twiml(
+        `<Gather numDigits="1" timeout="6" method="POST" action="${xml(action)}">` +
+          `<Say voice="Polly.Joanna">Press 1 to connect this call.</Say></Gather><Hangup/>`,
+      );
+    });
+  },
+
+  // An empty response connects the two legs.
+  async "twilio/relay/accept"({ req }) {
+    return relayRoute(req, "twilio/relay/accept", () => twiml(`<Hangup/>`), async (form, q) => {
+      const id = uuid(q.get("alert"), "alert");
+      if (form.get("Digits") !== "1" || await alertIsCoerced(id)) return twiml(`<Hangup/>`);
+      await addEvent(id, "SafetySense", "relay_accepted", "Monitoring call connected", true, { provider_sid: q.get("parent") });
+      return twiml("");
+    });
+  },
+
+  // Twilio doesn't document DialCallStatus for a screen hangup, so only our own record counts as answered.
+  async "twilio/relay/dial-done"({ req }) {
+    return relayRoute(req, "twilio/relay/dial-done", relayDuressTwiml, async (form, q) => {
+      const id = uuid(q.get("alert"), "alert");
+      if (await alertIsCoerced(id)) return relayDuressTwiml();
+      const accepted = must(await db.from("events").select("id").eq("alert_id", id).eq("action", "relay_accepted")
+        .eq("provider_sid", form.get("CallSid") ?? "").limit(1)) as unknown[];
+      if (accepted.length > 0 && form.get("DialCallStatus") === "completed") return twiml(`<Hangup/>`);
+      // She can cancel with her real PIN while it rings, and a PIN has to keep working.
+      const now = must(await db.from("alerts").select("status").eq("id", id).single()) as { status: string };
+      if (now.status === "cancelled") return relaySay(RELAY_CANCELLED);
+      await addEvent(id, "SafetySense", "relay_no_answer", "Monitoring call not answered", true);
+      return relaySay(RELAY_NO_ANSWER);
+    });
+  },
+
+  // Inbound text. Nothing is ever forwarded to her phone, in any state. It's logged internally and,
+  // unless the sender is a device, answered with fixed words. Outbound SMS is blocked on this account
+  // (error 30034), so the reply can't be relied on, and neither the log nor safety depends on it.
+  async "twilio/relay/sms"({ req }) {
+    return relayRoute(req, "twilio/relay/sms", () => twiml(""), async (form) => {
+      const caller = await relayCaller(form.get("From") ?? "");
+      const alerts = await relayCandidates();
+      const alert = alerts.find((a) => a.duress) ?? alerts[0];
+      if (alert) {
+        await addEvent(alert.id, "SafetySense", "relay_sms",
+          `Text received on the relay line (${(form.get("Body") ?? "").length} characters). Not forwarded.`, true);
+      }
+      if (caller === "device") return twiml("");
+      return twiml(`<Message>${xml(caller === "contact" ? RELAY_SMS_CONTACT : RELAY_SMS_OTHER)}</Message>`);
+    });
   },
 
   // ---------- retention (pg_cron hourly via pg_net)
@@ -936,10 +1180,12 @@ const routes: Record<string, Handler> = {
       result.heartbeat_lost++;
     }
 
-    // 2) Level-2 alerts with no valid cancel after 90 s: escalate to dispatch.
+    // 2) Alerts with no valid cancel after 90 s and no dispatch yet: level 2 alerts, and any whose
+    //    dispatch request failed (those stay active with no provider until one goes through).
     const cutoff = new Date(now - ESCALATE_AFTER_S * 1000).toISOString();
-    const stale = must(await db.from("alerts").select("*").eq("status", "active").eq("level", 2)
-      .is("dispatch_provider", null).lt("created_at", cutoff).limit(100)) as Alert[];
+    const oldest = new Date(now - SHARE_MAX_AGE_S * 1000).toISOString();
+    const stale = must(await db.from("alerts").select("*").eq("status", "active")
+      .is("dispatch_provider", null).lt("created_at", cutoff).gte("created_at", oldest).limit(100)) as Alert[];
     for (const a of stale) {
       await escalate(a, `No response for ${ESCALATE_AFTER_S} seconds.`, "SafetySense").catch((e) => console.error("escalate failed", a.id, String(e)));
       result.escalated++;
@@ -999,6 +1245,94 @@ async function alertByToken(token: unknown): Promise<Alert> {
   const endedAge = a.cancelled_at ? (Date.now() - Date.parse(a.cancelled_at)) / 1000 : 0;
   if (age > SHARE_MAX_AGE_S || endedAge > SHARE_EXPIRES_AFTER_END_S) throw new HttpError(410, "this link has expired");
   return a;
+}
+
+async function duressAt(alertId: string): Promise<string | null> {
+  const rows = must(await db.from("events").select("created_at").eq("alert_id", alertId).eq("action", "duress")
+    .order("created_at").limit(1)) as { created_at: string }[];
+  return rows[0]?.created_at ?? null;
+}
+
+// ------------------------------------------------------------------ relay line
+const RELAY_SAY = 'voice="Polly.Joanna"';
+const RELAY_DURESS = "This is the SafetySense relay line for an active alarm. The person may be coerced. " +
+  "Do not call or text them. Send police to the location being shared.";
+const RELAY_NO_ANSWER = "This is the SafetySense relay line. The person did not answer. Treat this as no response, " +
+  "and send police to the location being shared. If they cancel with their PIN, the alarm will be cancelled.";
+const RELAY_CANCELLED = "This is the SafetySense relay line. The person cancelled this alarm with their PIN.";
+const RELAY_NEUTRAL = "This is SafetySense. This line does not connect to anyone. If someone is in danger, call 9 1 1.";
+const RELAY_CONTACT = "This is SafetySense. This line does not connect to the person. Please use the live link we sent you, " +
+  "and do not call or text their phone. If you think they are in danger, call 9 1 1.";
+const RELAY_SMS_OTHER = "SafetySense: this line can't take texts. Please call this number instead. Do not text the person's own phone.";
+const RELAY_SMS_CONTACT = "SafetySense: this line can't take texts. Please use the live link we sent you, and do not call or text " +
+  "their phone. If you think they are in danger, call 911.";
+
+function relaySay(words: string): Response {
+  return twiml(`<Say ${RELAY_SAY} loop="2">${xml(words)}</Say><Hangup/>`);
+}
+function relayDuressTwiml(): Response {
+  return relaySay(RELAY_DURESS);
+}
+
+// Checks the signature, then fails safe: a relay handler that can't reach the data must never ring her.
+async function relayRoute(req: Request, route: string, onError: () => Response,
+  fn: (form: URLSearchParams, q: URLSearchParams) => Promise<Response>): Promise<Response> {
+  try {
+    const form = new URLSearchParams(await req.text());
+    if (!(await validTwilio(req, route, form))) return new Response("forbidden", { status: 403 });
+    return await fn(form, new URL(req.url).searchParams);
+  } catch {
+    // Fixed words only: a database error's message carries the query URL, which can hold a caller's number.
+    console.error("relay failed", route);
+    return onError();
+  }
+}
+
+async function relayCaller(from: string): Promise<"contact" | "device" | "other"> {
+  if (!from) return "other";
+  // Device first: a phone that is also on some contact list must never be sent contact wording.
+  if ((must(await db.from("devices").select("id").eq("phone", from).limit(1)) as unknown[]).length) return "device";
+  if ((must(await db.from("contacts").select("id").eq("phone", from).limit(1)) as unknown[]).length) return "contact";
+  return "other";
+}
+
+// Every alarm shares one relay number, so a call can't say which alarm it's about. These are the
+// alarms it could be, newest first. Duress alerts stay listed after their status changes.
+async function relayCandidates(): Promise<Alert[]> {
+  const since = new Date(Date.now() - RELAY_ALERT_MAX_AGE_S * 1000).toISOString();
+  return must(await db.from("alerts").select("*").eq("dispatch_provider", "noonlight_sandbox").eq("dry_run", false)
+    .gte("created_at", since).or("status.in.(active,dispatched),duress.eq.true")
+    .order("created_at", { ascending: false }).limit(10)) as Alert[];
+}
+
+// Which of those can stop a forward. An old duress alarm can't: forwarding another person's alarm rings
+// that person, never the coerced phone, and alertIsCoerced still blocks her own number on any device.
+async function relayBlockers(candidates: Alert[]): Promise<Alert[]> {
+  const cutoff = Date.now() - RELAY_DURESS_BLOCK_S * 1000;
+  const out: Alert[] = [];
+  for (const a of candidates) {
+    const at = a.duress ? await duressAt(a.id) : null;
+    if (!a.duress || !at || Date.parse(at) >= cutoff) out.push(a);
+  }
+  return out;
+}
+
+// Every device on the same phone number. A phone is one person: she can be forced to delete the
+// account and sign up again, and that new device still rings the phone in the same room.
+async function samePhoneDevices(deviceId: string): Promise<string[]> {
+  const d = must(await db.from("devices").select("phone").eq("id", deviceId).maybeSingle()) as { phone: string | null } | null;
+  if (!d?.phone) return [deviceId];
+  const same = must(await db.from("devices").select("id").eq("phone", d.phone)) as { id: string }[];
+  return [...new Set([deviceId, ...same.map((x) => x.id)])];
+}
+
+// True if this alert, or any recent real alert on the same phone number, is under duress. An unknown alert counts.
+async function alertIsCoerced(id: string): Promise<boolean> {
+  const a = must(await db.from("alerts").select("duress,device_id").eq("id", id).maybeSingle()) as { duress: boolean; device_id: string } | null;
+  if (!a || a.duress) return true;
+  const since = new Date(Date.now() - RELAY_ALERT_MAX_AGE_S * 1000).toISOString();
+  return (must(await db.from("alerts").select("id").in("device_id", await samePhoneDevices(a.device_id)).eq("duress", true).eq("dry_run", false)
+    .gte("created_at", since).limit(1)) as unknown[]).length > 0;
 }
 
 async function contactName(id: string | null, deviceId: string): Promise<string> {

@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Response><Say voice="Polly.Joanna" loop="2">This is the SafetySense relay line for an active alarm. The person may be coerced. Do not call or text them. Send police to the location being shared.</Say><Hangup/></Response>

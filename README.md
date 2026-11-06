@@ -27,7 +27,7 @@ Most safety apps rely on you pressing a button or running a timer. In a real ass
    2. Your trusted contacts get an automated call and text with a live-location link.
    3. Professional monitoring (Noonlight Dispatch API) sends police to your live location.
 
-   A **duress PIN** looks like it cancels the alert but escalates it silently. A **server heartbeat watchdog** raises an alert if your phone stops checking in mid-session.
+   A **duress PIN** looks like it cancels the alert but escalates it silently. Dispatch is given a relay number, not your phone, and once the server has the duress PIN, the relay never connects a call to your phone. A **server heartbeat watchdog** raises an alert if your phone stops checking in mid-session.
 
 The full product spec is in [docs/SPEC.md](docs/SPEC.md), and a visual walkthrough is in [docs/safetysense-spec.html](docs/safetysense-spec.html).
 
@@ -69,6 +69,7 @@ Foundation Models (2nd opinion)┘        │                                 �
 Live Activity · App Intents · Controls ◀┘                                 │  pg_cron heartbeat watchdog
                                                                           ├─▶ Twilio voice + SMS ─▶ trusted contacts
                                                                           ├─▶ Noonlight Dispatch API ─▶ police
+                                                                          │     └ gets the Twilio relay number, not the user's phone
                                                                           └─▶ live-link page (Vercel) ◀─ contacts
 ```
 
@@ -107,7 +108,7 @@ The security write-up is in [submission/05-security](submission/05-security).
 
 ## Status
 
-This is a contest prototype, not a released app. Dispatch runs against the Noonlight **sandbox**, and no real police are dispatched. The app is not on the App Store; contest rules require entries to be unpublished. See [docs/STATUS.md](docs/STATUS.md).
+This is a contest prototype, not a released app. Dispatch runs against the Noonlight **sandbox**, and no real police are dispatched. The relay line is tested with simulated calls, not a real dispatcher call. It has one number, so production needs a pool and Noonlight's confirmation that a relay is allowed. See [backend/README.md](backend/README.md) for the paths still open. The app is not on the App Store; contest rules require entries to be unpublished. See [docs/STATUS.md](docs/STATUS.md).
 
 ## Team
 

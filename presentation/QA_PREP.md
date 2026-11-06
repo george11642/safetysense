@@ -15,7 +15,7 @@ Judges to have in mind: Mark Orgeron (UNM Information Security and Privacy Offic
 ## 1. Trust and tech
 
 ### What about false alarms?
-**Short:** The first step is always a quiet "You okay?" that one tap clears, and the monitoring center calls you to confirm before police are ever sent.
+**Short:** The first step is always a quiet "You okay?" that one tap clears, and the monitoring center's call is forwarded to you to confirm before police are ever sent.
 **More:**
 - The risk engine is rule-based. Each signal adds weighted points that fade over time, so one shout at a party doesn't escalate on its own. A scream followed by long stillness does.
 - The ladder has three exits before police: the check-in (45 s), the Safety PIN during Alert (90 s), and the dispatcher's verification call.
@@ -79,10 +79,10 @@ If no contact responds within 90 seconds, dispatch takes over automatically. If 
 Location is shared only during a Guard session or an alert, and only the phone's owner can start one. Contacts can't pull location on demand. Live links are designed to expire after the alert. The Vault needs Face ID, and the discreet icon helps if someone controls the phone.
 
 ### What if someone forces her to cancel?
-That's what the duress PIN is for. It looks exactly like a normal cancel on screen, and the server silently escalates to dispatch. If they ask whether the dispatcher calls the phone: yes, today it could, and that's the first thing to fix before production.
+That's what the duress PIN is for. It looks exactly like a normal cancel on screen, and the server silently escalates to dispatch. If they ask whether the dispatcher calls the phone: not directly. Dispatch is given a relay number, not her phone, and during duress the relay never connects to the phone and tells the caller to send police. We've tested that with simulated calls and the Noonlight sandbox, not a real dispatcher. The prototype has one relay number, so production needs a pool, and Noonlight still has to confirm a relay is allowed. If they ask what's left: a link opened on her phone, the Vault after a relaunch, or a listed contact who is the attacker can still give it away. Those are disclosed in the Security document.
 
 ### What about false 911 calls? Isn't that a burden on police?
-SafetySense never calls 911 directly. A professional monitoring center calls the user first and dispatches only if she doesn't answer or says she's unsafe. Drills are marked TEST and never dispatch.
+SafetySense never calls 911 directly. A professional monitoring center calls first, through a relay line that forwards to the user, and dispatches only if she doesn't answer or says she's unsafe. Drills are marked TEST and never dispatch.
 
 ### What about older iPhones?
 The Action Button needs an iPhone 15 Pro or newer (or the 16e or 17 series). Every phone also gets the Lock Screen control, Siri, the spoken safe word and the hold-to-release SOS. Without Apple Intelligence, the app runs on rules only. It needs iOS 26.
@@ -94,7 +94,7 @@ We started on iOS to use Apple's on-device AI. The backend is platform-neutral, 
 No, and we won't claim it can. No phone can detect a drug. SafetySense detects the effect that matters: you stop responding, stop moving, or end up somewhere you didn't plan to be. Night Out also prompts drink checks.
 
 ### Is the demo real?
-Yes. It's a native SwiftUI app talking to a live Supabase backend. Calls are real Twilio calls to a verified number. Dispatch in the demo is the Noonlight sandbox or a labelled simulation, never live 911. The Twilio trial blocks US SMS, so texts are sent but don't arrive yet. Calls work.
+Yes. It's a native SwiftUI app talking to a live Supabase backend. Calls are real Twilio calls to a verified number. Dispatch in the demo is the Noonlight sandbox or a labelled simulation, never live 911. The relay line is tested with simulated calls, not a real dispatcher call. The Twilio trial blocks US SMS, so texts are sent but don't arrive yet. Calls work.
 
 ### How is the contacts' data protected?
 Contacts' names and numbers are stored server-side under row-level security and used only to reach them during an alert. The spec has contacts get a text explaining SafetySense when they're added. That text is blocked on the Twilio trial for now.
@@ -122,5 +122,6 @@ Be honest. Good answers: false-alarm rates in real noisy bars, which we haven't 
 - That Citizen sends your audio to the cloud. We don't know that.
 - "It detects drugging." It doesn't.
 - "It calls 911." It goes through professional monitoring, and the demo uses a sandbox.
+- That the duress callback problem is solved, that Noonlight approved the relay, or that dispatchers will follow the message. None of that is known yet.
 - "Replaces 911", "guarantees safety", or anything that blames a user for not using it.
 - Partnerships or user numbers we don't have.

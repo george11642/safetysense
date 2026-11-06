@@ -152,7 +152,7 @@
   <text class="s" x="620" y="497">watchdog every 60 s: heartbeat lost</text>
   <text class="s" x="620" y="513">→ Alert at last known location;</text>
   <text class="s" x="620" y="529">Alert 90 s, no cancel → dispatch</text>
-  <text class="s" x="620" y="545">retention: locations deleted at 30 days</text>
+  <text class="s" x="620" y="545">retention: evidence + locations 30 days</text>
   <path class="ar-teal" d="M726 456 V434" marker-end="url(#at)"/>
 
   <rect class="box" x="606" y="572" width="240" height="66" rx="9"/>
@@ -179,14 +179,17 @@
   <text class="h" x="926" y="320">Twilio Programmable Voice + SMS</text>
   <text class="s-ink" x="926" y="338">automated call per contact:</text>
   <text class="s-ink" x="926" y="354">press 1 = on my way · 9 = send help</text>
-  <text class="s-ink" x="926" y="370">SMS with the live link</text>
+  <text class="s-ink" x="926" y="370">SMS with live link · relay line for dispatch</text>
   <path class="ar-amber" d="M1043 296 V194" marker-end="url(#aa)"/>
   <text class="m lab-amber" x="1052" y="248">CALL · SMS</text>
+
+  <path class="ar-amber" d="M1043 414 V392" marker-end="url(#aa)"/>
+  <text class="m lab-amber" x="1052" y="406">RELAY: DURESS CHECK</text>
 
   <!-- noonlight -->
   <rect class="box-amber" x="910" y="414" width="266" height="98" rx="10"/>
   <text class="h" x="926" y="438">Noonlight Dispatch API</text>
-  <text class="s-ink" x="926" y="456">professional monitoring calls the user,</text>
+  <text class="s-ink" x="926" y="456">monitoring calls a relay, not the phone,</text>
   <text class="s-ink" x="926" y="472">then routes police to the live location</text>
   <text class="s-ink" x="926" y="488">sandbox in the demo, never live 911;</text>
   <text class="s-ink" x="926" y="504">"simulated" fallback if no token</text>

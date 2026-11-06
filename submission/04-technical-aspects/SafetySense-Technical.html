@@ -223,14 +223,17 @@
   <text class="h" x="926" y="320">Twilio Programmable Voice + SMS</text>
   <text class="s-ink" x="926" y="338">automated call per contact:</text>
   <text class="s-ink" x="926" y="354">press 1 = on my way · 9 = send help</text>
-  <text class="s-ink" x="926" y="370">SMS with the live link</text>
+  <text class="s-ink" x="926" y="370">SMS with live link · relay line for dispatch</text>
   <path class="ar-amber" d="M1043 296 V194" marker-end="url(#aa)"/>
   <text class="m lab-amber" x="1052" y="248">CALL · SMS</text>
+
+  <path class="ar-amber" d="M1043 414 V392" marker-end="url(#aa)"/>
+  <text class="m lab-amber" x="1052" y="406">RELAY: DURESS CHECK</text>
 
   <!-- noonlight -->
   <rect class="box-amber" x="910" y="414" width="266" height="98" rx="10"/>
   <text class="h" x="926" y="438">Noonlight Dispatch API</text>
-  <text class="s-ink" x="926" y="456">professional monitoring calls the user,</text>
+  <text class="s-ink" x="926" y="456">monitoring calls a relay, not the phone,</text>
   <text class="s-ink" x="926" y="472">then routes police to the live location</text>
   <text class="s-ink" x="926" y="488">sandbox in the demo, never live 911;</text>
   <text class="s-ink" x="926" y="504">"simulated" fallback if no token</text>
@@ -302,8 +305,8 @@
     <tr><td>Supabase Vault</td><td>Encrypted secret store: Twilio and Noonlight credentials, the cron secret, and the AES-256 key for sealed date details.</td><td>Secrets only</td></tr>
     <tr><td>pg_cron + pg_net</td><td>Runs a watchdog every minute (heartbeat lost → Alert, 90 s at Alert → dispatch) and an hourly retention job (evidence and locations after 30 days, alerts after 90 days, test alerts after 48 h). An <code>account/delete</code> route erases a device's data on request.</td><td>None (internal)</td></tr>
     <tr><td>Supabase Storage</td><td>Private <code>evidence</code> bucket.</td><td>Ciphertext and SHA-256 only</td></tr>
-    <tr><td>Twilio Programmable Voice + SMS</td><td>An automated call to each contact ("press 1 if you're on your way, 9 to send help"), verified with signed webhooks, plus an SMS with the live link.</td><td>Contact phone, user's first name, alert reason, link</td></tr>
-    <tr><td>Noonlight Dispatch API</td><td>Professional monitoring: a dispatcher texts and calls the user to verify, then, with no PIN or answer, passes the live location to the local 911 center (<code>POST /dispatch/v1/alarms</code>, plus location and status updates).</td><td>Name, phone, location (Level 3 only)</td></tr>
+    <tr><td>Twilio Programmable Voice + SMS</td><td>An automated call to each contact ("press 1 if you're on your way, 9 to send help"), verified with signed webhooks, plus an SMS with the live link. The same number is the relay line for dispatch: on each call the server checks the alert's duress state, then forwards the call to the user or tells the caller to send police.</td><td>Contact phone, user's first name, alert reason, link. The user's phone when a call is forwarded</td></tr>
+    <tr><td>Noonlight Dispatch API</td><td>Professional monitoring. Dispatch is given the relay number, not the user's phone. A dispatcher calls and texts that number to verify, then, with no PIN or answer, passes the live location to the local 911 center (<code>POST /dispatch/v1/alarms</code>, plus location and status updates).</td><td>Name, relay number, location (Level 3 only)</td></tr>
     <tr><td>Vercel (static hosting)</td><td>The contact live-link page <code>/a/&lt;token&gt;</code> and the landing page. Plain HTML and JS with Leaflet 1.9.4 and OpenStreetMap tiles.</td><td>Nothing stored. The page reads the API with its token</td></tr>
   </tbody>
 </table>
@@ -320,7 +323,7 @@
     <tr><td>evidence/upload</td><td>device</td><td>An encrypted evidence chunk with its sequence number and SHA-256.</td></tr>
     <tr><td>account/delete</td><td>device</td><td>"Delete everything": erases the device's contacts, sessions, alerts, locations, events and evidence files, and revokes its secret.</td></tr>
     <tr><td>share/get · share/action</td><td>link token</td><td>The live-link page: status, location, battery, sealed details while the alert is active, and "on my way", "called 911" or "send help".</td></tr>
-    <tr><td>twilio/* · cron/*</td><td>signature · secret</td><td>Call TwiML, keypress handling and SMS delivery receipts (Twilio-signed), the minute-by-minute watchdog and the hourly retention job.</td></tr>
+    <tr><td>twilio/* · cron/*</td><td>signature · secret</td><td>Call TwiML, keypress handling, SMS delivery receipts and the relay line (<code>twilio/relay/voice</code>, <code>/screen</code>, <code>/accept</code>, <code>/dial-done</code>, <code>/sms</code>), all Twilio-signed, plus the minute-by-minute watchdog and the hourly retention job.</td></tr>
   </tbody>
 </table>
 
@@ -333,7 +336,7 @@
       <li>The risk engine crosses its threshold, and a Level 1 check-in starts with a haptic and the Live Activity.</li>
       <li><span class="t">+45 s</span>No answer. Level 2: the app seals the 30 s buffer as evidence and calls <code>alert/create</code>.</li>
       <li>The server calls and texts each contact through Twilio. Contacts open the live link.</li>
-      <li><span class="t">+90 s</span>No PIN. The watchdog or the app escalates to Noonlight, which calls the user and then dispatches.</li>
+      <li><span class="t">+90 s</span>No PIN. The watchdog or the app escalates to Noonlight. A dispatcher calls the relay number, which forwards to the user. With no answer, the relay tells the dispatcher the person did not answer and to send police.</li>
     </ol>
   </div>
   <div class="card keep">
@@ -348,11 +351,13 @@
   </div>
 </div>
 
+<p class="small keep"><strong>A forced cancel.</strong> The duress PIN shows "cancelled" and the server escalates. A dispatcher's call reaches <code>twilio/relay/voice</code>, which reads the alert's duress state at that moment. During duress it never connects to the phone and tells the caller the person may be coerced, not to call or text them, and to send police to the shared location. This holds whichever came first, the PIN or the dispatch. If duress lands during a forwarded call, the server takes the call back. A failed lookup counts as duress.</p>
+
 <h2><span class="num">05</span>Engineering quality</h2>
 <ul class="keep">
   <li><strong>Swift 6</strong> language mode with complete strict concurrency, SwiftUI, and an XcodeGen project. The build has zero warnings.</li>
   <li><strong>Protocol-based services</strong> (sensing, risk, escalation, backend, vault) with demo and mock versions, so tests and demo videos never touch the network or place calls.</li>
-  <li><strong>136 Swift Testing tests</strong> covering the risk engine, detectors, escalation timing, the duress path, vault encryption and tamper checks, and the backend contract. A shell smoke test runs the whole server flow in dry-run mode.</li>
+  <li><strong>136 Swift Testing tests</strong> covering the risk engine, detectors, escalation timing, the duress path, vault encryption and tamper checks, and the backend contract. A shell smoke test runs the whole server flow in dry-run mode, and a relay script runs 151 checks with signed, simulated Twilio webhooks and Noonlight sandbox alarms.</li>
   <li><strong>Resilience:</strong> an offline outbox for heartbeats and alert locations, one live alert per session (repeat calls reuse it), and server-side escalation that doesn't depend on the phone surviving.</li>
 </ul>
 
@@ -364,8 +369,9 @@
     <tr><td>Backend, watchdog, live-link page</td><td><span class="pill teal">Live</span></td><td>Deployed on Supabase and Vercel.</td></tr>
     <tr><td>Twilio voice calls to contacts</td><td><span class="pill teal">Working</span></td><td>Trial account: calls reach verified numbers only, after Twilio's trial message. Production needs a paid account.</td></tr>
     <tr><td>Twilio SMS</td><td><span class="pill amber">Blocked on trial</span></td><td>US SMS needs A2P 10DLC registration (error 30034). Failures are recorded and don't stop the calls.</td></tr>
-    <tr><td>Noonlight dispatch</td><td><span class="pill amber">Sandbox / simulated</span></td><td>Uses the sandbox only (<code>api-sandbox.noonlight.com</code>; the token is set). Dry runs, and any run without a token, record a clearly labelled "simulated dispatch" instead; every demo alert so far has been a dry run. It never contacts live 911.</td></tr>
-    <tr><td>Next</td><td><span class="pill">Roadmap</span></td><td>App Attest on alert routes, Sign in with Apple for account recovery, the Critical Alerts entitlement, Apple Watch, an Android version, and production Noonlight after legal review.</td></tr>
+    <tr><td>Noonlight dispatch</td><td><span class="pill amber">Sandbox / simulated</span></td><td>Uses the sandbox only (<code>api-sandbox.noonlight.com</code>; the token is set). Dry runs, and any run without a token, record a clearly labelled "simulated dispatch" instead; every demo alert so far has been a dry run. Relay tests raise real sandbox alarms and cancel them. It never contacts live 911.</td></tr>
+    <tr><td>Relay line for dispatch</td><td><span class="pill amber">Simulated calls</span></td><td>Built and deployed. No real dispatcher call has happened: voice is tested with signed, simulated webhooks only. Noonlight's sandbox texts do reach the relay, where they are logged without their content and never forwarded. The prototype has one relay number. Production needs one per active alarm and Noonlight's confirmation that a relay is allowed. On the Twilio trial, callers press a key first and forwarding reaches verified numbers only.</td></tr>
+    <tr><td>Next</td><td><span class="pill">Roadmap</span></td><td>App Attest on alert routes, Sign in with Apple for account recovery, the Critical Alerts entitlement, Apple Watch, an Android version, a relay number pool, and production Noonlight after legal review and its answer on relay numbers.</td></tr>
   </tbody>
 </table>
 

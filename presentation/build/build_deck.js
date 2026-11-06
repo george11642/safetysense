@@ -269,7 +269,7 @@ While guarding, the phone watches for screams, your safe word, a fall followed b
 When something looks wrong, SafetySense climbs a calm ladder.
 Level one is a check-in: a quiet buzz and "You okay?" One tap and it goes away. Most false alarms end right here.
 No answer in 45 seconds, your safe word, or the Action Button, and it's level two: your trusted contacts get a phone call and a live-location link, and evidence is encrypted on the phone.
-After 90 seconds with no cancel, or the moment a contact taps "Send help," a professional monitoring center calls you and, if needed, sends police.
+After 90 seconds with no cancel, or the moment a contact taps "Send help," a professional monitoring center calls through our relay line and, if needed, sends police.
 And if someone forces you to cancel, a duress PIN looks exactly like cancelling, but help still comes.`);
   }
 
@@ -551,7 +551,7 @@ When you can't call for help, SafetySense does. We'd love to pilot it with stude
   // ===== Appendix: Q&A prep ======================================================
   const qa = [
     [
-      ["What about false alarms?", "Escalation needs a combination of signals that fade over time, and the first step is always a quiet “You okay?” that one tap clears. Contacts come before dispatch, and the monitoring center calls you to confirm before sending police. Target: under 1 false alert per 10 hours."],
+      ["What about false alarms?", "Escalation needs a combination of signals that fade over time, and the first step is always a quiet “You okay?” that one tap clears. Contacts come before dispatch, and the monitoring center's call is forwarded to you to confirm before sending police. Target: under 1 false alert per 10 hours."],
       ["Won't listening kill the battery?", "It only listens during a Guard session you start, not all day. Sensing runs on Apple's on-device frameworks, and the server heartbeat is one small request a minute. Our target is under 8% per hour, and we're measuring it on an iPhone 16e."],
       ["Is it recording my conversations?", "No. Audio sits in a 30-second memory buffer that overwrites itself and is never written to storage. Only an Alert keeps audio, and that's encrypted on the phone. Transcription and AI run on the device. The server sees ciphertext only."],
       ["Will Apple approve it?", "We follow the rules rather than fight them: listening only during user-started sessions with a visible Live Activity, no auto-dialing 911 (iOS doesn't allow it), and dispatch through Noonlight, an established partner. Permissions are explained when they're asked for."],

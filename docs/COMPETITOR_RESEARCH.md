@@ -259,18 +259,51 @@ Read: big apps aren't chasing passive detection. Small ones are, but haven't won
 
 ## 6. A gap this research exposed in our own duress flow
 
-**This matters more than the originality wording.** aegis+ says dispatch "is told not to call or text you back." In SafetySense:
-- `alert/cancel` with `duress: true` calls the same `escalate()` as any alert (`backend/supabase/functions/api/index.ts`, about line 668).
-- The Noonlight payload (about lines 317 to 325) has no duress signal.
-- SPEC 6.3 and the Purpose document's Level 3 row say monitoring texts and calls the user.
-- So in a coerced moment, the phone may ring right after the fake cancel, in front of the attacker. Everything the app hides on screen could be undone by that call.
-- If dispatch already happened, `escalate()` returns early, so nothing tells Noonlight that this alarm is now duress.
+**This matters more than the originality wording.** aegis+ says dispatch "is told not to call or text you back." When this research ran, SafetySense gave Noonlight the user's real number and had no way to flag duress. In a coerced moment the phone could ring right after the fake cancel, in front of the attacker. Everything the app hides on screen could be undone by that call.
 
-We read the code. We did not run it against Noonlight or confirm what the sandbox does. We don't know whether Noonlight's API offers call suppression. aegis+ names Noonlight as its dispatcher, so it's worth asking them, though aegis+'s terms predate its 2.0 duress feature.
+Noonlight's API has no duress or no-callback field. The nearest thing is free text in `instructions.entry`, which is documented for access details such as gate codes.
+
+**Status, Nov 6, 2026: a relay is built. Its voice path is tested with simulated webhooks only. The gap is not closed.**
+
+**Built:** Noonlight gets a SafetySense relay number instead of hers (`phone` in `escalate()`, which never reads her number). When a call reaches the relay, the server checks duress at that moment:
+- Duress: it never rings her, and tells the caller to send police to the shared location. This holds whichever came first, the duress PIN or the dispatch.
+- No duress: it forwards the call, and she must press 1. No answer or voicemail tells the caller she did not answer and to send police.
+- A failed lookup counts as duress. Texts are never forwarded, in any state.
+- If duress lands mid-call, the call is taken back from her phone.
+
+Contacts are told not to call or text her by SMS, automated call and a banner on the live link. On this Twilio account SMS doesn't arrive (error 30034), so only the first contact hears the warning, by voice, and the app's intro text still says "try calling me" until the app is changed. The full table is in `backend/README.md`.
+
+**Tested:** 151 relay checks against deployed function version 11 using signed, simulated Twilio webhooks and the Noonlight sandbox, with a failed lookup forced for real. They include duress, forced account deletion and sign-up again with the same number. The banner was also checked in a browser, on an earlier version. Twilio has not executed any of the voice path on a real call: its log shows 0 inbound calls. Texts are different. Noonlight's sandbox really texts the alarm number, and 88 of those texts reached the relay, where they were logged without their content and not forwarded.
+
+**Not tested, or not confirmed:**
+- **A real dispatcher call.** Sandbox alarms have only texted the relay, never called it. A real forwarded call, the press-1 screen, voicemail and the mid-call takeover are all unproven.
+- **Whether Noonlight allows a relay number.** Its docs don't say whether the alarm phone must belong to the user, and its quick-start lists a "verified phone number." Noonlight may refuse this.
+- **Whether a dispatcher listens or complies.** Nothing guarantees it.
+- **What happens to Noonlight's first text.** In the sandbox the first contact is a text. It never reaches her. Our 88 replies all went to Noonlight's sandbox number, not to a person, and all failed (Twilio errors 21608 and 63038), so the text goes unanswered. Nobody has confirmed what Noonlight does then.
+
+**Can't be prevented by this design:** a contact dialing her number directly, a call that lands before duress reaches the server (for example, she's offline), and a missed-call or voicemail notice left on her phone by a forward that started before duress.
+
+**Still open, not fixed:**
+- A link opened on her phone shows the escalation and a "Do not call or text" banner, and the alert screen offers "Share link".
+- A duress PIN notifies contacts and a real cancel doesn't, so an attacker who is a listed contact gets a direct alert.
+- The Vault hides a duress recording only in memory, so after a relaunch or 30 minutes it can list clips timed after the PIN (found in the code, not run on a device).
+- Silent triggers (safe word, Action Button) forward a dispatcher's call to her phone like any other alert.
+- The relay's lookups put phone numbers in URLs that Supabase's gateway logs keep.
+
+**Prototype limits:** one shared relay number, so a real service needs one per active alarm. The Twilio trial makes callers press a key first and only forwards to verified numbers.
 
 Next steps for George:
-1. Ask Noonlight how to flag a duress alarm and suppress callbacks.
-2. Until then, describe it honestly (items 3, 5 and 16 below). Another session owns the backend, so this report changed no code.
+1. Send Noonlight the questions in `backend/README.md`.
+2. Decide the open items above. The submission's Security document discloses them.
+
+**Wording now in use in place of items 3, 5 and 16, true as of Nov 6:**
+
+- **Item 3 (Purpose, duress line):**
+  > Duress PIN: it looks exactly like cancelling, but the alert stays live and moves to dispatch, for when someone forces the user to cancel. The screen shows nothing unusual. Dispatch is given a relay number, not the user's phone, and once the server has the duress PIN, the relay never connects a call to the phone and tells the caller to send police. This is tested with simulated calls and the Noonlight sandbox, not a real dispatcher call. The prototype has one relay number, so production needs a pool of numbers and Noonlight's confirmation that a relay is allowed.
+- **Item 5 (Security):**
+  > Noonlight's API has no duress flag, so dispatch is given a relay number, not the user's phone, and the server decides each call when it arrives. Once the server has the duress PIN, the relay never connects a call to the phone. It tells the caller the person may be coerced, not to call or text them, and to send police to the shared location. This holds whichever came first, the PIN or the dispatch, and a failed lookup counts as duress. It is tested with simulated calls and the Noonlight sandbox, not a real dispatcher call (see Limitations).
+- **Item 16 (Q&A), if asked whether the dispatcher calls the phone:**
+  > Not directly. Dispatch is given a relay number, not her phone, and during duress the relay never connects to the phone and tells the caller to send police. We've tested that with simulated calls and the Noonlight sandbox, not a real dispatcher. The prototype has one relay number, so production needs a pool, and Noonlight still has to confirm a relay is allowed.
 
 ## 7. Statements that are wrong or risky, and replacement wording
 

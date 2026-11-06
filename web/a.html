@@ -72,6 +72,8 @@ input{width:100%;font:400 17px var(--body);padding:12px 14px;border-radius:12px;
 .timeline time{font:500 12px var(--mono);color:var(--muted);padding-top:2px}
 .sealed{white-space:pre-wrap;background:var(--accent-soft);border-radius:12px;padding:12px;font-size:15px}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:12px;font-size:15px;max-width:calc(100% - 32px);display:none}
+.duress{background:var(--danger-soft);border-color:var(--danger)}
+.duress h2{color:var(--danger);font-size:20px;line-height:1.2}
 .hidden{display:none !important}
 .leaflet-container{font:inherit}
 </style>
@@ -94,6 +96,12 @@ input{width:100%;font:400 17px var(--body);padding:12px 14px;border-radius:12px;
       <h1 id="headline">Someone may need help</h1>
       <p id="reason" class="muted"></p>
       <p id="dispatch" class="small hidden"></p>
+    </section>
+
+    <section class="card duress hidden" id="duress-card" role="alert">
+      <h2 id="duress-title">Do not call or text their phone</h2>
+      <p>They may not be free to talk, and their phone may be in someone else's hands. A call or text could put them at risk.</p>
+      <p>Use this page to follow their location. If you think they are in danger, <a href="tel:911">call 911</a>.</p>
     </section>
 
     <section class="card" id="map-card">
@@ -180,7 +188,7 @@ input{width:100%;font:400 17px var(--body);padding:12px 14px;border-radius:12px;
   const LABELS = {
     alert_started: "Alert started", text_sent: "Text sent", call_placed: "Call placed", call_status: "Call update",
     on_my_way: "On the way", called_911: "Called 911", send_help: "Asked for help", dispatch_requested: "Dispatch requested",
-    marked_safe: "Marked safe", no_contacts: "No contacts",
+    dispatch_failed: "Dispatch delayed", marked_safe: "Marked safe", no_contacts: "No contacts",
   };
 
   function render(d) {
@@ -199,14 +207,18 @@ input{width:100%;font:400 17px var(--body);padding:12px 14px;border-radius:12px;
     $("headline").textContent = ended ? `${d.first_name} marked themselves safe` : `${d.first_name} may need help`;
     $("reason").textContent = ended
       ? "They cancelled this alert with their Safety PIN. No action is needed, but it's okay to check in with them."
+      : d.duress ? `Started ${clock(d.started_at)} (${ago(d.started_at)})`
       : `${d.reason} · started ${clock(d.started_at)} (${ago(d.started_at)})`;
+
+    $("duress-card").classList.toggle("hidden", !d.duress);
+    $("duress-title").textContent = `Do not call or text ${d.first_name}'s phone`;
 
     const disp = $("dispatch");
     if (d.dispatch && !ended) {
       disp.classList.remove("hidden");
       disp.textContent = d.dispatch.provider === "simulated"
         ? "Emergency dispatch was requested. This is a demo build, so dispatch is simulated and no responders were sent. Call 911 if this is real."
-        : "Professional monitoring (Noonlight) has been asked to send help to their location.";
+        : "Emergency dispatch was requested. This build uses a test monitoring service, so no responders are sent. Call 911 if this is real.";
     } else disp.classList.add("hidden");
 
     $("act-card").classList.toggle("hidden", ended);
@@ -268,7 +280,7 @@ input{width:100%;font:400 17px var(--body);padding:12px 14px;border-radius:12px;
       failures = 0; $("refresh").textContent = "updated " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
     } catch (e) {
       if (e.status === 404) return showError("This link isn't available", "The link may be mistyped. If you think someone is in danger, call 911.");
-      if (e.status === 410) return showError("This alert has ended", "The live link expired after the alert ended. If you're still worried, call or text them, or call 911.");
+      if (e.status === 410) return showError("This alert has ended", "The live link expired. If you're still worried, call 911.");
       failures++; $("refresh").textContent = "reconnecting…";
       if (!last && failures > 2) showError("Can't reach SafetySense", "Check your connection. If you think someone is in danger, call 911.");
     }
