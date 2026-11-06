@@ -7,10 +7,43 @@ final class MockEvidenceVault: EvidenceVaultProtocol {
     private(set) var isUnlocked = false
     var isRecordingEvidence: Bool { isCapturing }
 
-    init(clips: [EvidenceClip] = []) { self.clips = clips }
+    /// `-ssDemo`: an alert leaves clips in the Vault, one every `clipLength`, as the real vault does.
+    private let simulatesRecording: Bool
+    private let clipLength: TimeInterval
+    private var recording: Task<Void, Never>?
 
-    func startCapture(alertID: UUID, serverAlertID: String?, prebuffer: Data?) async throws { isCapturing = true }
-    func stopCapture() { isCapturing = false }
+    init(clips: [EvidenceClip] = [], simulatesRecording: Bool = false, clipLength: TimeInterval = 30) {
+        self.clips = clips
+        self.simulatesRecording = simulatesRecording
+        self.clipLength = clipLength
+    }
+
+    func startCapture(alertID: UUID, serverAlertID: String?, prebuffer: Data?) async throws {
+        isCapturing = true
+        guard simulatesRecording else { return }
+        recording?.cancel()
+        addClip(alertID: alertID, serverAlertID: serverAlertID)   // The 30 s from before the alert.
+        recording = Task { [weak self, clipLength] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(clipLength))
+                guard !Task.isCancelled else { return }
+                self?.addClip(alertID: alertID, serverAlertID: serverAlertID)
+            }
+        }
+    }
+
+    private func addClip(alertID: UUID, serverAlertID: String?) {
+        let seq = clips.count { $0.alertID == alertID }
+        clips.append(EvidenceClip(alertID: alertID, serverAlertID: serverAlertID, seq: seq,
+                                  startedAt: .now.addingTimeInterval(-clipLength), duration: clipLength,
+                                  sha256: "demo", fileName: "demo-\(seq)", byteCount: 480_000, uploaded: true))
+    }
+
+    func stopCapture() {
+        isCapturing = false
+        recording?.cancel()
+        recording = nil
+    }
     func unlock(reason: String) async -> Bool { isUnlocked = true; return true }
     func lock() { isUnlocked = false }
     func decrypt(_ clip: EvidenceClip) async throws -> Data { Data() }

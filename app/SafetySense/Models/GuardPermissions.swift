@@ -31,6 +31,9 @@ struct GuardPermissions: Sendable, Equatable {
         }
     }
 
+    /// Location updates can keep the app running while the phone is locked.
+    var allowsBackgroundLocation: Bool { location == .always || location == .whenInUse }
+
     /// Permissions that are off and that this session needs. Something not asked yet isn't an
     /// issue, because Start Guard asks for it.
     func issues(listening: Bool) -> [GuardPermissionIssue] {
@@ -44,7 +47,7 @@ struct GuardPermissions: Sendable, Equatable {
 
 /// A permission that is switched off, with calm copy saying what that changes.
 enum GuardPermissionIssue: String, Sendable, Identifiable, CaseIterable {
-    case microphone, location, notifications
+    case microphone, location, notifications, noBackgroundRun
     var id: String { rawValue }
 
     var message: String {
@@ -52,6 +55,7 @@ enum GuardPermissionIssue: String, Sendable, Identifiable, CaseIterable {
         case .microphone: "The microphone is off, so SafetySense can't listen for trouble or your safe word."
         case .location: "Location is off, so your contacts won't see where you are."
         case .notifications: "Notifications are off, so check-ins only show up while SafetySense is open. An unanswered check-in still starts an alert."
+        case .noBackgroundRun: "With Location and the microphone both off, SafetySense stops running when your iPhone locks. Keep it open, or turn Location on in iOS Settings."
         }
     }
 
@@ -60,6 +64,7 @@ enum GuardPermissionIssue: String, Sendable, Identifiable, CaseIterable {
         case .microphone: "mic.slash"
         case .location: "location.slash"
         case .notifications: "bell.slash"
+        case .noBackgroundRun: "lock.iphone"
         }
     }
 }

@@ -75,7 +75,7 @@ final class ServiceContainer {
     /// shows the real ladder timing without touching the network. Pair with `DemoScenarioPlayer`.
     static func demoEngine() -> ServiceContainer {
         let backend = MockBackendClient(credentials: DeviceCredentials(deviceId: "demo-device", deviceSecret: "demo"))
-        let vault = MockEvidenceVault(clips: SampleData.evidence)
+        let vault = MockEvidenceVault(clips: SampleData.evidence, simulatesRecording: true)
         let device = MockDeviceStatus()
         let engine = GuardEngine.makeSimulated(backend: backend, vault: vault, device: device)
         // No HeartbeatScheduler here: its background refresh talks to the live backend client

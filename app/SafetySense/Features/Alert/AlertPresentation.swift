@@ -121,6 +121,12 @@ enum AlertPresentation {
         return "\(lead) \(NameList.join(others)) \(others.count == 1 ? "gets" : "get") it by text."
     }
 
+    /// "Help is on the way" needs proof: the server has the alert and dispatch has answered, with
+    /// no connection problem since. Until then the screen must not promise it.
+    static func dispatchConfirmed(alert: AlertRecord?, dispatch: DispatchInfo?, connectionNote: String?) -> Bool {
+        alert?.serverAlertID != nil && dispatch != nil && connectionNote == nil
+    }
+
     /// Every contact came back "dry_run": the server logged the alert but called and texted nobody.
     static func isTest(_ alert: AlertRecord?) -> Bool {
         let notified = alert?.notified ?? []
@@ -158,14 +164,11 @@ enum AlertPresentation {
 
         var channelImage: String { call != nil ? "phone" : "message" }
 
-        /// The channel that's telling the story: the call, unless it failed and a text got out.
+        /// Their response on top, then the call, which stays "Couldn't reach" even if a text got
+        /// out: a sent text doesn't mean they know. The channel line still says both.
         func status(events: [AlertEvent]) -> Status {
             if let response = AlertPresentation.response(for: name, in: events) { return response }
-            if let call {
-                let status = AlertPresentation.notified(call)
-                if status.tint == SSColor.warn, status.text == "Couldn't reach", let text { return AlertPresentation.notified(text) }
-                return status
-            }
+            if let call { return AlertPresentation.notified(call) }
             return text.map(AlertPresentation.notified) ?? Status(text: "Sending…", tint: SSColor.inkMuted, systemImage: "message")
         }
     }

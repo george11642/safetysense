@@ -212,6 +212,49 @@ struct AlertStatusResponse: Codable, Sendable, Equatable {
     var events: [EventDTO]
 }
 
+/// Moves the people rows along with the call. `alert/create` only knows the call was placed. Twilio's
+/// later updates arrive as `call_status` events whose text reads `Call to Maya: answered`.
+enum CallProgress {
+    /// Twilio's callbacks can arrive out of order, and a finished call never goes back to ringing.
+    private static func rank(_ status: String) -> Int {
+        switch status {
+        case "queued", "initiated": 0
+        case "ringing": 1
+        case "answered", "in-progress": 2
+        default: 3
+        }
+    }
+
+    static func update(from event: EventDTO) -> (name: String, status: String)? {
+        guard event.action == "call_status", let detail = event.detail, detail.hasPrefix("Call to "),
+              let colon = detail.range(of: ": ", options: .backwards) else { return nil }
+        let name = String(detail[detail.index(detail.startIndex, offsetBy: 8)..<colon.lowerBound])
+        let status = detail[colon.upperBound...].lowercased()
+        guard !name.isEmpty, name != "A contact", !status.isEmpty, status != "unknown" else { return nil }
+        return (name, status)
+    }
+
+    /// The server names people by first name. An alert the phone adopted has no rows yet, so a
+    /// call it hears about adds one.
+    static func apply(_ events: [EventDTO], to notified: [NotifiedContact]) -> [NotifiedContact] {
+        var out = notified
+        func matches(_ contact: NotifiedContact, _ name: String) -> Bool {
+            contact.name == name || contact.name.split(separator: " ").first.map(String.init) == name
+        }
+        for update in events.compactMap(Self.update) {
+            if let index = out.firstIndex(where: { $0.channel == .call && matches($0, update.name) }) {
+                let current = out[index].status
+                guard current != "dry_run", current != "test", rank(update.status) >= rank(current) else { continue }
+                out[index].status = update.status
+            } else {
+                let name = out.first { matches($0, update.name) }?.name ?? update.name
+                out.append(NotifiedContact(name: name, channel: .call, status: update.status))
+            }
+        }
+        return out
+    }
+}
+
 // MARK: - account
 struct EmptyRequest: Codable, Sendable, Equatable {}
 /// `account/delete`: what the server removed for this device. The device secret stops working at once.

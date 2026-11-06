@@ -74,7 +74,7 @@ struct DispatchPoliciesView: View {
                 } label: {
                     Label("Manual SOS", systemImage: "sos")
                 }
-                Text(model.settings.dispatchPolicies.manualSOS.explanation)
+                Text(model.alertDelivery.policyExplanation(model.settings.dispatchPolicies.manualSOS))
                     .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
             } header: {
                 Text("When you trigger it yourself")
@@ -187,8 +187,7 @@ struct PINSettingsView: View {
     private func resetForgottenPINs() async {
         switch await DeviceAuth.authenticateOwner(reason: "Reset your SafetySense PINs") {
         case .success, .unavailable:
-            model.store.setSafetyPIN(nil)
-            model.store.setDuressPIN(nil)
+            model.clearForgottenPINs()
             refresh()
             flow = .changeSafety
         case .failed:

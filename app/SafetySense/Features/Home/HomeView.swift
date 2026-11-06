@@ -180,7 +180,7 @@ struct HomeView: View {
 
     private var contactsCard: some View {
         VStack(alignment: .leading, spacing: SSSpacing.sm) {
-            SectionHeader("Trusted contacts", subtitle: "Your first contact gets a call. Everyone gets a live link if you need help.") {
+            SectionHeader("Trusted contacts", subtitle: model.alertDelivery.homeContactsSubtitle) {
                 Button("Edit") { model.selectedTab = .contacts }
                     .frame(minWidth: 44, minHeight: 44)
             }

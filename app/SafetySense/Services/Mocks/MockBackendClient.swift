@@ -4,11 +4,16 @@ import Foundation
 actor MockBackendClient: BackendClientProtocol {
     private(set) var calls: [BackendRoute] = []
     private(set) var lastAlertCreate: AlertCreateRequest?
+    private(set) var lastSessionStart: SessionStartRequest?
     private var credentials: DeviceCredentials?
     private var contacts: [ContactDTO] = []
     private var alerts: [String: (status: String, level: Int, events: [EventDTO], dispatch: DispatchDTO?)] = [:]
+    /// The first contact's call, played back through `alert/status` the way Twilio's updates arrive.
+    private var placedCalls: [String: (name: String, placedAt: Date)] = [:]
     /// Artificial latency to make demos feel real.
     var latency: Duration = .milliseconds(150)
+    /// How long the demo's call rings before it's answered.
+    var callAnswerDelay: TimeInterval = 6
 
     init(credentials: DeviceCredentials? = nil) {
         self.credentials = credentials
@@ -17,6 +22,11 @@ actor MockBackendClient: BackendClientProtocol {
     var isConfigured: Bool { true }
 
     func setCredentials(_ credentials: DeviceCredentials?) { self.credentials = credentials }
+
+    func setLatency(_ latency: Duration, callAnswerDelay: TimeInterval) {
+        self.latency = latency
+        self.callAnswerDelay = callAnswerDelay
+    }
 
     private func record(_ route: BackendRoute) async throws {
         calls.append(route)
@@ -41,6 +51,7 @@ actor MockBackendClient: BackendClientProtocol {
 
     func startSession(_ request: SessionStartRequest) async throws -> SessionStartResponse {
         try await record(.sessionStart)
+        lastSessionStart = request
         return SessionStartResponse(sessionId: "mock-session-\(UUID().uuidString.prefix(8))")
     }
 
@@ -60,6 +71,9 @@ actor MockBackendClient: BackendClientProtocol {
         let id = "mock-alert-\(UUID().uuidString.prefix(8))"
         let notified = (contacts.isEmpty ? [ContactDTO(name: "Maya Chen", phone: "+15055550111")] : contacts).enumerated().map { i, c in
             NotifiedContact(name: c.name, channel: i == 0 ? .call : .sms, status: request.dryRun == true ? "test" : (i == 0 ? "ringing" : "sent"))
+        }
+        if request.dryRun != true, let first = notified.first(where: { $0.channel == .call }) {
+            placedCalls[id] = (name: first.name, placedAt: .now)
         }
         alerts[id] = (status: "active", level: request.level,
                       events: [EventDTO(who: "SafetySense", action: "notified", at: now())], dispatch: nil)
@@ -90,7 +104,15 @@ actor MockBackendClient: BackendClientProtocol {
     func alertStatus(_ request: AlertStatusRequest) async throws -> AlertStatusResponse {
         try await record(.alertStatus)
         guard let a = alerts[request.alertId] else { throw BackendError.http(status: 404, message: "alert not found") }
-        return AlertStatusResponse(status: a.status, level: a.level, dispatch: a.dispatch, events: a.events)
+        return AlertStatusResponse(status: a.status, level: a.level, dispatch: a.dispatch,
+                                   events: a.events + callEvents(alertID: request.alertId))
+    }
+
+    private func callEvents(alertID: String) -> [EventDTO] {
+        guard let call = placedCalls[alertID], Date.now.timeIntervalSince(call.placedAt) >= callAnswerDelay else { return [] }
+        let first = call.name.split(separator: " ").first.map(String.init) ?? call.name
+        let at = ISO8601DateFormatter().string(from: call.placedAt.addingTimeInterval(callAnswerDelay))
+        return [EventDTO(who: "SafetySense", action: "call_status", at: at, detail: "Call to \(first): answered")]
     }
 
     func uploadEvidence(_ request: EvidenceUploadRequest) async throws -> OKResponse {

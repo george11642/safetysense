@@ -10,14 +10,14 @@ struct ContactsView: View {
                 VStack(alignment: .leading, spacing: SSSpacing.xs) {
                     Text("Your people").ssEyebrow(SSColor.accent)
                     Text("Trusted contacts").font(SSFont.display)
-                    Text("Up to \(TrustedContact.maxCount) people. They don't need the app. If an alert starts, your first contact gets a call, and everyone gets a text with a link to your live location.")
+                    Text(model.alertDelivery.contactsIntro(max: TrustedContact.maxCount))
                         .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 }
                 .padding(.top, SSSpacing.md)
 
                 if model.contacts.isEmpty {
                     Card(tint: SSColor.warn) {
-                        Label("Without a contact, an alert can only go to dispatch. Add someone you trust.",
+                        Label(model.alertDelivery.noContactsWarning,
                               systemImage: "exclamationmark.triangle")
                             .font(SSFont.callout)
                     }

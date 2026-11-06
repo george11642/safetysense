@@ -28,6 +28,9 @@ public struct GuardActivityAttributes: Sendable {
         }
     }
 
+    /// The status at Dispatch until dispatch has answered. The Live Activity's title follows it.
+    public static let unconfirmedDispatchStatus = "Reaching dispatch. If you can, call 911."
+
     /// `GuardMode.rawValue` (API spelling: everyday, walk, night_out, date, ride).
     public var modeRawValue: String
     public var modeDisplayName: String

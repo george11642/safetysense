@@ -235,6 +235,8 @@ private struct CapacityDots: View {
 }
 
 private struct EmptyContactsCard: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
         Card {
             HStack(alignment: .top, spacing: SSSpacing.sm) {
@@ -243,7 +245,7 @@ private struct EmptyContactsCard: View {
                     .symbolEffect(.variableColor.iterative, options: .repeating)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Who should we call?").font(SSFont.headline)
-                    Text("Add at least one person. If an alert starts, your first contact gets a call, and everyone gets a text with your live location.")
+                    Text(model.alertDelivery.contactsEditorPrompt)
                         .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 }
             }

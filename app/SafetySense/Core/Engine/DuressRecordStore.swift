@@ -59,4 +59,19 @@ struct DuressRecordStore: Sendable {
         if let serverAlertID = record.serverAlertID { merged[index].serverAlertID = serverAlertID }
         return merged
     }
+
+    /// Another duress PIN during the same window: it restarts, and a forced "Delete everything"
+    /// also hides whatever was in the Vault up to now.
+    static func renewing(_ id: UUID, at date: Date, hidesClipsBefore: Date?, in records: [DuressRecord]) -> [DuressRecord] {
+        records.map { record in
+            guard record.alertID == id else { return record }
+            var renewed = record
+            renewed.enteredAt = date
+            if let hidesClipsBefore {
+                renewed.hidesClipsBefore = hidesClipsBefore
+                renewed.hiddenFrom = record.hiddenFrom ?? hidesClipsBefore
+            }
+            return renewed
+        }
+    }
 }

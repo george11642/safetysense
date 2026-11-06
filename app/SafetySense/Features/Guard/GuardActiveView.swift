@@ -58,6 +58,7 @@ struct GuardActiveView: View {
         .onChange(of: model.wantsHeadsUp) { _, _ in presentHeadsUpIfAsked() }
         .sheet(isPresented: $showPIN) {
             PINEntrySheet(title: "End Guard", message: "Enter your safety PIN to stop guarding.",
+                          forgotMessage: "Still not matching. Take your time. If you need help, call 911.",
                           verify: { model.store.verifyPIN($0) },
                           onResult: { result in finishEnd(duress: result == .duress) })
         }

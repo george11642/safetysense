@@ -75,6 +75,8 @@ final class EscalationController: EscalationControllerProtocol {
     /// A duress-cancelled alert the server is silently escalating. Never shown on screen.
     @ObservationIgnored private(set) var duressAlertID: UUID?
     @ObservationIgnored private var duressUntil: Date?
+    /// Earlier duress alerts replaced by a newer one. Their capture ends when the window does.
+    @ObservationIgnored private var supersededDuressIDs: [UUID] = []
     /// Duress alerts started in this run, in case a Keychain write failed. See `duressRecords`.
     @ObservationIgnored private var sessionDuressRecords: [DuressRecord] = []
     /// Alerts `alert/create` hasn't confirmed, mirrored to `pendingStore` so they survive a relaunch.
@@ -454,8 +456,16 @@ final class EscalationController: EscalationControllerProtocol {
     ///
     /// `hidingAllClips`: a forced "Delete everything". Every clip saved so far leaves the Vault with
     /// this alert's own, and nothing is destroyed. Only the safety PIN brings them back.
+    ///
+    /// One is already running (a duress PIN at a check-in, then again at End Guard): the server is
+    /// already sending help and evidence is already recording, so a second alert would only break
+    /// that recording. This one renews the window instead.
     func startHiddenDuressAlert(reason: String, hidingAllClips: Bool = false) {
         let t = now
+        if let live = duressAlertID {
+            renewDuress(live, hidesClipsBefore: hidingAllClips ? t : nil)
+            return
+        }
         let record = AlertRecord(sessionID: serverSessionID, level: .dispatch, trigger: .manualSOS, reason: reason,
                                  policy: .dispatchImmediately, status: .dispatched, startedAt: t, levelChangedAt: t,
                                  events: [AlertEvent(who: "SafetySense", action: "alert_started", at: t)],
@@ -470,12 +480,19 @@ final class EscalationController: EscalationControllerProtocol {
 
     private func beginDuressTracking(alertID: UUID, hiddenFrom: Date, serverAlertID: String? = nil,
                                      hidesClipsBefore: Date? = nil) {
+        if let previous = duressAlertID, previous != alertID { supersededDuressIDs.append(previous) }
         duressAlertID = alertID
         saveDuressRecord(DuressRecord(alertID: alertID, hiddenFrom: hiddenFrom, enteredAt: now,
                                       serverAlertID: serverAlertID, hidesClipsBefore: hidesClipsBefore))
         duressUntil = now.addingTimeInterval(timing.duressTrackingDuration)
         onDuressTracking?(true)
         scheduleDuressLocation()
+    }
+
+    private func renewDuress(_ id: UUID, hidesClipsBefore: Date?) {
+        duressUntil = now.addingTimeInterval(timing.duressTrackingDuration)
+        sessionDuressRecords = DuressRecordStore.renewing(id, at: now, hidesClipsBefore: hidesClipsBefore, in: sessionDuressRecords)
+        duressStore.save(DuressRecordStore.renewing(id, at: now, hidesClipsBefore: hidesClipsBefore, in: duressStore.load()))
     }
 
     private func saveDuressRecord(_ record: DuressRecord) {
@@ -524,8 +541,16 @@ final class EscalationController: EscalationControllerProtocol {
     private func stopDuressTracking(_ id: UUID) {
         duressTimer?.cancel()
         duressAlertID = nil
+        duressUntil = nil
+        for earlier in supersededDuressIDs { evidence?.stop(alertID: earlier) }
+        supersededDuressIDs = []
         evidence?.stop(alertID: id)
         onDuressTracking?(false)
+        // An alert that started during the window has been sharing this capture. It needs its own now.
+        if let alert = activeAlert, !alert.isDrill {
+            let alertID = alert.id, serverID = alert.serverAlertID, mode = self.mode
+            track { [weak self] in await self?.evidence?.commit(alertID: alertID, serverAlertID: serverID, mode: mode) }
+        }
     }
 
     /// The saved records, plus any from this run that the Keychain didn't take.
@@ -542,6 +567,9 @@ final class EscalationController: EscalationControllerProtocol {
     }
 
     func vaultShows(_ clip: EvidenceClip) -> Bool { !vaultClips([clip]).isEmpty }
+
+    /// True while any clip is held out of the Vault, so a PIN reset must not unlock it.
+    var isHidingClips: Bool { duressRecords.contains { $0.hiddenFrom != nil } }
 
     /// The safety PIN was entered in the Vault, which only the person's own choice can do.
     func releaseVaultClips() {
@@ -932,6 +960,7 @@ final class EscalationController: EscalationControllerProtocol {
             endedOnServer(alert, status: response.status)
             return
         }
+        alert.notified = CallProgress.apply(response.events, to: alert.notified)
         var helpRequestedBy: String?
         for event in response.events {
             let key = "\(serverID)|\(event.who)|\(event.action)|\(event.at)"

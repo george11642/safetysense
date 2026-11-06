@@ -392,12 +392,14 @@ struct SessionStartWire: Encodable, Sendable, Equatable {
     /// The server's watchdog uses `grace_s` as "no heartbeat for this long". The app's 45 s is
     /// the *check-in* answer window, which would trip the watchdog between 60 s heartbeats.
     static let minimumHeartbeatGrace = 180
+    /// The server's limit, for a session where nothing keeps the app running behind a locked screen.
+    static let maximumHeartbeatGrace = 3600
 
     init(request: SessionStartRequest, dryRun: Bool, dispatchPolicy: String) {
         mode = request.mode
         // 0 means "no scheduled check-ins" in the app; the server wants 15...3600.
         checkInIntervalS = min(max(request.checkInIntervalS, 15), 3600)
-        graceS = min(max(request.graceS ?? 0, Self.minimumHeartbeatGrace), 3600)
+        graceS = min(max(request.graceS ?? 0, Self.minimumHeartbeatGrace), Self.maximumHeartbeatGrace)
         sealedDetails = request.sealedDetails
         self.dryRun = dryRun
         self.dispatchPolicy = dispatchPolicy

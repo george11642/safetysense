@@ -171,8 +171,18 @@ final class SettingsStore {
                         AppGroup.KeychainAccounts.safeWord, AppGroup.KeychainAccounts.sessionDetails] {
             secrets.set(nil, for: account)
         }
-        secrets.set(safety, for: AppGroup.KeychainAccounts.parkedSafetyPINHash)
+        if !hasParkedSafetyPIN { secrets.set(safety, for: AppGroup.KeychainAccounts.parkedSafetyPINHash) }
         savedSessionDetails = nil
+    }
+
+    /// Clears both PINs. `parkingSafetyPIN` keeps the old one as the only PIN that brings back
+    /// hidden clips. One already parked stays: it's the older PIN, from before the first reset.
+    func clearPINs(parkingSafetyPIN: Bool) {
+        if parkingSafetyPIN, !hasParkedSafetyPIN, let safety = secrets.data(for: AppGroup.KeychainAccounts.safetyPINHash) {
+            secrets.set(safety, for: AppGroup.KeychainAccounts.parkedSafetyPINHash)
+        }
+        setSafetyPIN(nil)
+        setDuressPIN(nil)
     }
 
     var hasParkedSafetyPIN: Bool { secrets.data(for: AppGroup.KeychainAccounts.parkedSafetyPINHash) != nil }

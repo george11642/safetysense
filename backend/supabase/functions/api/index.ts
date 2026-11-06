@@ -771,6 +771,16 @@ const routes: Record<string, Handler> = {
     const device = await authDevice(req);
     const s = await ownedSession(device, uuid(body.session_id, "session_id"));
     must(await db.from("sessions").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", s.id));
+    // The person ended this session, but the end couldn't reach us until after the watchdog gave up
+    // on the phone. It has stopped sending heartbeats, so it can never see that alert or cancel it.
+    // A duress alert is never touched: help it asked for doesn't get called off here.
+    const stranded = must(await db.from("alerts").select("*").eq("session_id", s.id).eq("trigger", "heartbeat_lost")
+      .eq("duress", false).in("status", ["active", "dispatched"])) as Alert[];
+    for (const alert of stranded) {
+      must(await db.from("alerts").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", alert.id));
+      await cancelNoonlight(alert);
+      await addEvent(alert.id, firstName(device.name), "marked_safe", "Ended their Guard session");
+    }
     return json({ ok: true });
   },
 

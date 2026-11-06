@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: 1. Welcome
 
 struct WelcomeStepView: View {
+    @Environment(AppModel.self) private var model
     var next: () -> Void
     @State private var appeared = false
 
@@ -15,7 +16,7 @@ struct WelcomeStepView: View {
             Spacer(minLength: SSSpacing.lg)
             VStack(alignment: .leading, spacing: SSSpacing.sm) {
                 Text("SafetySense").ssEyebrow(SSColor.accent)
-                Text("Gets help to you when you can't reach your phone.")
+                Text(model.alertDelivery.welcomeHeadline)
                     .font(SSFont.hero)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
@@ -271,7 +272,7 @@ struct CampusStepView: View {
 }
 
 #Preview("Welcome") {
-    WelcomeStepView {}.background(SSColor.background).foregroundStyle(SSColor.ink).preferredColorScheme(.dark)
+    WelcomeStepView {}.environment(AppModel.preview()).background(SSColor.background).foregroundStyle(SSColor.ink).preferredColorScheme(.dark)
 }
 
 #Preview("Promises") {

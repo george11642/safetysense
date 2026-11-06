@@ -22,6 +22,9 @@ struct AlertActiveView: View {
     private var events: [AlertEvent] { AlertPresentation.merge(alert?.events ?? [], remoteEvents) }
     private var dispatch: DispatchInfo? { remoteDispatch ?? alert?.dispatch }
     private var delivery: AlertDelivery { model.alertDelivery }
+    private var confirmed: Bool {
+        AlertPresentation.dispatchConfirmed(alert: alert, dispatch: dispatch, connectionNote: model.alertConnectionNote)
+    }
 
     var body: some View {
         ScrollView {
@@ -49,7 +52,8 @@ struct AlertActiveView: View {
         .task(id: alert?.id) { await run() }
         .sheet(isPresented: $showPIN) {
             PINEntrySheet(title: "I'm safe now",
-                          message: delivery.pinPrompt,
+                          message: delivery.pinPrompt(confirmed: confirmed),
+                          forgotMessage: delivery.forgotPINHint(confirmed: confirmed),
                           tint: SSColor.calm,
                           // Safety and duress both land on Marked safe; the model handles it.
                           verify: { await model.cancelAlert(pin: $0) },
@@ -68,7 +72,7 @@ struct AlertActiveView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: SSSpacing.xs) {
             HStack {
-                StatusPill(text: delivery.dispatchPill, tint: SSColor.danger, pulsing: true)
+                StatusPill(text: delivery.dispatchPill(confirmed: confirmed), tint: SSColor.danger, pulsing: true)
                 if let mode = model.currentSession?.mode, mode != .everyday {
                     TagChip(text: mode.displayName, isOn: false)
                 }
@@ -78,9 +82,9 @@ struct AlertActiveView: View {
                         .font(SSFont.mono(13, weight: .semibold)).foregroundStyle(SSColor.inkMuted)
                 }
             }
-            Text(delivery.dispatchHeadline).font(SSFont.display)
+            Text(delivery.dispatchHeadline(confirmed: confirmed)).font(SSFont.display)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(delivery.dispatchDetail)
+            Text(delivery.dispatchDetail(confirmed: confirmed))
                 .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -132,7 +136,7 @@ struct AlertActiveView: View {
         .frame(height: 220)
         .clipShape(RoundedRectangle(cornerRadius: SSRadius.card, style: .continuous))
         .overlay(alignment: .topLeading) {
-            Label(delivery.mapLabel, systemImage: "location.fill")
+            Label(mapLabel, systemImage: "location.fill")
                 .font(SSFont.caption.weight(.semibold))
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
@@ -140,8 +144,10 @@ struct AlertActiveView: View {
         }
         .overlay(RoundedRectangle(cornerRadius: SSRadius.card, style: .continuous).stroke(SSColor.line, lineWidth: 1))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Map showing your live location. \(delivery.mapLabel).")
+        .accessibilityLabel("Map showing your live location. \(mapLabel).")
     }
+
+    private var mapLabel: String { delivery.mapLabel(reachedServer: alert?.serverAlertID != nil) }
 
     private var dispatchCard: some View {
         Card(tint: SSColor.danger) {
@@ -166,7 +172,7 @@ struct AlertActiveView: View {
                     } else {
                         Text("Connecting to dispatch…").font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                     }
-                    if let note = delivery.dispatchCallNote {
+                    if let note = delivery.dispatchCallNote(confirmed: confirmed) {
                         Text(note)
                             .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                             .fixedSize(horizontal: false, vertical: true)

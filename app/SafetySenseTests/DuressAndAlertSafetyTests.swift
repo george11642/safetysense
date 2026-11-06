@@ -197,7 +197,7 @@ struct DuressAndAlertSafetyTests {
         let later = h.clock.now.addingTimeInterval(1)
         h.controller.startHiddenDuressAlert(reason: "Duress")
         await h.controller.settle()
-        #expect(h.controller.duressAlertID != first)
+        #expect(h.controller.duressAlertID == first)   // A second alert would break the recording.
         #expect(!h.controller.vaultShows(clip(first, at: later)))
     }
 

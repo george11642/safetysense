@@ -6,7 +6,8 @@ import SwiftUI
 struct PINEntrySheet: View {
     let title: String
     let message: String
-    var forgotMessage = "Forgot it? Tell the monitoring center you're okay when they call. You can reset your PIN in Settings afterward."
+    /// After three wrong tries. Says only what's true where this sheet is open, so there's no default.
+    let forgotMessage: String
     var tint: Color = SSColor.accent
     /// Called with `.valid` or `.duress`. Invalid entries are handled here (shake + retry).
     let verify: (String) async -> PINVerification
@@ -83,5 +84,5 @@ struct PINShake: GeometryEffect {
 }
 
 #Preview {
-    PINEntrySheet(title: "End session", message: "Enter your safety PIN.") { _ in .invalid } onResult: { _ in }
+    PINEntrySheet(title: "End session", message: "Enter your safety PIN.", forgotMessage: "Still not matching.") { _ in .invalid } onResult: { _ in }
 }

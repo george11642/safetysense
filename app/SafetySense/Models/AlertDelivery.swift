@@ -99,6 +99,40 @@ enum AlertDelivery: Sendable, Equatable {
                       : "\(start) SafetySense starts a \(word.lowercased()) alert. This build contacts nobody, so if you need help, call 911."
     }
 
+    /// The welcome screen's headline.
+    var welcomeHeadline: String {
+        isReal ? "Gets help to you when you can't reach your phone."
+               : "Practice your safety plan. This \(word.lowercased()) build contacts nobody."
+    }
+
+    // MARK: Contacts
+
+    /// How a real build works, and that this one doesn't.
+    private var testContactsNote: String {
+        "A real build calls your first contact and texts everyone a live link. This \(word.lowercased()) build contacts nobody, so if you need help, call 911."
+    }
+
+    func contactsIntro(max: Int) -> String {
+        let start = "Up to \(max) people. They don't need the app."
+        return isReal ? "\(start) If an alert starts, your first contact gets a call, and everyone gets a text with a link to your live location."
+                      : "\(start) \(testContactsNote)"
+    }
+
+    var contactsEditorPrompt: String {
+        isReal ? "Add at least one person. If an alert starts, your first contact gets a call, and everyone gets a text with your live location."
+               : "Add at least one person. \(testContactsNote)"
+    }
+
+    var homeContactsSubtitle: String {
+        isReal ? "Your first contact gets a call. Everyone gets a live link if you need help."
+               : "Nobody is contacted in this \(word.lowercased()) build."
+    }
+
+    var noContactsWarning: String {
+        isReal ? "Without a contact, an alert can only go to dispatch. Add someone you trust."
+               : "Add someone you trust. This \(word.lowercased()) build contacts nobody and sends no dispatch, so if you need help, call 911."
+    }
+
     // MARK: The duress PIN
 
     var twoPINsSubtitle: String {
@@ -135,6 +169,18 @@ enum AlertDelivery: Sendable, Equatable {
                : "Set who hears first in each mode. This \(word.lowercased()) build contacts nobody and sends no dispatch, so if you need help, call 911."
     }
 
+    func policyExplanation(_ policy: DispatchPolicy) -> String {
+        guard isReal else {
+            let plan = policy == .contactsFirst ? "your people hear first, then dispatch after 90 seconds"
+                                                : "dispatch and your people hear at the same time"
+            return "In a real build, \(plan). This \(word.lowercased()) build sends nothing."
+        }
+        switch policy {
+        case .contactsFirst: return "Your people hear first. Help is sent if no one cancels in 90 seconds."
+        case .dispatchImmediately: return "Professional dispatch starts at the same time as your contacts."
+        }
+    }
+
     var policyDetailFooter: String {
         isReal ? "Contacts first: your people hear first, and dispatch is asked to help if you don't cancel within 90 seconds or a contact taps \u{201C}Send help.\u{201D} Dispatch right away: both at once. Dispatch calls you before sending anyone."
                : "This is how a real build would work. Contacts first: your people, then dispatch after 90 seconds. Dispatch right away: both at once. This \(word.lowercased()) build contacts nobody, so if you need help, call 911."
@@ -165,6 +211,25 @@ enum AlertDelivery: Sendable, Equatable {
     }
 
     // MARK: Alert active
+
+    /// Nothing has confirmed dispatch yet, or the server can't be reached. Used by every real
+    /// surface in place of "Help is on the way", which must never show on an unconfirmed alert.
+    static let unconfirmedHeadline = "Reaching dispatch"
+    static let unconfirmedDetail = "We can't confirm help is coming yet. If you can, call 911."
+
+    func dispatchPill(confirmed: Bool) -> String { isReal && !confirmed ? "Reaching dispatch" : dispatchPill }
+    func dispatchHeadline(confirmed: Bool) -> String { isReal && !confirmed ? Self.unconfirmedHeadline : dispatchHeadline }
+    func dispatchDetail(confirmed: Bool) -> String { isReal && !confirmed ? Self.unconfirmedDetail : dispatchDetail }
+    func dispatchCallNote(confirmed: Bool) -> String? { confirmed ? dispatchCallNote : nil }
+    func forgotPINHint(confirmed: Bool) -> String {
+        isReal && !confirmed ? "Forgot it? Tap Call 911 if you need help." : forgotPINHint
+    }
+    func pinPrompt(confirmed: Bool) -> String {
+        isReal && !confirmed ? "Enter your safety PIN to stop this alert." : pinPrompt
+    }
+    func mapLabel(reachedServer: Bool) -> String {
+        isReal && !reachedServer ? "Not shared yet: can't reach the server" : mapLabel
+    }
 
     var dispatchPill: String { isReal ? "Dispatch active" : "\(word) dispatch" }
     var dispatchHeadline: String { isReal ? "Help is on the way" : "This is a \(word.lowercased()). No help is being sent" }
@@ -204,7 +269,7 @@ enum AlertDelivery: Sendable, Equatable {
     func spokenAlert(_ level: EscalationLevel) -> String? {
         switch level {
         case .alert: isReal ? "Alert. Your people are being told." : "\(word) alert. Nobody is being told."
-        case .dispatch: isReal ? "Help is on the way." : "\(word) dispatch. No help is being sent. If you need help, call 911."
+        case .dispatch: isReal ? "\(Self.unconfirmedHeadline). \(Self.unconfirmedDetail)" : "\(word) dispatch. No help is being sent. If you need help, call 911."
         case .guarding, .checkIn: nil
         }
     }
@@ -224,7 +289,7 @@ enum AlertDelivery: Sendable, Equatable {
         case .guarding: "Guarding"
         case .checkIn: "You okay?"
         case .alert: isReal ? "Telling your people" : "\(word) alert"
-        case .dispatch: isReal ? "Help is on the way" : "\(word) dispatch"
+        case .dispatch: isReal ? Self.unconfirmedHeadline : "\(word) dispatch"
         }
     }
 

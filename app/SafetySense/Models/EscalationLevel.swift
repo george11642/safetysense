@@ -24,7 +24,8 @@ enum EscalationLevel: Int, Codable, Sendable, CaseIterable, Comparable {
         case .guarding: "Nothing is saved unless something seems wrong."
         case .checkIn: "Checking on you."
         case .alert: "Your people are being told."
-        case .dispatch: "Help is on the way."
+        // Only for a dispatch nothing has confirmed: `statusText` shows the real status once it has.
+        case .dispatch: GuardActivityAttributes.unconfirmedDispatchStatus
         }
     }
 

@@ -15,13 +15,6 @@ enum DispatchPolicy: String, Codable, Sendable, CaseIterable, Identifiable {
         case .dispatchImmediately: "Dispatch right away"
         }
     }
-
-    var explanation: String {
-        switch self {
-        case .contactsFirst: "Your people hear first. Help is sent if no one cancels in 90 seconds."
-        case .dispatchImmediately: "Professional dispatch starts at the same time as your contacts."
-        }
-    }
 }
 
 /// Per-mode dispatch policy plus the manual-SOS policy. Defaults follow SPEC 15.2:

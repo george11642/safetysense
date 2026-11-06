@@ -21,6 +21,7 @@ final class MockEscalationController: EscalationControllerProtocol {
     @ObservationIgnored private var session: GuardSession?
     @ObservationIgnored private var policies = DispatchPolicySettings.default
     @ObservationIgnored private var timer: Task<Void, Never>?
+    @ObservationIgnored private var statusPoll: Task<Void, Never>?
 
     init(backend: any BackendClientProtocol) {
         self.backend = backend
@@ -172,6 +173,24 @@ final class MockEscalationController: EscalationControllerProtocol {
         }
         activeAlert = alert
         onChange?(level, alert)
+        pollCallProgress(alertID: alert.id, serverID: response.alertId)
+    }
+
+    /// Follows the call, as the production ladder does from `alert/status`.
+    private func pollCallProgress(alertID: UUID, serverID: String) {
+        statusPoll?.cancel()
+        statusPoll = Task { @MainActor [weak self, backend] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled, let response = try? await backend.alertStatus(AlertStatusRequest(alertId: serverID)),
+                      let self, var alert = self.activeAlert, alert.id == alertID else { return }
+                let notified = CallProgress.apply(response.events, to: alert.notified)
+                guard notified != alert.notified else { continue }
+                alert.notified = notified
+                self.activeAlert = alert
+                self.onChange?(self.level, alert)
+            }
+        }
     }
 
     private func escalateToDispatch(reason: String) {
@@ -193,6 +212,7 @@ final class MockEscalationController: EscalationControllerProtocol {
 
     private func transition(to newLevel: EscalationLevel, alert: AlertRecord?) {
         timer?.cancel()
+        if alert == nil { statusPoll?.cancel() }
         level = newLevel
         activeAlert = alert
         stepDeadline = newLevel.autoEscalateAfter.map { Date.now.addingTimeInterval($0 * timeScale) }

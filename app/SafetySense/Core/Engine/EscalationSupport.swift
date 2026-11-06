@@ -146,9 +146,19 @@ final class EvidenceHandoff: EvidenceHandling {
     }
 
     func prepare(alertID: UUID) {
+        // A live capture keeps the mic. A new alert shares it and must not take the stream away.
+        if let capturingAlertID, capturingAlertID != alertID { return }
         if let snapshot = audio.snapshotRecentAudio() { prebuffers[alertID] = snapshot }
         gates[alertID] = EvidenceChunkGate()
-        if let guardAudio = audio as? AudioGuard, guardAudio.isRunning { stream(guardAudio, alertID: alertID) }
+        if let guardAudio = audio as? AudioGuard, guardAudio.isRunning, streamIsFree(guardAudio, for: alertID) {
+            stream(guardAudio, alertID: alertID)
+        }
+    }
+
+    /// Another alert may hold the stream while it waits for `alert/create`.
+    private func streamIsFree(_ guardAudio: AudioGuard, for alertID: UUID) -> Bool {
+        guard let owner = guardAudio.evidenceAlertID, owner != alertID else { return true }
+        return stoppedAlertIDs.contains(owner)
     }
 
     private func stream(_ guardAudio: AudioGuard, alertID: UUID) {
@@ -205,7 +215,8 @@ final class EvidenceHandoff: EvidenceHandling {
         stoppedAlertIDs.insert(alertID)
         prebuffers.removeValue(forKey: alertID)
         gates.removeValue(forKey: alertID)
-        (audio as? AudioGuard)?.endEvidenceStream()
+        // Only its own: a later alert's cancel must not cut off a duress recording.
+        if let guardAudio = audio as? AudioGuard, guardAudio.evidenceAlertID == alertID { guardAudio.endEvidenceStream() }
         // Capture nobody here started has no other way to end, and the next alert couldn't begin.
         guard capturingAlertID == alertID || (capturingAlertID == nil && vault.isCapturing) else { return }
         capturingAlertID = nil

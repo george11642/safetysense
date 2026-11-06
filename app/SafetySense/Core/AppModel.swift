@@ -159,8 +159,14 @@ final class AppModel {
 
     /// Permissions the running session needs that are off.
     var sessionPermissionIssues: [GuardPermissionIssue] {
-        permissions.issues(listening: currentSession?.listening == true)
+        var issues = permissions.issues(listening: currentSession?.listening == true)
+        if isGuarding, !staysRunningWhenLocked { issues.append(.noBackgroundRun) }
+        return issues
     }
+
+    /// iOS only keeps the app running behind a locked screen for location updates or the mic.
+    /// With neither, heartbeats stop whenever the phone is locked. See `linkSession`.
+    var staysRunningWhenLocked: Bool { permissions.allowsBackgroundLocation || listening == .listening }
 
     /// A server problem during an alert. Only shown while an alert is on screen: a hidden duress
     /// alert can fail too, and nothing may hint at that afterward.
@@ -301,7 +307,10 @@ final class AppModel {
         do {
             let response = try await services.backend.startSession(SessionStartRequest(
                 mode: session.mode.rawValue, checkInIntervalS: session.serverCheckInInterval,
-                graceS: Int(session.graceSeconds), sealedDetails: session.sealedDetailsString))
+                // Nothing keeps the app awake, so a locked phone would look like a lost one to the
+                // watchdog every time. The longest wait the server allows avoids that false alert.
+                graceS: staysRunningWhenLocked ? Int(session.graceSeconds) : SessionStartWire.maximumHeartbeatGrace,
+                sealedDetails: session.sealedDetailsString))
             guard var current = currentSession, current.id == id else {
                 // Ended while this was in flight. Left open, the watchdog would raise an alert.
                 _ = try? await services.backend.endSession(SessionEndRequest(sessionId: response.sessionId))
@@ -468,7 +477,8 @@ final class AppModel {
             markedSafe = markedSafeSummary(for: alert)
         }
         await services.escalation.cancel(with: result)
-        guard markedSafe != nil else { return }
+        // A wrong PIN changes nothing, even if an earlier alert's Marked safe is still up.
+        guard result != .invalid, markedSafe != nil else { return }
         let serverSessionID = stopSession()
         Task { await closeSessionRemotely(serverSessionID) }
     }
@@ -556,6 +566,14 @@ final class AppModel {
         } else {
             for clip in shown { try? services.vault.delete(clip) }
         }
+    }
+
+    /// "Forgot your PIN?" in Settings. Face ID or a passcode is all it takes, and someone forcing
+    /// the person could do that, so a PIN set afterward must not bring hidden clips back. The old
+    /// safety PIN moves aside and stays the only one that does, as after a forced "Delete everything".
+    func clearForgottenPINs() {
+        let hidden = (services.escalation as? EscalationController)?.isHidingClips == true
+        store.clearPINs(parkingSafetyPIN: hidden)
     }
 
     /// Whether Alert Active may offer the live link. Never one that opens on a duress alert.
@@ -844,11 +862,8 @@ final class AppModel {
             escalation.onDuressTracking = { [weak self] on in
                 if on {
                     self?.services.location.startAlertTracking()
-                } else if self?.currentSession == nil {
-                    // The hidden alert has run its course, and nothing else is using these.
-                    self?.services.location.stopAlertTracking()
-                    self?.services.location.stop()
-                    self?.services.audio.stop()
+                } else {
+                    self?.duressWindowEnded()
                 }
             }
         }
@@ -861,6 +876,8 @@ final class AppModel {
             if let alert, alert.isDrill { self.lastDrill = alert; return }
             let hadAlert = self.currentAlert != nil
             self.currentAlert = alert
+            // A new alert over an earlier one's Marked safe: that screen no longer applies.
+            if let alert, self.markedSafe?.alertID != alert.id { self.markedSafe = nil }
             if level == .guarding, let next = self.services.escalation.nextCheckInAt,
                self.currentSession != nil, self.currentSession?.nextCheckInAt != next {
                 self.currentSession?.nextCheckInAt = next
@@ -877,6 +894,15 @@ final class AppModel {
             self.alertStateChanged(hasAlert: alert != nil, hadAlert: hadAlert)
             self.pushLiveActivity(level: level, alert: alert)
         }
+    }
+
+    /// The hidden alert has run its course. Stops what only it was using, and nothing that a live
+    /// alert or the running session still needs.
+    private func duressWindowEnded() {
+        guard services.escalation.activeAlert == nil else { return }
+        services.location.stopAlertTracking()
+        if currentSession == nil { services.location.stop() }
+        if currentSession?.listening != true { services.audio.stop() }
     }
 
     /// An alert needs a fix and a process that stays alive whether or not a session is running.

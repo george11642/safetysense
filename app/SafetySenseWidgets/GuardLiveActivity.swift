@@ -15,7 +15,7 @@ struct GuardLiveActivity: Widget {
                 .activitySystemActionForegroundColor(BrandPalette.ink)
                 .widgetURL(DeepLink.forLevel(context.state.level).url)
         } dynamicIsland: { context in
-            let style = GuardLevelStyle(level: context.state.level, testNote: context.attributes.testNote)
+            let style = GuardLevelStyle(state: context.state, testNote: context.attributes.testNote)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     ShieldBadge(style: style, size: 40)
@@ -79,6 +79,8 @@ struct GuardLevelStyle {
     let level: Int
     /// Set when this build contacts nobody, so nothing here promises help.
     var testNote: String?
+    /// The status line says dispatch hasn't answered, so the title can't say help is coming.
+    var unconfirmed = false
 
     private var isTest: Bool { testNote != nil }
 
@@ -90,12 +92,23 @@ struct GuardLevelStyle {
         }
     }
 
+    init(level: Int, testNote: String? = nil, unconfirmed: Bool = false) {
+        self.level = level
+        self.testNote = testNote
+        self.unconfirmed = unconfirmed
+    }
+
+    init(state: GuardActivityAttributes.ContentState, testNote: String?) {
+        self.init(level: state.level, testNote: testNote,
+                  unconfirmed: state.statusText == GuardActivityAttributes.unconfirmedDispatchStatus)
+    }
+
     var title: String {
         switch level {
         case 0: "Guarding"
         case 1: "You okay?"
         case 2: isTest ? "Test alert" : "Telling your people"
-        default: isTest ? "Test dispatch" : "Help is on the way"
+        default: isTest ? "Test dispatch" : unconfirmed ? "Reaching dispatch" : "Help is on the way"
         }
     }
 
@@ -117,7 +130,7 @@ private struct LockScreenGuardView: View {
     let isStale: Bool
 
     var body: some View {
-        let style = GuardLevelStyle(level: state.level, testNote: attributes.testNote)
+        let style = GuardLevelStyle(state: state, testNote: attributes.testNote)
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 ShieldBadge(style: style, size: 44)
