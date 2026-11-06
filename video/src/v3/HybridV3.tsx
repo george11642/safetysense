@@ -53,7 +53,7 @@ const duck = (abs: number) => {
   for (const [a, b] of KEY_LINES) key = Math.max(key, interpolate(abs, [a - 8, a, b, b + 8], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }));
   // v3 fix r4: the dense privacy + architecture lines get ~3.5 dB more duck under speech
   const dense = abs >= CUTS.privacy3d[0] && abs < CUTS.team[0] ? 1 : 0;
-  return (1 - (0.32 + 0.24 * dense) * env) * (1 - 0.4 * key);
+  return (1 - (0.32 + 0.16 * dense) * env) * (1 - 0.4 * key);
 };
 
 const Sfx: React.FC<{ at: number; file: string; vol: number; dur?: number; loop?: boolean; fadeOut?: number }> = ({ at, file, vol, dur = 150, loop, fadeOut = 0 }) => (
@@ -64,8 +64,11 @@ const Sfx: React.FC<{ at: number; file: string; vol: number; dur?: number; loop?
 );
 
 const Music: React.FC<{ file: string; from: number; to: number; env: [number, number][] }> = ({ file, from, to, env }) => (
+  // v3 fix r4: the beds are pre-looped into 170 s files (public/music/v3long, ffmpeg -stream_loop). A `loop`ed <Audio>
+  // resets ffmpeg's `t` every loop, so the per-frame volume expression (ducking + section envelope) only matched
+  // during the FIRST loop (~23 s) and fell back to one default level for the rest of the film.
   <Sequence from={from} durationInFrames={to - from} name={`music ${file}`}>
-    <Audio src={staticFile(`music/${file}`)} loop
+    <Audio src={staticFile(`music/v3long/${file.replace(/\.wav$/, ".mp3")}`)}
       volume={(f) => {
         const abs = f + from;
         const v = interpolate(abs, env.map((e) => e[0]), env.map((e) => e[1]), { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
