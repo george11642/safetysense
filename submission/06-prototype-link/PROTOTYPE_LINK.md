@@ -1,7 +1,7 @@
 # SafetySense: prototype link
 
 **Prototype (put this one in the submission email):**
-https://www.figma.com/proto/Mx4ZCAW032658aaX1uD0vp/SafetySense-%E2%80%94-Prototype?node-id=2-5&starting-point-node-id=2%3A5&scaling=scale-down&content-scaling=fixed&page-id=2%3A3
+https://www.figma.com/proto/Mx4ZCAW032658aaX1uD0vp/SafetySense?node-id=2-5&scaling=scale-down
 
 **Design file:**
 https://www.figma.com/design/Mx4ZCAW032658aaX1uD0vp/SafetySense-%E2%80%94-Prototype
