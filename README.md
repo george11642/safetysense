@@ -14,7 +14,7 @@ Most safety apps rely on you pressing a button or running a timer. In a real ass
 
 - **Freezing is a common, involuntary response.** In one clinical study, 70% of 298 women seen after a sexual assault reported significant tonic immobility (Möller et al., 2017). A person who has frozen can't press a panic button.
 - **Drugging removes the ability to act.** Someone who has been drugged may not recognize the danger in time.
-- **Phones get taken or smashed.** Most apps can't tell a dead phone from a quiet night. SafetySense's server treats a lost heartbeat as a warning sign.
+- **Phones get taken or smashed.** A timer-based app may not react until the timer runs out. If SafetySense's heartbeat stops mid-session, its server raises the alert itself, designed to reach contacts in about 3 to 4 minutes.
 - **New Mexico has no text-to-911.** It is still listed as the only US state without it (checked Nov 2026), so a person who can't speak out loud can't simply text 911 here. SafetySense's dispatch path runs over data, not voice.
 
 ## How it works

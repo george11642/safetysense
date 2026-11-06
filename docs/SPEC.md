@@ -12,7 +12,7 @@
 Most of the apps below rely on the person pressing a button or running a timer. In a real assault that can fail:
 - **Freezing is a normal response.** Many survivors describe being unable to move or speak during an assault. This is called tonic immobility. In a study of 298 women seen at a Stockholm emergency clinic within a month of a sexual assault, 70% reported significant tonic immobility and 48% extreme tonic immobility (Möller, Söndergaard & Helström, *Acta Obstet Gynecol Scand* 2017;96(8):932–938, doi:10.1111/aogs.13174). A panic button does nothing for someone who has frozen.
 - **Drugging takes away the ability to act.** Someone who has been drugged may not recognize the danger or be able to unlock their phone.
-- **The phone gets taken or thrown.** Most competitors can't tell a dead phone from a quiet night (Apple's Check In is the partial exception: it can notify a contact late if the phone goes offline). SafetySense's server treats a lost heartbeat as a warning sign: after three missed 60 s heartbeats (a 180 s grace, checked by a once-a-minute watchdog), it raises the alert by itself, so contacts hear within about 3-4 minutes.
+- **The phone gets taken or thrown.** Timer-based apps can't tell a dead phone from a quiet night until the timer ends. Apple's Check In, Google's Safety Check, Centinela's server-held countdown and several lone-worker products have server-side versions of this. SafetySense's server treats a lost heartbeat as a warning sign: after three missed 60 s heartbeats (a 180 s grace, checked by a once-a-minute watchdog), it raises the alert by itself, so contacts hear within about 3-4 minutes.
 - **New Mexico still has no text-to-911.** As of Nov 4, 2026, sources still list it as the only US state without it, and we found no announcement of a public launch. The statewide NG911 upgrade (which can support text) began in 2025, starting with Bernalillo County. If you can't speak out loud, the standard silent route to 911 isn't there; third-party relays such as accesSOS cover Albuquerque and Santa Fe. SafetySense's data-only path to dispatch helps cover that local gap. Re-check before Nov 20.
 
 ## 3. What changed from the original idea (pushback)
@@ -50,7 +50,7 @@ Most of the apps below rely on the person pressing a button or running a timer. 
 3. **Motion.** CoreMotion picks up an impact or fall (a spike followed by stillness), erratic movement followed by long stillness, or the phone dropping.
 4. **Location.** You've left where you said you'd be, you're somewhere unknown late at night, or you're moving at vehicle speed off the planned route.
 5. **Responsiveness.** Missed check-ins, and ignored "You okay?" prompts.
-6. **Heartbeat (server side).** During a session the phone checks in with SafetySense's server every 60 s. If those check-ins stop with no clean "End session" (the phone was powered off, smashed, or put in airplane mode), **the server raises the alert by itself** using the last known location. This is the feature competitors don't have.
+6. **Heartbeat (server side).** During a session the phone checks in with SafetySense's server every 60 s. If those check-ins stop with no clean "End session" (the phone was powered off, smashed, or put in airplane mode), **the server raises the alert by itself** using the last known location. Apple's Check In and some timer and lone-worker apps also alert from outside the phone. Ours is a continuous session heartbeat, designed for about 3 to 4 minutes, feeding the full ladder.
 7. **Apple Watch (stretch goal).** A heart-rate spike and the Watch SOS button.
 
 ### 6.2 Risk engine
@@ -124,9 +124,9 @@ Copy is calm, plain and never blames the user. Each permission is asked only whe
 |---|---|---|---|---|---|
 | Manual SOS | ✓ Mobile BlueLight | ✓ (hold) | ✓ | ✓ side button | ✓ Action Button, Lock Screen, Siri |
 | Live location to a friend | ✓ Friend Walk | ✓ Safety Network | ✓ Follow Me | ✓ Check In | ✓ |
-| Check-in timer | (LoboGuardian's Safety Timer only) | ✓ Timer | ✓ | ✓ | ✓ adaptive |
+| Check-in timer | (LoboGuardian's Safety Timer only) | Wear OS timer, per listing | ✓ | ✓ | ✓ adaptive |
 | Professional dispatch | call to UNMPD | ✓ | – | 911 call | ✓ (Noonlight API) |
-| Voice trigger | – | via Alexa (paid) | ✓ 20+ preset phrases | Siri | ✓ safe word, offline |
+| Voice trigger | – | – (Alexa link discontinued) | ✓ 20+ preset phrases | Siri | ✓ safe word, offline |
 | **Detects distress automatically** | – | crash only (paid) | – | crash; fall on Apple Watch | **✓ on-device audio, motion, context** |
 | **Alerts when the phone goes dark** | – | – | – | Check In (may be delayed) | **✓ server heartbeat** |
 | **Duress PIN** | – | – | – | – | **✓** |
@@ -216,7 +216,7 @@ Copy is calm, plain and never blames the user. Each permission is asked only whe
 | NMSA 30-12-1(C) one-party consent wording | **Correct for telephone/telegraph**; in-person audio unclear | Statute text (Justia, FindLaw); 2013 SB 127 (not enacted) |
 | NM breach law NMSA 57-12C, 45 days | **Correct** | 57-12C-1 to -12, eff. Jun 16, 2017 |
 | Every competitor treats a silent phone as "all clear" | **Wrong**, softened | Apple Check In notifies late or early if the phone goes offline |
-| Noonlight: no live location to friends, no auto-detection | **Wrong**, fixed | noonlight.com/noonlight-app: Safety Network, Crash Response (paid), Alexa (paid) |
+| Noonlight: no live location to friends, no auto-detection | **Wrong**, fixed | noonlight.com/noonlight-app: Safety Network, Crash Response (paid). Alexa link since discontinued (v2.17.3) |
 | bSafe: voice trigger, timer, evidence, fake call, no dispatch | **Correct** | getbsafe.com/help |
 | Apple: fall detection | **Watch only** on iPhone; iPhone has Crash Detection | Apple iPhone User Guide |
 | UNM Safe: Mobile BlueLight, Friend Walk, tips, bus tracking; LoboGuardian retired Jul 31, 2026 | **Correct** | unmsafe.unm.edu |

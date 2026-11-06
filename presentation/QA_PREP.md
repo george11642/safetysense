@@ -43,7 +43,7 @@ Judges to have in mind: Mark Orgeron (UNM Information Security and Privacy Offic
 An App Intent ("SafetySense Alert") that you pick under Settings > Action Button > Shortcut. It writes to a shared queue the app drains, and it starts the alert at the level you set: by default a manual SOS goes straight to dispatch.
 
 ### What happens when the phone is smashed or switched off?
-During a session the phone sends a heartbeat every 60 seconds. If heartbeats stop without a clean "End session", the server raises the alert itself with the last known location. No competitor we found does this.
+During a session the phone sends a heartbeat every 60 seconds. If heartbeats stop without a clean End session, the server raises the alert with the last known location, designed to reach contacts in about 3 to 4 minutes. Others have versions of this: Apple's Check In and timer apps like SafePulse alert from a server, and Centinela's server holds a running SOS countdown. Ours covers the whole session and feeds the same ladder that ends at dispatch.
 
 ---
 
@@ -55,7 +55,7 @@ During a session the phone sends a heartbeat every 60 seconds. If heartbeats sto
 
 ### Why not Apple Check In, or UNM Safe?
 **Short:** They're good tools and we link to UNM Safe, but both need you to act. We cover the moments you can't.
-**More:** Check In notices when you don't arrive or a timer runs out. It doesn't listen for distress, doesn't involve professional dispatch, and has no duress PIN. UNM Safe (which replaced LoboGuardian) is built around manual actions: calling campus police, Friend Walk, tip reporting. Noonlight is a hold-to-release button (its paid tier adds crash detection and an Alexa trigger). Check In can tell your contact, sometimes late, if your phone goes offline, but none of them raise a full alert within a minute of the phone going dark, and none of them have a fake cancel.
+**More:** Check In notices when you don't arrive or a timer runs out. It doesn't listen for distress, doesn't involve professional dispatch, and has no duress PIN. UNM Safe (which replaced LoboGuardian) is built around manual actions: calling campus police, Friend Walk, tip reporting. Noonlight is a hold-to-release button with paid crash detection. Check In can alert a contact if your phone goes offline, on timing Apple doesn't publish, and it stops there. None of these three has a fake cancel. Other apps do, such as aegis+ and Centinela.
 
 ### Is recording people legal?
 **Short:** We only keep audio during an alert, the user is a party to the conversation, and we'd get a legal review before launch.
@@ -79,7 +79,7 @@ If no contact responds within 90 seconds, dispatch takes over automatically. If 
 Location is shared only during a Guard session or an alert, and only the phone's owner can start one. Contacts can't pull location on demand. Live links are designed to expire after the alert. The Vault needs Face ID, and the discreet icon helps if someone controls the phone.
 
 ### What if someone forces her to cancel?
-That's what the duress PIN is for. It looks exactly like a normal cancel on screen, and the server silently escalates to dispatch.
+That's what the duress PIN is for. It looks exactly like a normal cancel on screen, and the server silently escalates to dispatch. If they ask whether the dispatcher calls the phone: yes, today it could, and that's the first thing to fix before production.
 
 ### What about false 911 calls? Isn't that a burden on police?
 SafetySense never calls 911 directly. A professional monitoring center calls the user first and dispatches only if she doesn't answer or says she's unsafe. Drills are marked TEST and never dispatch.
@@ -111,11 +111,15 @@ Be honest. Good answers: false-alarm rates in real noisy bars, which we haven't 
 | 70% of 298 women reported significant tonic immobility (48% extreme) during sexual assault | Möller, Söndergaard and Helström, *Acta Obstetricia et Gynecologica Scandinavica* 96(8):932–938, 2017, DOI 10.1111/aogs.13174 | **Verified** (Crossref metadata plus ScienceDaily's summary of the paper). Women seen at a Stockholm emergency clinic within a month of the assault; 189 followed up at 6 months |
 | New Mexico is still listed as the only US state without text-to-911. The statewide NG911 upgrade (which can support text) began in 2025 | Textdrip state guide (Jun 18, 2026); Source NM (Apr 2025); GovTech (Aug 2025); KFOX | **Verified Nov 4, 2026**: no public launch found. Third-party relay accesSOS works in Albuquerque and Santa Fe, so don't say "no way at all". Re-check before Nov 20 |
 | NM is one-party consent for calls (NMSA 30-12-1(C): "a sender or intended recipient") | Statute text; 2013 SB 127 (all-party bill, not enacted) | **Wording verified**; in-person audio unclear; not legal advice. Use "generally read as" |
-| Competitor table (slide 7) | unmsafe.unm.edu, noonlight.com, getbsafe.com/help, Apple iPhone User Guide | **Verified Nov 4, 2026.** Noonlight has Safety Network location sharing and paid crash detection; Apple's fall detection is on the Watch; Check In can warn late if the phone dies |
+| Competitor table (slide 7) | unmsafe.unm.edu, noonlight.com, getbsafe.com/help, Apple iPhone User Guide | **Re-checked Nov 5, 2026.** Noonlight's Alexa link was discontinued; see docs/COMPETITOR_RESEARCH.md. Noonlight has Safety Network location sharing and paid crash detection; Apple's fall detection is on the Watch; Check In can warn late if the phone dies |
 | Twilio and Noonlight pricing | Not checked | Say "about a cent or two", no exact figures |
 | Local phone numbers in the Support screen | unm.edu, cnm.edu, nmcsap.org | **Verified Nov 4, 2026**: LoboRESPECT 505-277-2911, RCCCNM 505-266-7711, ABQ SANE 505-884-7263, UNMPD 505-277-2241, CEEO/Title IX 505-277-5251, CNM Security 505-224-3001/3002 |
 
 ## Things not to say
+
+- "No one else does this," "first," "only," or "novel" about any single feature.
+- "We tested the competitors." We read their documentation.
+- That Citizen sends your audio to the cloud. We don't know that.
 - "It detects drugging." It doesn't.
 - "It calls 911." It goes through professional monitoring, and the demo uses a sandbox.
 - "Replaces 911", "guarantees safety", or anything that blames a user for not using it.

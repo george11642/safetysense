@@ -177,7 +177,7 @@ Here's the whole idea: before a night out, a walk home, a date or a ride, you st
     s.addText("Möller et al., Acta Obstet Gynecol Scand, 2017 (n = 298)", { x: 0.85, y: 6.25, w: 3.6, h: 0.3, margin: 0, fontFace: SANS, fontSize: 9, color: C.muted });
     const rows = [
       ["FaPills", C.amber, "Drugging takes away the ability to act", "Someone who has been drugged may not recognize danger or be able to unlock a phone. No phone can detect a drug, but it can notice that you stopped responding."],
-      ["FaMobileScreen", C.red, "The phone gets taken or thrown", "Most apps can’t tell a dead phone from a quiet night. SafetySense’s server treats a lost heartbeat as a warning sign."],
+      ["FaMobileScreen", C.red, "The phone gets taken or thrown", "A timer can’t tell a dead phone from a quiet night until it runs out. SafetySense’s server treats a lost heartbeat as a warning sign."],
       ["FaCommentSms", C.teal, "New Mexico still has no text-to-911", "It’s still listed as the only US state without it. The statewide 911 upgrade began in 2025, but if you can’t speak, you can’t just text 911 here."],
     ];
     for (let i = 0; i < rows.length; i++) {
@@ -190,9 +190,9 @@ Here's the whole idea: before a night out, a walk home, a date or a ride, you st
     footer(s, 3);
     s.addNotes(
 `[0:45 to 1:30, 45 s]
-Most safety apps we tested assume one thing: that in the moment, you can press a button.
+Most safety apps we reviewed assume one thing: that in the moment, you can press a button.
 That fails exactly when it matters. In a clinical study of almost 300 survivors, 70 percent reported significant tonic immobility, an involuntary paralysis during the assault.
-Someone who's been drugged may not be able to unlock a phone. Phones get taken or thrown, and most apps can't tell that silence from a quiet night. And New Mexico is still listed as the only state without text-to-911, so if you can't speak, you can't just text for help.
+Someone who's been drugged may not be able to unlock a phone. Phones get taken or thrown, and a timer can't tell that silence from a quiet night until it runs out. And New Mexico is still listed as the only state without text-to-911, so if you can't speak, you can't just text for help.
 SafetySense is help for when you can't ask.
 (Source if asked: Möller, Söndergaard and Helström, Acta Obstetricia et Gynecologica Scandinavica, 2017. 298 women at a Stockholm rape emergency clinic: 70% significant tonic immobility, 48% extreme.)`);
   }
@@ -321,15 +321,15 @@ After the clip: Two things to notice. First, nobody touched the phone between th
   {
     const s = newSlide(pres);
     eyebrow(s, "Originality", 0.6, 0.5, 6);
-    title(s, "We built the basics. Then we built what’s missing.", 0.6, 0.78, 12.1, 30);
+    title(s, "We built the basics. Then we connected the parts that work when you can’t.", 0.6, 0.78, 12.1, 30);
     const cols = ["", "UNM Safe", "Noonlight", "bSafe", "Apple built-in", "SafetySense"];
     const rows = [
       ["Notices distress on its own", "–", "Crash (paid)", "–", "Crash; fall on Watch", "✓  Sound, motion, context"],
-      ["Acts when the phone goes dark", "–", "–", "–", "Check In, may be late", "✓  Server heartbeat"],
+      ["Acts when the phone goes dark", "–", "–", "–", "Check In, timing varies", "✓  Server heartbeat"],
       ["Duress PIN (fake cancel)", "–", "–", "–", "–", "✓"],
       ["Date details sealed until needed", "–", "Tinder notes", "–", "–", "✓"],
       ["Professional dispatch", "Call UNMPD", "✓", "–", "911 call", "✓  Noonlight"],
-      ["Voice trigger", "–", "Alexa (paid)", "✓", "Siri", "✓  Offline safe word"],
+      ["Voice trigger", "–", "–", "✓", "Siri", "✓  Offline safe word"],
       ["Live location to a friend", "✓", "✓", "✓", "✓  Check In", "✓"],
     ];
     const hdr = cols.map((t, i) => ({
@@ -349,14 +349,14 @@ After the clip: Two things to notice. First, nobody touched the phone between th
       x: 0.6, y: 1.85, w: 12.13, colW: [3.35, 1.5, 1.5, 1.35, 1.88, 2.55], rowH: 0.56,
       border: { type: "solid", pt: 0.5, color: C.line }, margin: [0, 0.12, 0, 0.12],
     });
-    s.addText("The top four rows are the reason SafetySense exists. Everything else is table stakes, and we link out to UNM Safe instead of rebuilding it.", {
+    s.addText("Others have pieces: Centinela detects but doesn’t dispatch; aegis+ dispatches but doesn’t detect. We found no product that documents the full chain.", {
       x: 0.6, y: 6.5, w: 12.1, h: 0.4, margin: 0, fontFace: SANS, fontSize: 13, color: C.muted, italic: true,
     });
     footer(s, 7);
     s.addNotes(
 `[4:25 to 5:00, 35 s]
 We compared what students already have: UNM Safe, Noonlight, bSafe, and what's built into the iPhone.
-We do the basics too. But look at the top four rows: noticing distress on its own, acting when the phone goes dark, a duress PIN, and date details sealed until something goes wrong. No app we compared combines them, and they're exactly where a button fails.
+We do the basics too. But look at the top four rows: noticing distress on its own, acting when the phone goes dark, a duress PIN, and date details sealed until something goes wrong. Other apps have pieces of this, and we'll name them. Centinela listens for a scream and has a duress PIN, but stops at your friends. aegis+ has dispatch, but you have to press the button. We found no product that connects all of it, and that chain is the point.
 We're not competing with UNM Safe. We link to it.`);
   }
 
