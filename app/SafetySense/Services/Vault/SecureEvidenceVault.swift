@@ -13,9 +13,12 @@ import Observation
 ///   `evidence/upload`. The server only ever receives ciphertext.
 /// - Ciphertext files live in Application Support/Vault with complete-until-first-auth file
 ///   protection, and the clip index is itself encrypted.
-/// - Chunks upload as soon as they're sealed, so evidence survives if the phone is smashed.
-///   Uploads that fail (or happen before the server alert ID is known) retry on every new chunk
-///   and on `setServerAlertID`.
+/// - Chunks upload as soon as they're sealed. Uploads that fail (or happen before the server alert
+///   ID is known) retry on a timer, on every new chunk, on `setServerAlertID`, at launch, when the
+///   network returns and from the background refresh.
+/// - **Limit:** the key exists only on this iPhone and is never escrowed, and no route downloads
+///   ciphertext. An uploaded copy proves what was recorded and when, but without this iPhone nobody
+///   can open it. The Vault says so.
 ///
 /// Live audio comes from `EvidenceMicrophone` (RAM-only PCM, flushed every `chunkSeconds`)
 /// or from `append(_:duration:)` if another component already owns the microphone.
@@ -54,6 +57,11 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
     @ObservationIgnored private var nextSeq = 0
     @ObservationIgnored private var serverIDs: [UUID: String] = [:]
     @ObservationIgnored private var uploading = false
+    @ObservationIgnored private var uploadAgain = false
+    @ObservationIgnored private var uploadRetry: Task<Void, Never>?
+    @ObservationIgnored private var uploadRetryDelay: TimeInterval = SecureEvidenceVault.firstUploadRetry
+    static let firstUploadRetry: TimeInterval = 30
+    static let maxUploadRetry: TimeInterval = 300
 
     /// - Parameters:
     ///   - useMicrophone: record live audio with `EvidenceMicrophone` while capturing. Pass `false`
@@ -157,6 +165,8 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
 
     func deleteAll() throws {
         stopCapture()
+        uploadRetry?.cancel()
+        uploadRetry = nil
         if let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
             for f in files { try? FileManager.default.removeItem(at: f) }
         }
@@ -190,10 +200,23 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
         Task { await uploadPending() }
     }
 
+    /// Runs until nothing is left that can go now. A call that arrives mid-run runs it once more,
+    /// so the last chunks of an alert are never skipped.
     func uploadPending() async {
-        guard !uploading else { return }
+        guard !uploading else {
+            uploadAgain = true
+            return
+        }
         uploading = true
         defer { uploading = false }
+        repeat {
+            uploadAgain = false
+            await uploadEverythingWaiting()
+        } while uploadAgain
+        saveIndex()
+    }
+
+    private func uploadEverythingWaiting() async {
         for clip in clips where !clip.uploaded {
             guard let serverID = clip.serverAlertID ?? serverIDs[clip.alertID],
                   let ciphertext = try? Data(contentsOf: directory.appending(path: clip.fileName)) else { continue }
@@ -206,11 +229,28 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
                     clips[i].serverAlertID = serverID
                 }
                 lastUploadError = nil
+                uploadRetryDelay = Self.firstUploadRetry
             } catch {
                 lastUploadError = "Upload will retry."
+                // Refused for good (the alert is gone): stays on this phone, the rest can still go.
+                if (error as? BackendError)?.isPermanentRejection == true { continue }
+                retryUploadsLater()
+                return
             }
         }
-        saveIndex()
+    }
+
+    private func retryUploadsLater() {
+        HeartbeatScheduler.scheduleAppRefresh()
+        guard uploadRetry == nil else { return }
+        let delay = uploadRetryDelay
+        uploadRetryDelay = min(delay * 2, Self.maxUploadRetry)
+        uploadRetry = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+            self?.uploadRetry = nil
+            await self?.uploadPending()
+        }
     }
 
     // MARK: Key + index

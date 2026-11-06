@@ -103,7 +103,8 @@ final class ServiceContainer {
                                       secondOpinion: FoundationModelsSecondOpinion(),
                                       transcript: { [weak audio] in audio?.recentTranscript() ?? "" },
                                       backend: backend, vault: vault, device: device,
-                                      clock: SystemEngineClock(), haptics: SystemEngineHaptics())
+                                      clock: SystemEngineClock(), haptics: SystemEngineHaptics(),
+                                      pendingAlerts: .keychain)
         #else
         let engine = GuardEngine.makeLive(backend: backend, vault: vault, device: device)
         #endif

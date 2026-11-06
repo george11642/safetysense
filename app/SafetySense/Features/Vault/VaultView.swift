@@ -156,6 +156,9 @@ struct VaultView: View {
                 }
             }
         } else {
+            Text("Only this iPhone can open these clips. A copy on the server shows what was recorded and when, but it can't be played without this iPhone.")
+                .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
             ForEach(groups, id: \.alertID) { group in
                 VStack(alignment: .leading, spacing: SSSpacing.sm) {
                     SectionHeader(alertTitle(group.clips), subtitle: summary(group.clips))
@@ -195,7 +198,7 @@ struct VaultView: View {
                 Text("SHA-256 \(Self.shortHash(clip.sha256))")
                     .font(SSFont.mono(12)).foregroundStyle(SSColor.inkMuted)
                     .lineLimit(1)
-                Label(clip.uploaded ? "Encrypted backup saved" : "On this phone only",
+                Label(clip.uploaded ? "Encrypted copy on the server" : "On this phone only",
                       systemImage: clip.uploaded ? "checkmark.icloud" : "iphone")
                     .font(SSFont.caption)
                     .foregroundStyle(clip.uploaded ? SSColor.calm : SSColor.inkMuted)
@@ -271,9 +274,17 @@ struct VaultExport: Identifiable {
     let folder: URL
     let files: [URL]
 
+    static let folderPrefix = "SafetySense-Export-"
+
+    /// Decrypted copies left behind when the app died before the share sheet closed.
+    static func sweepLeftovers(in directory: URL = FileManager.default.temporaryDirectory) {
+        let items = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
+        for item in items where item.lastPathComponent.hasPrefix(folderPrefix) { try? FileManager.default.removeItem(at: item) }
+    }
+
     @MainActor
     static func make(clips: [EvidenceClip], vault: any EvidenceVaultProtocol) async throws -> VaultExport {
-        let folder = FileManager.default.temporaryDirectory.appending(path: "SafetySense-Export-\(UUID().uuidString.prefix(6))")
+        let folder = FileManager.default.temporaryDirectory.appending(path: "\(folderPrefix)\(UUID().uuidString.prefix(6))")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         var files: [URL] = []
         var manifest = """

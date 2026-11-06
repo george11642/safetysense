@@ -85,4 +85,16 @@ protocol EscalationControllerProtocol: AnyObject, Observable {
     /// Practice drill: contacts get a TEST message, never dispatches.
     func startDrill() async
     func end()
+    /// Who-gets-help settings. Also covers an SOS with no session running.
+    func updatePolicies(_ policies: DispatchPolicySettings)
+    /// The server says this session has a live alert (raised while the phone was out of reach).
+    func adoptServerAlert(_ alert: LiveAlertDTO)
+    /// Tries everything waiting for the server again, now. Called when the network returns.
+    func retryServerWork()
+}
+
+extension EscalationControllerProtocol {
+    func updatePolicies(_ policies: DispatchPolicySettings) {}
+    func adoptServerAlert(_ alert: LiveAlertDTO) {}
+    func retryServerWork() {}
 }

@@ -110,6 +110,21 @@ struct DispatchInfo: Codable, Sendable, Equatable {
     }
 }
 
+/// The line contacts get, built from what happened and the Guard it happened in:
+/// `Missed check-in during Night Out`. It reaches them by SMS and voice, so it stays plain.
+enum AlertReasonText {
+    /// `alert/create` accepts at most this many characters.
+    static let maxLength = 140
+
+    static func contact(_ cause: String, mode: GuardMode) -> String {
+        let suffix = mode == .everyday ? "" : " during \(mode.displayName)"
+        return String(cause.prefix(maxLength - suffix.count)) + suffix
+    }
+
+    static let missedCheckIn = "Missed check-in"
+    static let askedForHelp = "Tapped \u{201C}I need help\u{201D}"
+}
+
 /// Local record of one alert, merged from the backend responses.
 struct AlertRecord: Codable, Sendable, Equatable, Identifiable {
     var id: UUID
@@ -118,7 +133,11 @@ struct AlertRecord: Codable, Sendable, Equatable, Identifiable {
     var sessionID: String?
     var level: EscalationLevel
     var trigger: AlertTrigger
+    /// In the person's own terms, for the "Why" line on their screen.
     var reason: String
+    /// What contacts read and hear (SMS, the voice call, the live link). Nil on alerts from
+    /// before this existed, and on ones that started on the server: `reason` says it already.
+    var contactReason: String?
     var policy: DispatchPolicy
     var status: AlertStatus
     var startedAt: Date
@@ -133,7 +152,7 @@ struct AlertRecord: Codable, Sendable, Equatable, Identifiable {
          level: EscalationLevel, trigger: AlertTrigger, reason: String, policy: DispatchPolicy,
          status: AlertStatus = .active, startedAt: Date = .now, levelChangedAt: Date = .now,
          notified: [NotifiedContact] = [], events: [AlertEvent] = [], dispatch: DispatchInfo? = nil,
-         isDrill: Bool = false) {
+         isDrill: Bool = false, contactReason: String? = nil) {
         self.id = id
         self.serverAlertID = serverAlertID
         self.shareURL = shareURL
@@ -141,6 +160,7 @@ struct AlertRecord: Codable, Sendable, Equatable, Identifiable {
         self.level = level
         self.trigger = trigger
         self.reason = reason
+        self.contactReason = contactReason
         self.policy = policy
         self.status = status
         self.startedAt = startedAt

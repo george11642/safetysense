@@ -7,6 +7,7 @@ import Foundation
 
 enum BackendRoute: String, Sendable, CaseIterable {
     case register
+    case profileUpdate = "profile/update"
     case contactsSet = "contacts/set"
     case sessionStart = "session/start"
     case sessionHeartbeat = "session/heartbeat"
@@ -92,6 +93,10 @@ struct DeviceCredentials: Codable, Sendable, Equatable {
 struct RegisterRequest: Codable, Sendable, Equatable { var name: String; var phone: String; var campus: String }
 typealias RegisterResponse = DeviceCredentials
 
+/// `profile/update`: name and phone edits after registration, so contacts and dispatch aren't
+/// left with old values. Failing is harmless: `AppModel` sends it again on the next sync.
+typealias ProfileUpdateRequest = RegisterRequest
+
 // MARK: - contacts/set
 struct ContactDTO: Codable, Sendable, Equatable { var name: String; var phone: String }
 struct ContactsSetRequest: Codable, Sendable, Equatable { var contacts: [ContactDTO] }
@@ -113,7 +118,25 @@ struct HeartbeatRequest: Codable, Sendable, Equatable {
     var accuracy: Double?
     var battery: Double?
 }
-struct HeartbeatResponse: Codable, Sendable, Equatable { var ok: Bool; var serverTime: String }
+struct HeartbeatResponse: Codable, Sendable, Equatable {
+    var ok: Bool
+    var serverTime: String
+    /// The session's live alert, when the server raised one the phone may not know about (the
+    /// watchdog, while the phone was offline). Duress alerts are never included.
+    var alert: LiveAlertDTO? = nil
+}
+
+/// An alert the server is running for this session. `reason` is the contact-facing line.
+struct LiveAlertDTO: Codable, Sendable, Equatable {
+    var id: String
+    var level: Int
+    var shareUrl: String
+    var trigger: String? = nil
+    var reason: String? = nil
+    var startedAt: String? = nil
+    var status: String? = nil
+    var dispatchPolicy: String? = nil
+}
 
 struct SessionEndRequest: Codable, Sendable, Equatable { var sessionId: String }
 
@@ -129,6 +152,9 @@ struct AlertCreateRequest: Codable, Sendable, Equatable {
     var battery: Double?
     var dryRun: Bool?
     var dispatchPolicy: String       // DispatchPolicy.rawValue
+    /// The phone's own id for this alert. A repeat with the same id returns the same alert
+    /// instead of calling everyone again, so a slow response is always safe to retry.
+    var clientAlertId: String? = nil
 }
 struct AlertCreateResponse: Codable, Sendable, Equatable {
     var alertId: String

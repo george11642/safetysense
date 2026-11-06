@@ -24,8 +24,19 @@ protocol BackendClientProtocol: Sendable {
     /// Erases everything this device stored on the server (contacts, sessions, alerts, locations,
     /// events, evidence) and revokes its credentials.
     func deleteAccount() async throws -> AccountDeleteResponse
+    /// Same, for credentials set aside by an erase that couldn't reach the server.
+    func deleteAccount(using credentials: DeviceCredentials) async throws -> AccountDeleteResponse
+    /// Name and phone edits after registration.
+    func updateProfile(_ request: ProfileUpdateRequest) async throws -> OKResponse
+    /// Sends whatever waited for the network.
+    func flushOutbox() async
 }
 
 extension BackendClientProtocol {
     func deleteAccount() async throws -> AccountDeleteResponse { throw BackendError.notRegistered }
+    func deleteAccount(using credentials: DeviceCredentials) async throws -> AccountDeleteResponse {
+        try await deleteAccount()
+    }
+    func updateProfile(_ request: ProfileUpdateRequest) async throws -> OKResponse { OKResponse(ok: true) }
+    func flushOutbox() async {}
 }

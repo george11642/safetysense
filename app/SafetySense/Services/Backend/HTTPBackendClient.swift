@@ -13,8 +13,9 @@ import os
 /// - **Retries:** idempotent routes retry transport errors, 429 and 5xx with backoff. Creating an
 ///   alert or session retries only when the request clearly never reached the server, so a slow
 ///   response can't turn into two rounds of phone calls.
-/// - **Offline:** heartbeats and alert locations that fail are kept in `BackendOutbox` and sent
-///   when the network returns, after the next successful request, or from a background refresh.
+/// - **Offline:** heartbeats, alert locations, session ends and alert cancels that fail are kept
+///   in `BackendOutbox` and sent when the network returns, after the next successful request, or
+///   from a background refresh. Session ends and cancels also retry on a timer until they land.
 actor HTTPBackendClient: BackendClientProtocol {
     /// Shared by the app's services, App Intents running in the background, and BG refresh tasks.
     static let shared = HTTPBackendClient()
@@ -41,6 +42,8 @@ actor HTTPBackendClient: BackendClientProtocol {
     private var credentials: DeviceCredentials?
     private var pathMonitor: NWPathMonitor?
     private var isFlushing = false
+    private var retryTask: Task<Void, Never>?
+    private var retryAttempt = 0
 
     init(configuration: BackendConfiguration = .live,
          session: URLSession = HTTPBackendClient.makeSession(),
@@ -83,6 +86,10 @@ actor HTTPBackendClient: BackendClientProtocol {
         return creds
     }
 
+    func updateProfile(_ request: ProfileUpdateRequest) async throws -> OKResponse {
+        try await post(.profileUpdate, request, retry: .idempotent)
+    }
+
     func setContacts(_ request: ContactsSetRequest) async throws -> OKResponse {
         try await post(.contactsSet, request, retry: .idempotent)
     }
@@ -113,7 +120,13 @@ actor HTTPBackendClient: BackendClientProtocol {
     func endSession(_ request: SessionEndRequest) async throws -> OKResponse {
         // A clean end must never be followed by a replayed heartbeat for the same session.
         dropQueued(sessionID: request.sessionId)
-        return try await post(.sessionEnd, request, retry: .idempotent)
+        do {
+            return try await post(.sessionEnd, request, retry: .idempotent)
+        } catch let error as BackendError where error.isWorthQueueing {
+            // Left open, the watchdog would alert contacts for someone who ended safely.
+            enqueueDurable(.sessionEnd(request))
+            throw error
+        }
     }
 
     func createAlert(_ request: AlertCreateRequest) async throws -> AlertCreateResponse {
@@ -128,7 +141,13 @@ actor HTTPBackendClient: BackendClientProtocol {
     }
 
     func cancelAlert(_ request: AlertCancelRequest) async throws -> AlertCancelResponse {
-        try await post(.alertCancel, request, retry: .idempotent)
+        do {
+            return try await post(.alertCancel, request, retry: .idempotent)
+        } catch let error as BackendError where error.isWorthQueueing {
+            // Lost, the server's own 90 s countdown would dispatch after a valid cancel.
+            enqueueDurable(.alertCancel(request))
+            throw error
+        }
     }
 
     func updateAlertLocation(_ request: AlertLocationRequest) async throws -> OKResponse {
@@ -162,6 +181,11 @@ actor HTTPBackendClient: BackendClientProtocol {
         return response
     }
 
+    /// Finishes an erase that couldn't reach the server, with the credentials it set aside.
+    func deleteAccount(using credentials: DeviceCredentials) async throws -> AccountDeleteResponse {
+        try await post(.accountDelete, EmptyRequest(), retry: .idempotent, credentials: credentials)
+    }
+
     // MARK: Outbox
 
     /// Number of heartbeats / locations waiting for the network.
@@ -183,6 +207,10 @@ actor HTTPBackendClient: BackendClientProtocol {
                     let _: HeartbeatResponse = try await post(.sessionHeartbeat, beat, retry: .single, flushAfter: false)
                 case .location(let fix):
                     let _: OKResponse = try await post(.alertLocation, fix, retry: .single, flushAfter: false)
+                case .sessionEnd(let end):
+                    let _: OKResponse = try await post(.sessionEnd, end, retry: .single, flushAfter: false)
+                case .alertCancel(let cancel):
+                    let _: AlertCancelResponse = try await post(.alertCancel, cancel, retry: .single, flushAfter: false)
                 }
                 remaining.removeFirst()
             } catch let error as BackendError where error.isWorthQueueing {
@@ -193,7 +221,42 @@ actor HTTPBackendClient: BackendClientProtocol {
         }
         // Keep anything enqueued while we were flushing (a newer heartbeat replaces an older one).
         let added = outbox.load().filter { !snapshot.contains($0) }
-        outbox.save(added.reduce(remaining) { BackendOutbox.merging($1.item, into: $0, now: $1.enqueuedAt) })
+        let merged = added.reduce(remaining) { BackendOutbox.merging($1.item, into: $0, now: $1.enqueuedAt) }
+        outbox.save(merged)
+        if merged.contains(where: \.item.isDurable) {
+            scheduleDurableRetry()
+        } else {
+            retryAttempt = 0
+        }
+    }
+
+    private func enqueueDurable(_ item: BackendOutbox.Item) {
+        outbox.enqueue(item)
+        // The app may be suspended before the timer below fires.
+        HeartbeatScheduler.scheduleAppRefresh()
+        startMonitoringIfNeeded()
+        scheduleDurableRetry()
+    }
+
+    /// Nothing else may be running to trigger a flush once a session has ended.
+    private func scheduleDurableRetry() {
+        guard retryTask == nil else { return }
+        retryAttempt += 1
+        let delay = Self.durableRetryDelay(attempt: retryAttempt)
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            await self?.runDurableRetry()
+        }
+    }
+
+    private func runDurableRetry() async {
+        retryTask = nil
+        await flushOutbox()
+    }
+
+    /// 15 s, 30 s, 60 s, then every 2 minutes.
+    static func durableRetryDelay(attempt: Int) -> TimeInterval {
+        min(15 * pow(2, Double(max(attempt, 1) - 1)), 120)
     }
 
     private func dropQueued(sessionID: String) {
@@ -218,7 +281,8 @@ actor HTTPBackendClient: BackendClientProtocol {
     // MARK: Transport
 
     private func post<Body: Encodable & Sendable, Response: Decodable & Sendable>(
-        _ route: BackendRoute, _ body: Body, retry: RetryPolicy, flushAfter: Bool = true
+        _ route: BackendRoute, _ body: Body, retry: RetryPolicy, flushAfter: Bool = true,
+        credentials override: DeviceCredentials? = nil
     ) async throws -> Response {
         guard configuration.isValid else { throw BackendError.notConfigured }
         startMonitoringIfNeeded()
@@ -228,7 +292,7 @@ actor HTTPBackendClient: BackendClientProtocol {
         urlRequest.setValue("application/json", forHTTPHeaderField: "content-type")
         urlRequest.setValue(configuration.publishableKey, forHTTPHeaderField: "apikey")
         if route.requiresDeviceAuth {
-            guard let credentials else { throw BackendError.notRegistered }
+            guard let credentials = override ?? credentials else { throw BackendError.notRegistered }
             urlRequest.setValue(credentials.deviceId, forHTTPHeaderField: "x-device-id")
             urlRequest.setValue(credentials.deviceSecret, forHTTPHeaderField: "x-device-secret")
         }
@@ -243,7 +307,7 @@ actor HTTPBackendClient: BackendClientProtocol {
             attempt += 1
             do {
                 let response: Response = try await perform(urlRequest, route: route)
-                if flushAfter, route != .sessionEnd { Task { await self.flushOutbox() } }
+                if flushAfter { Task { await self.flushOutbox() } }
                 return response
             } catch let failure as Failure {
                 let canRetry = attempt < retry.maxAttempts
@@ -349,6 +413,24 @@ extension BackendError {
         default: false
         }
     }
+
+    /// True when the request can't have reached the server, so nothing happened there.
+    var neverReachedServer: Bool {
+        switch self {
+        case .notConfigured, .notRegistered: true
+        case .transport(let message): BackendError.unreachableMessages.contains(message)
+        default: false
+        }
+    }
+
+    /// The server looked at this request and will never accept it, so retrying is pointless.
+    /// 401 and 429 aren't here: a new registration or a little time can clear those.
+    var isPermanentRejection: Bool {
+        if case .http(let status, _) = self { return (400..<500).contains(status) && status != 401 && status != 408 && status != 429 }
+        return false
+    }
+
+    static let unreachableMessages: Set<String> = ["offline", "server not found", "couldn't connect"]
 
     /// Log-safe description (no request bodies, no secrets).
     var logDescription: String {

@@ -10,7 +10,7 @@ struct ContactsView: View {
                 VStack(alignment: .leading, spacing: SSSpacing.xs) {
                     Text("Your people").ssEyebrow(SSColor.accent)
                     Text("Trusted contacts").font(SSFont.display)
-                    Text("Up to \(TrustedContact.maxCount) people. They don't need the app. If an alert starts, they get a call and a text with a link to your live location.")
+                    Text("Up to \(TrustedContact.maxCount) people. They don't need the app. If an alert starts, your first contact gets a call, and everyone gets a text with a link to your live location.")
                         .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 }
                 .padding(.top, SSSpacing.md)

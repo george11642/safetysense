@@ -6,7 +6,10 @@ struct SafetySenseApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
-        if !LaunchOptions.isUnitTestHost { StorageMigration.run() }
+        if !LaunchOptions.isUnitTestHost {
+            StorageMigration.run()
+            FreshInstall.run()   // Before anything reads the Keychain.
+        }
         let launch = LaunchOptions.current
         // One fixed, wiped-on-launch suite for QA screens so repeated launches don't leave a
         // preferences file behind each time.

@@ -111,6 +111,15 @@ enum AlertPresentation {
         }
     }
 
+    /// `Maya gets a call and your live location. Jordan and Sam get it by text.`
+    static func whoHears(_ contacts: [TrustedContact]) -> String {
+        guard let first = contacts.first(where: \.isPrimary) ?? contacts.first else { return "Add a trusted contact so someone hears from you." }
+        let others = contacts.filter { $0.id != first.id }.map(\.firstName)
+        let lead = "\(first.firstName) gets a call and your live location."
+        guard !others.isEmpty else { return lead }
+        return "\(lead) \(NameList.join(others)) \(others.count == 1 ? "gets" : "get") it by text."
+    }
+
     /// Every contact came back "dry_run": the server logged the alert but called and texted nobody.
     static func isTest(_ alert: AlertRecord?) -> Bool {
         let notified = alert?.notified ?? []

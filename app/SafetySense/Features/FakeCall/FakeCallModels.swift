@@ -155,4 +155,8 @@ enum FakeCallPreferences {
     static func save(_ config: FakeCallConfig, to defaults: UserDefaults = .standard) {
         if let data = try? JSONEncoder().encode(config) { defaults.set(data, forKey: key) }
     }
+
+    static func clear(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: key)
+    }
 }

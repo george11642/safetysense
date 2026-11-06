@@ -13,13 +13,13 @@ enum Campus: String, Codable, Sendable, CaseIterable, Identifiable {
     }
 }
 
-/// The user. `name`, `phone`, `campus` go to the backend at `register`; the responder fields
-/// stay on device until an alert shares them with dispatch.
+/// The user. `name`, `phone`, `campus` go to the backend at `register` and on every sync after.
+/// The responder fields stay on this iPhone: no route sends them yet.
 struct Profile: Codable, Sendable, Equatable {
     var name: String
     var phone: String
     var campus: Campus
-    /// Optional responder profile (SPEC 8.8). Shared with dispatch only during an alert.
+    /// Optional responder profile (SPEC 8.8). Kept on this iPhone for now.
     var physicalDescription: String?
     var medicalNotes: String?
     var allergies: String?
@@ -39,5 +39,14 @@ struct Profile: Codable, Sendable, Equatable {
 
     var firstName: String {
         name.split(separator: " ").first.map(String.init) ?? name
+    }
+
+    /// `register` needs a name. Someone who skipped that step still gets a working account, and
+    /// contacts read this until they add one.
+    static let unnamed = "Someone"
+
+    var registration: RegisterRequest {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return RegisterRequest(name: trimmed.isEmpty ? Self.unnamed : trimmed, phone: phone, campus: campus.rawValue)
     }
 }

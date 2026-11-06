@@ -42,12 +42,18 @@ final class EscalationController: EscalationControllerProtocol {
     @ObservationIgnored var onDuressTracking: (@MainActor (Bool) -> Void)?
     /// Returns the backend `session_id` once `session/start` has answered.
     @ObservationIgnored var serverSessionIDProvider: (@MainActor () -> String?)?
+    /// A cancel didn't reach the server yet. The client keeps it queued, but until it lands the
+    /// person shouldn't be told their contacts know. Fires for both PINs, so they read the same.
+    @ObservationIgnored var onCancelUnconfirmed: (@MainActor () -> Void)?
+    /// The server doesn't recognize this device (never registered, or its row is gone).
+    @ObservationIgnored var onDeviceNotRecognized: (@MainActor () -> Void)?
 
     @ObservationIgnored private let backend: any BackendClientProtocol
     @ObservationIgnored private let clock: any EngineClock
     @ObservationIgnored private let context: (any AlertContextProviding)?
     @ObservationIgnored private let evidence: (any EvidenceHandling)?
     @ObservationIgnored private let haptics: any EngineHaptics
+    @ObservationIgnored private let pendingStore: PendingAlertStore
     @ObservationIgnored let timing: EscalationTiming
 
     @ObservationIgnored private var session: GuardSession?
@@ -59,6 +65,8 @@ final class EscalationController: EscalationControllerProtocol {
     @ObservationIgnored private var locationTimer: EngineTimer?
     @ObservationIgnored private var statusTimer: EngineTimer?
     @ObservationIgnored private var duressTimer: EngineTimer?
+    @ObservationIgnored private var serverRetryTimer: EngineTimer?
+    @ObservationIgnored private var drillCloseTimers: [String: EngineTimer] = [:]
     @ObservationIgnored private var okaySuppressedUntil: Date?
 
     /// Every alert raised while this controller lives, by local id.
@@ -66,8 +74,11 @@ final class EscalationController: EscalationControllerProtocol {
     /// A duress-cancelled alert the server is silently escalating. Never shown on screen.
     @ObservationIgnored private(set) var duressAlertID: UUID?
     @ObservationIgnored private var duressUntil: Date?
-    /// Cancels that arrived before the server answered `alert/create` (value: duress).
-    @ObservationIgnored private var pendingCancels: [UUID: Bool] = [:]
+    /// Alerts `alert/create` hasn't confirmed, mirrored to `pendingStore` so they survive a relaunch.
+    @ObservationIgnored private var pendingCreates: [UUID: PendingAlert] = [:]
+    @ObservationIgnored private var creating: Set<UUID> = []
+    /// Server alerts this phone already closed (or a drill): a heartbeat can't bring them back.
+    @ObservationIgnored private var closedServerAlertIDs: Set<String> = []
     @ObservationIgnored private var dispatchRequested: Set<UUID> = []
     @ObservationIgnored private var dispatchReasons: [UUID: String] = [:]
     @ObservationIgnored private var seenServerEvents: Set<String> = []
@@ -78,7 +89,9 @@ final class EscalationController: EscalationControllerProtocol {
          context: (any AlertContextProviding)? = nil,
          evidence: (any EvidenceHandling)? = nil,
          haptics: any EngineHaptics = SystemEngineHaptics(),
-         timing: EscalationTiming = .standard) {
+         timing: EscalationTiming = .standard,
+         pendingAlerts: PendingAlertStore = .memory) {
+        self.pendingStore = pendingAlerts
         self.backend = backend
         self.clock = clock
         self.context = context
@@ -131,6 +144,11 @@ final class EscalationController: EscalationControllerProtocol {
         connectionNote = nil
         scheduleNextCheckIn()
         emit()
+    }
+
+    /// Settings changed. Without a session this is the only way an SOS sees them.
+    func updatePolicies(_ policies: DispatchPolicySettings) {
+        self.policies = policies
     }
 
     /// Lets the app hand over the `session_id` (or other changes) after `session/start`.
@@ -206,7 +224,7 @@ final class EscalationController: EscalationControllerProtocol {
             // Hold-to-SOS keeps its dispatch-first default (SPEC 15.2).
             startAlert(trigger: .manualSOS, reason: "Asked for help at a check-in",
                        at: policies.startingLevel(for: .missedCheckIn, in: mode),
-                       policy: policies.policy(for: mode))
+                       policy: policies.policy(for: mode), contactCause: AlertReasonText.askedForHelp)
         }
     }
 
@@ -282,11 +300,16 @@ final class EscalationController: EscalationControllerProtocol {
             if start == .dispatch, level == .alert { escalateToDispatch(reason: reason) }
             return
         }
-        startAlert(trigger: trigger, reason: reason, at: start)
+        startAlert(trigger: trigger, reason: reason, at: start, contactCause: Self.contactCause(trigger, reason))
+    }
+
+    private static func contactCause(_ trigger: AlertTrigger, _ reason: String) -> String {
+        if trigger == .missedCheckIn { return AlertReasonText.missedCheckIn }
+        return reason == "Asked for help at a check-in" ? AlertReasonText.askedForHelp : reason
     }
 
     private func startAlert(trigger: AlertTrigger, reason: String, at start: EscalationLevel,
-                            policy: DispatchPolicy? = nil) {
+                            policy: DispatchPolicy? = nil, contactCause: String) {
         cancelLadderTimers()
         nextCheckInAt = nil
         checkInReason = nil
@@ -296,8 +319,10 @@ final class EscalationController: EscalationControllerProtocol {
                                  policy: policy ?? policies.policy(for: trigger, in: mode),
                                  status: start == .dispatch ? .dispatched : .active,
                                  startedAt: t, levelChangedAt: t,
-                                 events: [AlertEvent(who: "SafetySense", action: "alert_started", at: t)])
+                                 events: [AlertEvent(who: "SafetySense", action: "alert_started", at: t)],
+                                 contactReason: AlertReasonText.contact(contactCause, mode: mode))
         known[record.id] = record
+        trackPending(PendingAlert(record: record))
         level = start
         activeAlert = record
         if start == .alert {
@@ -312,10 +337,11 @@ final class EscalationController: EscalationControllerProtocol {
         track { [weak self] in await self?.createOnServer(alertID: record.id) }
     }
 
-    private func armDispatchCountdown() {
-        stepDeadline = now.addingTimeInterval(timing.alertToDispatch)
+    private func armDispatchCountdown(after seconds: TimeInterval? = nil) {
+        let wait = seconds ?? timing.alertToDispatch
+        stepDeadline = now.addingTimeInterval(wait)
         stepTimer?.cancel()
-        stepTimer = clock.schedule(after: timing.alertToDispatch) { [weak self] in
+        stepTimer = clock.schedule(after: wait) { [weak self] in
             guard let self, self.level == .alert else { return }
             self.escalateToDispatch(reason: "No cancel within 90 seconds")
         }
@@ -389,9 +415,19 @@ final class EscalationController: EscalationControllerProtocol {
         // Never makes the screen wait for the network: retries can take a long time offline.
         if let serverID = record.serverAlertID {
             track { [weak self] in await self?.sendCancel(serverID: serverID, duress: duress) }
-        } else {
-            pendingCancels[record.id] = duress
+        } else if var entry = pendingCreates[record.id] {
+            entry.cancel = duress
+            entry.record = record
+            trackPending(entry)
+            dropIfNobodyWasTold(record.id)
         }
+    }
+
+    /// A valid cancel of an alert that never reached the server: there's nobody to tell.
+    private func dropIfNobodyWasTold(_ id: UUID) {
+        guard !creating.contains(id), let entry = pendingCreates[id], entry.cancel == false,
+              !entry.mayHaveLanded else { return }
+        stopTrackingPending(id)
     }
 
     private func startHiddenDuressAlert(reason: String) async {
@@ -401,6 +437,7 @@ final class EscalationController: EscalationControllerProtocol {
                                  events: [AlertEvent(who: "SafetySense", action: "alert_started", at: t)])
         known[record.id] = record
         dispatchReasons[record.id] = reason
+        trackPending(PendingAlert(record: record, dispatchReason: reason, hidden: true))
         evidence?.prepare(alertID: record.id)
         beginDuressTracking(alertID: record.id)
         await createOnServer(alertID: record.id)
@@ -432,9 +469,11 @@ final class EscalationController: EscalationControllerProtocol {
 
     /// Takes over an alert that already exists on the server (created by an App Intent while
     /// the ladder wasn't running, e.g. Action Button from a cold start). Shows it, keeps the
-    /// countdown going if it is still at Alert, and resumes location + status loops.
+    /// countdown going if it is still at Alert, and resumes location + status loops. The
+    /// countdown keeps its real deadline, because the server's own clock never stopped. The first
+    /// status poll reconciles anything that changed while the app was gone.
     func adopt(_ alert: AlertRecord) {
-        guard activeAlert == nil, alert.serverAlertID != nil else { return }
+        guard activeAlert == nil, alert.serverAlertID != nil || pendingCreates[alert.id] != nil else { return }
         cancelLadderTimers()
         nextCheckInAt = nil
         var record = alert
@@ -444,10 +483,12 @@ final class EscalationController: EscalationControllerProtocol {
         activeAlert = record
         level = record.level
         if record.level == .alert {
-            armDispatchCountdown()
+            // A few seconds at least, so an overdue countdown hears from the server first.
+            let left = timing.alertToDispatch - now.timeIntervalSince(record.levelChangedAt)
+            armDispatchCountdown(after: max(left, Self.adoptedCountdownMinimum))
         } else {
             stepDeadline = nil
-            if record.dispatch == nil {
+            if record.dispatch == nil, record.serverAlertID != nil {
                 let id = record.id
                 track { [weak self] in await self?.requestDispatch(alertID: id) }
             }
@@ -457,6 +498,28 @@ final class EscalationController: EscalationControllerProtocol {
         track { [weak self] in await self?.evidence?.commit(alertID: id, serverAlertID: serverID, mode: mode) }
         startAlertLoops()
         emit()
+        track { [weak self] in await self?.pollStatus(alertID: id) }
+    }
+
+    static let adoptedCountdownMinimum: TimeInterval = 3
+
+    /// An alert the server raised on its own, seen in a heartbeat: the watchdog fired while the
+    /// phone was out of reach. Contacts already have it, so the person needs the countdown, the
+    /// PIN and "I'm safe" right away. Never brings back one this phone closed.
+    func adoptServerAlert(_ dto: LiveAlertDTO) {
+        guard activeAlert == nil, !closedServerAlertIDs.contains(dto.id),
+              !known.values.contains(where: { $0.serverAlertID == dto.id }),
+              dto.status != "cancelled", dto.status != "resolved" else { return }
+        let trigger = dto.trigger.flatMap(AlertTrigger.init(rawValue:)) ?? .heartbeatLost
+        let dispatching = dto.level >= 3
+        let started = BackendCoding.date(from: dto.startedAt) ?? now
+        let record = AlertRecord(serverAlertID: dto.id, shareURL: URL(string: dto.shareUrl),
+                                 sessionID: serverSessionID, level: dispatching ? .dispatch : .alert, trigger: trigger,
+                                 reason: trigger == .heartbeatLost ? "Your phone lost its connection" : (dto.reason ?? trigger.displayName),
+                                 policy: dto.dispatchPolicy.flatMap(DispatchPolicy.init(rawValue:)) ?? policies.policy(for: mode),
+                                 status: dispatching ? .dispatched : .active, startedAt: started, levelChangedAt: started,
+                                 contactReason: dto.reason)
+        adopt(record)
     }
 
     // MARK: Drill
@@ -473,8 +536,10 @@ final class EscalationController: EscalationControllerProtocol {
                 sessionId: record.sessionID, level: 2, reason: "TEST: practice drill",
                 trigger: AlertTrigger.manualSOS.rawValue, lat: ctx.latitude, lng: ctx.longitude,
                 accuracy: ctx.accuracy, battery: ctx.battery, dryRun: true,
-                dispatchPolicy: DispatchPolicy.contactsFirst.rawValue))
+                dispatchPolicy: DispatchPolicy.contactsFirst.rawValue,
+                clientAlertId: record.id.uuidString.lowercased()))
             record.serverAlertID = response.alertId
+            closeDrillOnServer(response.alertId)
             record.shareURL = URL(string: response.shareUrl)
             record.notified = response.notified
             record.events += response.notified.map {
@@ -488,37 +553,106 @@ final class EscalationController: EscalationControllerProtocol {
         onChange?(level, record)
     }
 
+    /// Whatever started the drill, its TEST alert closes by itself, so the server's countdown never
+    /// runs it into a simulated dispatch. Onboarding reads its events first.
+    private func closeDrillOnServer(_ serverID: String) {
+        closedServerAlertIDs.insert(serverID)
+        drillCloseTimers[serverID] = clock.schedule(after: timing.drillCloseDelay) { [weak self] in
+            guard let self else { return }
+            self.drillCloseTimers[serverID] = nil
+            let backend = self.backend
+            self.track { _ = try? await backend.cancelAlert(AlertCancelRequest(alertId: serverID, duress: false)) }
+        }
+    }
+
     // MARK: Server
 
+    /// Every alert that hasn't reached the server is sent again, for as long as it stays relevant.
+    func retryServerWork() {
+        serverRetryTimer?.cancel()
+        serverRetryTimer = nil
+        for id in pendingCreates.keys {
+            track { [weak self] in await self?.createOnServer(alertID: id) }
+        }
+        if let alert = activeAlert, alert.level == .dispatch, alert.serverAlertID != nil, alert.dispatch == nil {
+            track { [weak self] in await self?.requestDispatch(alertID: alert.id) }
+        }
+    }
+
+    /// At launch: picks up alerts that hadn't reached the server when iOS ended the app. The one
+    /// that was on screen comes back on screen, a hidden one goes out without a trace.
+    func restorePendingAlerts() {
+        for entry in pendingStore.load(now: now) where pendingCreates[entry.record.id] == nil {
+            pendingCreates[entry.record.id] = entry
+            known[entry.record.id] = entry.record
+            dispatchReasons[entry.record.id] = entry.dispatchReason
+            if !entry.hidden, entry.cancel == nil { adopt(entry.record) }
+        }
+        persistPending()
+        retryServerWork()
+    }
+
+    private func armServerRetry() {
+        guard serverRetryTimer == nil else { return }
+        serverRetryTimer = clock.schedule(after: timing.serverRetryInterval) { [weak self] in
+            self?.retryServerWork()
+        }
+    }
+
+    private func trackPending(_ entry: PendingAlert) {
+        pendingCreates[entry.record.id] = entry
+        persistPending()
+    }
+
+    private func stopTrackingPending(_ id: UUID) {
+        pendingCreates[id] = nil
+        persistPending()
+    }
+
+    private func persistPending() {
+        pendingStore.save(Array(pendingCreates.values))
+    }
+
     private func createOnServer(alertID: UUID) async {
+        guard pendingCreates[alertID] != nil, !creating.contains(alertID) else { return }
+        creating.insert(alertID)
+        defer { creating.remove(alertID) }
         guard known[alertID] != nil else { return }
         let ctx = await context?.alertContext() ?? .unknown
-        guard let snapshot = known[alertID] else { return }
-        if pendingCancels[alertID] == false {
+        guard let snapshot = known[alertID], let entry = pendingCreates[alertID] else { return }
+        if entry.cancel == false, !entry.mayHaveLanded {
             // Cancelled with a valid PIN before we reached the server: nobody needs to be told.
-            pendingCancels.removeValue(forKey: alertID)
+            stopTrackingPending(alertID)
             return
         }
         let request = AlertCreateRequest(
-            sessionId: snapshot.sessionID ?? serverSessionID, level: max(2, snapshot.level.rawValue),
-            reason: snapshot.reason, trigger: snapshot.trigger.rawValue,
+            sessionId: entry.skipSession ? nil : snapshot.sessionID ?? serverSessionID,
+            level: max(2, snapshot.level.rawValue),
+            reason: snapshot.contactReason ?? snapshot.reason, trigger: snapshot.trigger.rawValue,
             lat: ctx.latitude, lng: ctx.longitude, accuracy: ctx.accuracy, battery: ctx.battery,
-            dryRun: nil, dispatchPolicy: snapshot.policy.rawValue)
-        let backend = self.backend
-        let response: AlertCreateResponse
-        do {
-            response = try await withRetry { try await backend.createAlert(request) }
-        } catch {
-            connectionNote = "Couldn't reach SafetySense's server yet. If you can, call 911."
-            if var alert = known[alertID] {
-                alert.events.append(AlertEvent(who: "SafetySense", action: "server_unreachable", at: now))
-                store(alert)
+            dryRun: nil, dispatchPolicy: snapshot.policy.rawValue,
+            clientAlertId: alertID.uuidString.lowercased())
+        var answer: AlertCreateResponse?
+        var failure: BackendError?
+        for delay in [0] + timing.retryDelays {
+            if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+            do {
+                answer = try await backend.createAlert(request)
+                break
+            } catch {
+                let backendError = error as? BackendError ?? .transport("request failed")
+                failure = backendError
+                if !backendError.neverReachedServer { pendingCreates[alertID]?.mayHaveLanded = true }
+                if backendError.isPermanentRejection || pendingCreates[alertID]?.cancel == false { break }
             }
-            if pendingCancels[alertID] == nil { await evidence?.commit(alertID: alertID, serverAlertID: nil, mode: mode) }
-            emit()
+        }
+        guard let response = answer else {
+            await createFailed(alertID: alertID, request: request, error: failure)
             return
         }
         connectionNote = nil
+        let delivered = pendingCreates[alertID]
+        stopTrackingPending(alertID)
         guard var alert = known[alertID] else { return }
         alert.serverAlertID = response.alertId
         alert.shareURL = URL(string: response.shareUrl)
@@ -530,7 +664,7 @@ final class EscalationController: EscalationControllerProtocol {
         // No fix was ready for `alert/create` (a cold start): fill the map in as soon as one is.
         if ctx.latitude == nil { track { [weak self] in await self?.pushLocation(alertID: alertID) } }
 
-        if let duress = pendingCancels.removeValue(forKey: alertID) {
+        if let duress = delivered?.cancel {
             await sendCancel(serverID: response.alertId, duress: duress)
             if !duress {
                 emit()
@@ -540,6 +674,33 @@ final class EscalationController: EscalationControllerProtocol {
             await requestDispatch(alertID: alertID)
         }
         await evidence?.commit(alertID: alertID, serverAlertID: response.alertId, mode: mode)
+        emit()
+    }
+
+    private func createFailed(alertID: UUID, request: AlertCreateRequest, error: BackendError?) async {
+        guard let entry = pendingCreates[alertID] else { return }
+        if entry.cancel == false, !entry.mayHaveLanded {
+            stopTrackingPending(alertID)
+            return
+        }
+        persistPending()
+        connectionNote = "Couldn't reach SafetySense's server yet. If you can, call 911."
+        if var alert = known[alertID], !alert.events.contains(where: { $0.action == "server_unreachable" }) {
+            alert.events.append(AlertEvent(who: "SafetySense", action: "server_unreachable", at: now))
+            store(alert)
+        }
+        if entry.cancel == nil { await evidence?.commit(alertID: alertID, serverAlertID: nil, mode: mode) }
+
+        if error == .notRegistered || error.isUnauthorized { onDeviceNotRecognized?() }
+        if case .http(404, _)? = error, request.sessionId != nil {
+            pendingCreates[alertID]?.skipSession = true   // A session the server no longer has.
+            persistPending()
+            armServerRetry()
+        } else if error?.isPermanentRejection == true {
+            stopTrackingPending(alertID)   // The note stays up: 911 is the way from here.
+        } else {
+            armServerRetry()
+        }
         emit()
     }
 
@@ -553,6 +714,7 @@ final class EscalationController: EscalationControllerProtocol {
             let response = try await withRetry { try await backend.escalateAlert(request) }
             guard var current = known[alertID] else { return }
             let info = response.dispatch.model
+            connectionNote = nil
             current.dispatch = info
             current.events.append(AlertEvent(who: "dispatch", action: info.provider == .simulated
                                              ? "simulated_\(info.status)" : info.status, at: now))
@@ -561,14 +723,21 @@ final class EscalationController: EscalationControllerProtocol {
         } catch {
             dispatchRequested.remove(alertID)
             connectionNote = "Couldn't confirm dispatch yet. If you can, call 911."
+            if (error as? BackendError)?.isPermanentRejection != true { armServerRetry() }
             emit()
         }
     }
 
     private func sendCancel(serverID: String, duress: Bool) async {
+        closedServerAlertIDs.insert(serverID)
         let backend = self.backend
         let request = AlertCancelRequest(alertId: serverID, duress: duress)
-        _ = try? await withRetry { try await backend.cancelAlert(request) }
+        do {
+            _ = try await withRetry { try await backend.cancelAlert(request) }
+        } catch {
+            // Queued in the client's outbox, which keeps trying.
+            onCancelUnconfirmed?()
+        }
     }
 
     private func pushLocation(alertID: UUID) async {
@@ -584,6 +753,10 @@ final class EscalationController: EscalationControllerProtocol {
         guard let serverID = known[alertID]?.serverAlertID else { return }
         guard let response = try? await backend.alertStatus(AlertStatusRequest(alertId: serverID)),
               var alert = known[alertID] else { return }
+        if activeAlert?.id == alertID, response.status == "cancelled" || response.status == "resolved" {
+            endedOnServer(alert, status: response.status)
+            return
+        }
         var helpRequestedBy: String?
         for event in response.events {
             let key = "\(serverID)|\(event.who)|\(event.action)|\(event.at)"
@@ -613,6 +786,21 @@ final class EscalationController: EscalationControllerProtocol {
         } else {
             emit()
         }
+    }
+
+    /// The server closed this alert while the app was gone, so the screen shouldn't keep counting.
+    private func endedOnServer(_ alert: AlertRecord, status: String) {
+        cancelLadderTimers()
+        stopAlertLoops()
+        level = .guarding
+        activeAlert = nil
+        stepDeadline = nil
+        scheduleNextCheckIn()
+        var record = alert
+        record.status = status == "resolved" ? .resolved : .cancelled
+        known[record.id] = record
+        evidence?.stop(alertID: record.id)
+        emit()
     }
 
     // MARK: Loops
@@ -659,6 +847,11 @@ final class EscalationController: EscalationControllerProtocol {
     private func store(_ alert: AlertRecord) {
         known[alert.id] = alert
         if activeAlert?.id == alert.id { activeAlert = alert }
+        if pendingCreates[alert.id] != nil {
+            pendingCreates[alert.id]?.record = alert
+            pendingCreates[alert.id]?.dispatchReason = dispatchReasons[alert.id]
+            persistPending()
+        }
     }
 
     private func emit() {
@@ -688,7 +881,7 @@ final class EscalationController: EscalationControllerProtocol {
                 return try await operation()
             } catch {
                 lastError = error
-                if error is CancellationError { break }
+                if error is CancellationError || (error as? BackendError)?.isPermanentRejection == true { break }
             }
         }
         throw lastError ?? CancellationError()

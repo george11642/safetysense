@@ -44,6 +44,7 @@ struct RideDetails: Codable, Sendable, Equatable {
         lines.append("Plate: \(plate)")
         if let carDescription, !carDescription.isEmpty { lines.append("Car: \(carDescription)") }
         if !destinationName.isEmpty { lines.append("Going to: \(destinationName)") }
+        if let expectedArrival { lines.append("Expected by: \(expectedArrival.formatted(date: .omitted, time: .shortened))") }
         return lines.joined(separator: "\n")
     }
 }

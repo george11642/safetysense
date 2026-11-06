@@ -7,6 +7,10 @@ import UIKit
 /// Screen), `CLMonitor` geofences for the destination and the planned area, and
 /// `RouteMonitor` for off-route, vehicle-speed and unexpected-stop checks in Ride / Walk.
 /// Location is only read during a session or an alert.
+///
+/// A session also runs classic updates with pausing off (`keepsProcessAlive`). Live updates pause
+/// when you stop moving, and with no microphone nothing else keeps the app running through a long
+/// red light. The heartbeat would stop and the watchdog would call contacts for someone who's fine.
 @MainActor
 final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate {
     private(set) var lastFix: LocationFix?
@@ -29,6 +33,7 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
     /// Condition changes run strictly in order, so a stop can't remove a new session's geofence.
     private var conditionsWork: Task<Void, Never>?
     private(set) var isTrackingAlert = false
+    private var keepsProcessAlive = false
     private var promptWatcher: Task<Void, Never>?
     private var route = RouteMonitor(mode: .everyday, destination: nil)
     private var mode: GuardMode = .everyday
@@ -135,6 +140,7 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
         serviceSession = CLServiceSession(authorization: .whenInUse)
         backgroundSession = CLBackgroundActivitySession()
         isRunning = true
+        startKeepingProcessAlive()
 
         let configuration: CLLocationUpdate.LiveConfiguration = switch mode {
         case .ride: .automotiveNavigation
@@ -157,6 +163,7 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
     func stop() {
         guard isRunning else { return }
         isRunning = false
+        stopKeepingProcessAlive()
         updatesTask?.cancel()
         updatesTask = nil
         updateConditions { monitor in
@@ -202,17 +209,46 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
     /// Classic updates, because they can start from a background launch under Always and they
     /// keep the process running for the alert's location and status loops.
     func startAlertTracking() {
-        guard !isTrackingAlert, authorization == .always || authorization == .whenInUse else { return }
+        guard !isTrackingAlert, canRunClassicUpdates else { return }
         isTrackingAlert = true
-        manager.allowsBackgroundLocationUpdates = true
-        manager.pausesLocationUpdatesAutomatically = false
-        manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.startUpdatingLocation()
+        runClassicUpdates(accuracy: kCLLocationAccuracyBest)
     }
 
     func stopAlertTracking() {
         guard isTrackingAlert else { return }
         isTrackingAlert = false
+        if keepsProcessAlive {
+            manager.desiredAccuracy = Self.keepAliveAccuracy
+        } else {
+            stopClassicUpdates()
+        }
+    }
+
+    private var canRunClassicUpdates: Bool { authorization == .always || authorization == .whenInUse }
+
+    /// Coarse is enough: this only has to keep running. `liveUpdates` does the route work.
+    static let keepAliveAccuracy = kCLLocationAccuracyHundredMeters
+
+    private func startKeepingProcessAlive() {
+        guard !keepsProcessAlive, canRunClassicUpdates else { return }
+        keepsProcessAlive = true
+        runClassicUpdates(accuracy: isTrackingAlert ? kCLLocationAccuracyBest : Self.keepAliveAccuracy)
+    }
+
+    private func stopKeepingProcessAlive() {
+        guard keepsProcessAlive else { return }
+        keepsProcessAlive = false
+        if !isTrackingAlert { stopClassicUpdates() }
+    }
+
+    private func runClassicUpdates(accuracy: CLLocationAccuracy) {
+        manager.allowsBackgroundLocationUpdates = true
+        manager.pausesLocationUpdatesAutomatically = false
+        manager.desiredAccuracy = accuracy
+        manager.startUpdatingLocation()
+    }
+
+    private func stopClassicUpdates() {
         manager.stopUpdatingLocation()
         manager.allowsBackgroundLocationUpdates = false
     }

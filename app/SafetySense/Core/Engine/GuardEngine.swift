@@ -34,7 +34,8 @@ enum GuardEngine {
         return wire(audio: audio, motion: MotionGuard(), location: location,
                     secondOpinion: FoundationModelsSecondOpinion(),
                     transcript: { [weak audio] in audio?.recentContext() ?? "" },
-                    backend: backend, vault: vault, device: device, clock: clock, haptics: SystemEngineHaptics())
+                    backend: backend, vault: vault, device: device, clock: clock, haptics: SystemEngineHaptics(),
+                    pendingAlerts: .keychain)
     }
 
     /// Mock sensors (no mic, no GPS) with the real rules engine and ladder. Pair with
@@ -54,7 +55,7 @@ enum GuardEngine {
                      secondOpinion: any SecondOpinionProtocol, transcript: @escaping @MainActor () -> String,
                      backend: any BackendClientProtocol, vault: any EvidenceVaultProtocol,
                      device: any DeviceStatusProviding, clock: any EngineClock,
-                     haptics: any EngineHaptics) -> GuardEngineServices {
+                     haptics: any EngineHaptics, pendingAlerts: PendingAlertStore = .memory) -> GuardEngineServices {
         let risk = RiskEngine()
         risk.now = { [weak clock] in clock?.now ?? .now }
         risk.secondOpinion = secondOpinion
@@ -63,7 +64,7 @@ enum GuardEngine {
             backend: backend, clock: clock,
             context: SensorAlertContext(location: location, device: device),
             evidence: EvidenceHandoff(audio: audio, vault: vault),
-            haptics: haptics)
+            haptics: haptics, pendingAlerts: pendingAlerts)
         risk.onReassessment = { [weak escalation] assessment in escalation?.handle(assessment) }
         escalation.onUserConfirmedOkay = { [weak risk, weak clock] in
             risk?.acknowledge(at: clock?.now ?? .now)

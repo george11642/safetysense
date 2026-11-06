@@ -48,6 +48,7 @@ enum SystemBridge {
 
         if services.flavor == .live {
             HeartbeatScheduler.registerBackgroundTasks()
+            HeartbeatScheduler.onBackgroundRefresh = { [weak vault = services.vault] in await vault?.uploadPending() }
         }
     }
 

@@ -10,13 +10,34 @@ actor EngineFakeBackend: BackendClientProtocol {
     private(set) var statusRequests: [AlertStatusRequest] = []
     var failCreates = false
     var failEscalations = false
+    /// Thrown by `createAlert` instead of `failCreates`'s offline error.
+    var createError: BackendError?
+    var failCancels = false
+    var sessionStartFailures = 0
+    var heartbeatAlert: LiveAlertDTO?
+    var registerError: BackendError?
+    var contactsError: BackendError?
+    var deleteError: BackendError?
+    private(set) var registrations: [RegisterRequest] = []
+    private(set) var profileUpdates: [ProfileUpdateRequest] = []
+    private(set) var sessionEnds: [SessionEndRequest] = []
+    private(set) var deletions = 0
+    private(set) var deletedWith: [DeviceCredentials] = []
+    private(set) var credentialChanges: [DeviceCredentials?] = []
     var statusResponse: AlertStatusResponse?
     private var holdCreates = false
     private var gates: [CheckedContinuation<Void, Never>] = []
     private var counter = 0
 
     var isConfigured: Bool { true }
-    func setCredentials(_ credentials: DeviceCredentials?) {}
+    func setCredentials(_ credentials: DeviceCredentials?) { credentialChanges.append(credentials) }
+    func setCreateError(_ value: BackendError?) { createError = value }
+    func setFailCancels(_ value: Bool) { failCancels = value }
+    func setSessionStartFailures(_ value: Int) { sessionStartFailures = value }
+    func setHeartbeatAlert(_ value: LiveAlertDTO?) { heartbeatAlert = value }
+    func setRegisterError(_ value: BackendError?) { registerError = value }
+    func setContactsError(_ value: BackendError?) { contactsError = value }
+    func setDeleteError(_ value: BackendError?) { deleteError = value }
 
     func setFailCreates(_ value: Bool) { failCreates = value }
     func setFailEscalations(_ value: Bool) { failEscalations = value }
@@ -31,22 +52,66 @@ actor EngineFakeBackend: BackendClientProtocol {
     }
 
     func register(_ request: RegisterRequest) async throws -> RegisterResponse {
-        DeviceCredentials(deviceId: "test-device", deviceSecret: "test-secret")
+        registrations.append(request)
+        if let registerError, !request.phone.isEmpty || registerError != .http(status: 400, message: "phone") { throw registerError }
+        return DeviceCredentials(deviceId: "test-device", deviceSecret: "test-secret")
     }
-    func setContacts(_ request: ContactsSetRequest) async throws -> OKResponse { OKResponse(ok: true) }
+    func updateProfile(_ request: ProfileUpdateRequest) async throws -> OKResponse {
+        profileUpdates.append(request)
+        return OKResponse(ok: true)
+    }
+    func setContacts(_ request: ContactsSetRequest) async throws -> OKResponse {
+        if let contactsError {
+            self.contactsError = nil
+            throw contactsError
+        }
+        lastContacts = request
+        return OKResponse(ok: true)
+    }
+    private(set) var lastContacts: ContactsSetRequest?
     private(set) var sessionStarts: [SessionStartRequest] = []
     func startSession(_ request: SessionStartRequest) async throws -> SessionStartResponse {
         sessionStarts.append(request)
+        if holdSessionStarts { await withCheckedContinuation { sessionGate = $0 } }
+        if sessionStartFailures > 0 {
+            sessionStartFailures -= 1
+            throw BackendError.transport("offline")
+        }
         return SessionStartResponse(sessionId: "session-1")
     }
-    func heartbeat(_ request: HeartbeatRequest) async throws -> HeartbeatResponse {
-        HeartbeatResponse(ok: true, serverTime: "2026-11-04T23:00:00Z")
+    private var holdSessionStarts = false
+    private var sessionGate: CheckedContinuation<Void, Never>?
+    func setHoldSessionStarts(_ value: Bool) { holdSessionStarts = value }
+    var isHoldingSessionStart: Bool { sessionGate != nil }
+    func releaseSessionStart() {
+        holdSessionStarts = false
+        sessionGate?.resume()
+        sessionGate = nil
     }
-    func endSession(_ request: SessionEndRequest) async throws -> OKResponse { OKResponse(ok: true) }
+    func heartbeat(_ request: HeartbeatRequest) async throws -> HeartbeatResponse {
+        HeartbeatResponse(ok: true, serverTime: "2026-11-04T23:00:00Z", alert: heartbeatAlert)
+    }
+    func endSession(_ request: SessionEndRequest) async throws -> OKResponse {
+        sessionEnds.append(request)
+        return OKResponse(ok: true)
+    }
+    func deleteAccount() async throws -> AccountDeleteResponse {
+        deletions += 1
+        if let deleteError { throw deleteError }
+        return Self.deleted
+    }
+    func deleteAccount(using credentials: DeviceCredentials) async throws -> AccountDeleteResponse {
+        deletedWith.append(credentials)
+        if let deleteError { throw deleteError }
+        return Self.deleted
+    }
+    private static let deleted = AccountDeleteResponse(ok: true, deleted: .init(
+        contacts: 0, sessions: 0, alerts: 0, locations: 0, events: 0, evidenceRows: 0, evidenceObjects: 0, device: 1))
 
     func createAlert(_ request: AlertCreateRequest) async throws -> AlertCreateResponse {
         creates.append(request)
         if holdCreates { await withCheckedContinuation { gates.append($0) } }
+        if let createError { throw createError }
         if failCreates { throw BackendError.transport("offline") }
         counter += 1
         return AlertCreateResponse(alertId: "alert-\(counter)", shareUrl: "https://safetysense-live.vercel.app/a/token\(counter)",
@@ -61,6 +126,7 @@ actor EngineFakeBackend: BackendClientProtocol {
 
     func cancelAlert(_ request: AlertCancelRequest) async throws -> AlertCancelResponse {
         cancels.append(request)
+        if failCancels { throw BackendError.transport("offline") }
         return AlertCancelResponse(ok: true, status: "cancelled")
     }
 
@@ -132,9 +198,9 @@ struct LadderHarness {
     private let recorder = ChangeRecorder()
 
     init(mode: GuardMode = .nightOut, checkInInterval: TimeInterval = 0,
-         policies: DispatchPolicySettings = .default) {
+         policies: DispatchPolicySettings = .default, pendingAlerts: PendingAlertStore = .memory) {
         controller = EscalationController(backend: backend, clock: clock, context: context, evidence: evidence,
-                                          haptics: haptics, timing: .immediate)
+                                          haptics: haptics, timing: .immediate, pendingAlerts: pendingAlerts)
         let recorder = self.recorder
         controller.onChange = { level, alert in recorder.changes.append((level, alert)) }
         let session = GuardSession(serverSessionID: "session-1", mode: mode, startedAt: clock.now,

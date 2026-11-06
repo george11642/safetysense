@@ -62,6 +62,16 @@ public enum AppGroup {
         public static let safeWord = "safeWord"
         public static let deviceCredentials = "deviceCredentials"
         public static let evidenceKey = "evidenceKey"
+        /// Date and Ride details plus the Walk destination for the running session.
+        public static let sessionDetails = "sessionDetails"
+        /// Alerts the server hasn't confirmed yet (`PendingAlertStore`).
+        public static let pendingAlerts = "pendingAlerts"
+        /// Device credentials waiting to finish `account/delete` after an offline erase.
+        public static let pendingAccountDeletion = "pendingAccountDeletion"
+        /// Every item "delete everything" clears, and the ones a reinstall mustn't inherit.
+        public static let erasable = [
+            safetyPINHash, duressPINHash, safeWord, deviceCredentials, evidenceKey, sessionDetails, pendingAlerts,
+        ]
         /// Separate service for the widget-readable items in `SharedStore`, so a secret lookup
         /// by account can never match one.
         public static let sharedService = "com.georgeteifel.SafetySense.shared"

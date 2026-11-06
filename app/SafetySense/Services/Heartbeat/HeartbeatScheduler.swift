@@ -101,8 +101,11 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
         let request = HeartbeatRequest(sessionId: sessionID, lat: fix?.latitude, lng: fix?.longitude,
                                        accuracy: fix?.accuracy, battery: battery)
         do {
-            _ = try await backend.heartbeat(request)
+            let response = try await backend.heartbeat(request)
             markSent()
+            // The watchdog can raise an alert while the phone is out of reach, and contacts are
+            // called. Coming back, the person needs to see it and be able to stop it.
+            if let alert = response.alert { escalation?.adoptServerAlert(alert) }
         } catch BackendError.http(let status, _) where status == 409 || status == 404 {
             // The server already ended this session (ended elsewhere or erased). Stop quietly.
             log.notice("Session closed on the server; stopping heartbeats")
@@ -134,12 +137,16 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
 
     // MARK: Background refresh (best effort)
 
-    private static var didRegister = false
+    /// `BGTaskScheduler.submit` raises an exception for an identifier nobody registered, and that
+    /// can't be caught. Demo and test containers never register it.
+    private nonisolated static let didRegister = OSAllocatedUnfairLock(initialState: false)
+    /// Extra work for a background refresh (evidence uploads). Set by `SystemBridge.install`.
+    static var onBackgroundRefresh: (@MainActor @Sendable () async -> Void)?
 
     /// Must run before the app finishes launching (called from `SystemBridge.install`).
     static func registerBackgroundTasks() {
-        guard !didRegister else { return }
-        didRegister = true
+        guard !didRegister.withLock({ $0 }) else { return }
+        didRegister.withLock { $0 = true }
         BGTaskScheduler.shared.register(forTaskWithIdentifier: refreshTaskIdentifier, using: nil,
                                         launchHandler: makeLaunchHandler())
     }
@@ -153,6 +160,7 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
     }
 
     nonisolated static func scheduleAppRefresh() {
+        guard didRegister.withLock({ $0 }) else { return }
         let request = BGAppRefreshTaskRequest(identifier: refreshTaskIdentifier)
         request.earliestBeginDate = .now.addingTimeInterval(15 * 60)
         do {
@@ -171,6 +179,7 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
                 scheduleAppRefresh()
             }
             await backend.flushOutbox()
+            if let work = await MainActor.run(body: { onBackgroundRefresh }) { await work() }
         }
         box.task.expirationHandler = { @Sendable in work.cancel() }
         _ = await work.result

@@ -18,4 +18,13 @@ protocol EvidenceVaultProtocol: AnyObject {
     func decrypt(_ clip: EvidenceClip) async throws -> Data
     func delete(_ clip: EvidenceClip) throws
     func deleteAll() throws
+    /// The server id for clips sealed before `alert/create` answered.
+    func setServerAlertID(_ serverAlertID: String, for alertID: UUID)
+    /// Uploads whatever is still only on this phone.
+    func uploadPending() async
+}
+
+extension EvidenceVaultProtocol {
+    func setServerAlertID(_ serverAlertID: String, for alertID: UUID) {}
+    func uploadPending() async {}
 }

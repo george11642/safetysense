@@ -243,7 +243,7 @@ private struct EmptyContactsCard: View {
                     .symbolEffect(.variableColor.iterative, options: .repeating)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Who should we call?").font(SSFont.headline)
-                    Text("Add at least one person. If an alert starts, they get a call and a text with your live location.")
+                    Text("Add at least one person. If an alert starts, your first contact gets a call, and everyone gets a text with your live location.")
                         .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 }
             }

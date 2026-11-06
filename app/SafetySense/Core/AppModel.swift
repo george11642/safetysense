@@ -54,7 +54,12 @@ final class AppModel {
 
     var profile: Profile? { didSet { store.profile = profile } }
     var contacts: [TrustedContact] { didSet { store.contacts = contacts } }
-    var settings: AppSettings { didSet { store.settings = settings } }
+    var settings: AppSettings {
+        didSet {
+            store.settings = settings
+            if settings.dispatchPolicies != oldValue.dispatchPolicies { services.escalation.updatePolicies(settings.dispatchPolicies) }
+        }
+    }
     var hasCompletedOnboarding: Bool { didSet { store.onboardingComplete = hasCompletedOnboarding } }
     var currentSession: GuardSession? { didSet { store.currentSession = currentSession } }
     var currentAlert: AlertRecord? { didSet { store.currentAlert = currentAlert } }
@@ -91,6 +96,13 @@ final class AppModel {
     @ObservationIgnored private var seenResponses: Set<String> = []
     @ObservationIgnored private var launchFinished = false
     @ObservationIgnored private var pendingLink: DeepLink?
+    @ObservationIgnored private var connectivity: ConnectivityMonitor?
+    /// Keeps trying `register` / `contacts/set` after a failure.
+    @ObservationIgnored private var registrationRetry: Task<Void, Never>?
+    /// Keeps trying `session/start` until the session is linked or over.
+    @ObservationIgnored private var sessionLinkRetry: Task<Void, Never>?
+    /// Waits between `session/start` attempts, in seconds. The last one repeats.
+    @ObservationIgnored var sessionLinkDelays: [TimeInterval] = [5, 15, 30, 60]
     /// Keeps Live Activity calls in order, since each one awaits ActivityKit.
     @ObservationIgnored private var activityWork: Task<Void, Never>?
 
@@ -135,6 +147,9 @@ final class AppModel {
         set { settings.lastHomeMode = newValue }
     }
 
+    /// Dispatch can't call back without a number, so Home asks for one.
+    var isMissingPhone: Bool { hasCompletedOnboarding && profile != nil && profile?.phone.isEmpty == true }
+
     /// Whether a Guard in this mode would use the microphone.
     func listens(in mode: GuardMode) -> Bool {
         mode == .walk ? settings.listenDuringWalk : mode.listensByDefault
@@ -158,23 +173,82 @@ final class AppModel {
         Task { await syncRegistration() }
     }
 
-    /// Registers the device (once) and pushes contacts. Safe to call repeatedly.
+    /// Registers the device (once) and pushes profile edits and contacts. Safe to call repeatedly.
+    /// A failure says so on Home and keeps retrying, since every server route depends on this.
     func syncRegistration() async {
-        guard let profile else { return }
-        let backend = services.backend
-        do {
-            if let creds = store.deviceCredentials {
-                await backend.setCredentials(creds)
-            } else {
-                let creds = try await backend.register(RegisterRequest(name: profile.name, phone: profile.phone,
-                                                                       campus: profile.campus.rawValue))
-                store.deviceCredentials = creds
-                await backend.setCredentials(creds)
-            }
-            _ = try await backend.setContacts(ContactsSetRequest(contacts: contacts.map { ContactDTO(name: $0.name, phone: $0.phone) }))
+        guard profile != nil else { return }
+        registrationRetry?.cancel()
+        registrationRetry = nil
+        switch await pushRegistration() {
+        case .done:
             banner = nil
-        } catch {
+        case .failed:
             banner = "Couldn't reach SafetySense's server yet. We'll keep trying."
+            retryRegistration()
+        case .refused:
+            banner = "SafetySense's server didn't accept your details. Check your contacts' phone numbers."
+        }
+    }
+
+    private enum RegistrationResult { case done, failed, refused }
+
+    private func pushRegistration() async -> RegistrationResult {
+        guard let profile else { return .failed }
+        do {
+            try await linkDevice(profile)
+            return .done
+        } catch BackendError.http(401, _) {
+            // The server no longer has this device (erased, or expired): start over as new.
+            store.deviceCredentials = nil
+            await services.backend.setCredentials(nil)
+            return (try? await linkDevice(profile)) == nil ? .failed : .done
+        } catch {
+            return (error as? BackendError)?.isPermanentRejection == true ? .refused : .failed
+        }
+    }
+
+    private func linkDevice(_ profile: Profile) async throws {
+        let backend = services.backend
+        if let creds = store.deviceCredentials {
+            await backend.setCredentials(creds)
+            _ = try? await backend.updateProfile(profile.registration)   // Sent again on the next sync.
+        } else {
+            let creds = try await register(profile)
+            store.deviceCredentials = creds
+            await backend.setCredentials(creds)
+        }
+        let ordered = contacts.sorted { $0.isPrimary && !$1.isPrimary }   // The server calls the first one.
+        _ = try await backend.setContacts(ContactsSetRequest(contacts: ordered.map { ContactDTO(name: $0.name, phone: $0.phone) }))
+    }
+
+    /// A number the server can't use must not keep someone unregistered: the phone is optional there.
+    private func register(_ profile: Profile) async throws -> DeviceCredentials {
+        do {
+            return try await services.backend.register(profile.registration)
+        } catch BackendError.http(400, _) where !profile.phone.isEmpty {
+            var request = profile.registration
+            request.phone = ""
+            return try await services.backend.register(request)
+        }
+    }
+
+    /// Waits long enough for the server's hourly per-network limit to matter (shared campus Wi-Fi).
+    private func retryRegistration() {
+        guard registrationRetry == nil else { return }
+        registrationRetry = Task { [weak self] in
+            var delay: TimeInterval = 30
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(delay))
+                guard !Task.isCancelled, let self else { return }
+                let result = await self.pushRegistration()
+                guard !Task.isCancelled else { return }
+                if result != .failed {
+                    self.registrationRetry = nil
+                    if result == .done { self.banner = nil }
+                    return
+                }
+                delay = min(delay * 2, 600)
+            }
         }
     }
 
@@ -214,19 +288,49 @@ final class AppModel {
         if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
         startDrinkChecks(session)
         await services.liveActivity.start(session: session)
+        if await linkSession(session.id) == false { retrySessionLink(session.id) }
+    }
 
+    /// One `session/start`. Until it lands there are no heartbeats and the watchdog isn't covering
+    /// this session, so false means try again. Returns true when there's nothing left to do.
+    private func linkSession(_ id: UUID) async -> Bool {
+        guard let session = currentSession, session.id == id, session.serverSessionID == nil else { return true }
         do {
             let response = try await services.backend.startSession(SessionStartRequest(
-                mode: mode.rawValue, checkInIntervalS: session.serverCheckInInterval,
+                mode: session.mode.rawValue, checkInIntervalS: session.serverCheckInInterval,
                 graceS: Int(session.graceSeconds), sealedDetails: session.sealedDetailsString))
-            session.serverSessionID = response.sessionId
-            guard currentSession?.id == session.id else { return }
-            currentSession = session
-            (services.escalation as? EscalationController)?.updateSession(session)
+            guard var current = currentSession, current.id == id else {
+                // Ended while this was in flight. Left open, the watchdog would raise an alert.
+                _ = try? await services.backend.endSession(SessionEndRequest(sessionId: response.sessionId))
+                return true
+            }
+            current.serverSessionID = response.sessionId
+            currentSession = current
+            (services.escalation as? EscalationController)?.updateSession(current)
             services.heartbeat.start(serverSessionID: response.sessionId, interval: 60)
             banner = nil
+            return true
         } catch {
             banner = "Guarding on your phone. The server link will retry."
+            return false
+        }
+    }
+
+    private func retrySessionLink(_ id: UUID, immediately: Bool = false) {
+        sessionLinkRetry?.cancel()
+        sessionLinkRetry = Task { [weak self] in
+            var attempt = 0
+            var skipWait = immediately
+            while !Task.isCancelled {
+                guard let self else { return }
+                let delays = self.sessionLinkDelays
+                if !skipWait { try? await Task.sleep(for: .seconds(delays[min(attempt, delays.count - 1)])) }
+                skipWait = false
+                guard !Task.isCancelled else { return }
+                attempt += 1
+                if self.store.deviceCredentials == nil { await self.syncRegistration() }
+                if await self.linkSession(id) { return }
+            }
         }
     }
 
@@ -273,6 +377,8 @@ final class AppModel {
     private func stopSession() -> String? {
         let serverSessionID = currentSession?.serverSessionID
         currentSession = nil
+        sessionLinkRetry?.cancel()
+        sessionLinkRetry = nil
         wantsHeadsUp = false
         scenarioPlayer?.stop()
         listening = nil
@@ -296,6 +402,7 @@ final class AppModel {
         if session.mode == .nightOut, settings.drinkCheckPrompts { services.notifications.scheduleDrinkChecks() }
     }
 
+    /// An end that can't get through stays queued in the client until it does.
     private func closeSessionRemotely(_ serverSessionID: String?) async {
         await services.liveActivity.end()
         if let serverSessionID {
@@ -430,12 +537,24 @@ final class AppModel {
 
     func eraseEverything() async {
         await endGuard()
+        registrationRetry?.cancel()
+        registrationRetry = nil
         // Ask the server to erase this device's data too (contacts, alerts, locations, evidence).
-        // Best effort: the phone is wiped either way, and the server's retention job expires the rest.
-        _ = try? await services.backend.deleteAccount()
+        // The phone is wiped either way. If that can't get through now, the credentials stay, for
+        // that one purpose, until it does.
+        let credentials = store.deviceCredentials
+        var keepForDeletion = false
+        do {
+            _ = try await services.backend.deleteAccount()
+        } catch {
+            keepForDeletion = (error as? BackendError)?.isWorthQueueing == true
+        }
         try? services.vault.deleteAll()
         store.eraseAll()
+        if keepForDeletion { store.pendingAccountDeletion = credentials }
         await services.backend.setCredentials(nil)
+        fakeCall.cancelScheduled()
+        FakeCallPreferences.clear()
         profile = nil
         contacts = []
         settings = AppSettings()
@@ -475,8 +594,12 @@ final class AppModel {
             let persistedAlert = currentAlert
             await resumeGuardIfNeeded()
             adoptPersisted(persistedAlert)
+            (services.escalation as? EscalationController)?.restorePendingAlerts()
+            VaultExport.sweepLeftovers()
         }
         if hasCompletedOnboarding, forcedScreen == nil { await syncRegistration() }
+        if forcedScreen == nil, services.flavor == .live { startWatchingConnectivity() }
+        if forcedScreen == nil { retryWaitingWork() }
         drainSharedCommands()
         launchFinished = true
         if let pendingLink {
@@ -498,6 +621,37 @@ final class AppModel {
         escalation.adopt(alert)
     }
 
+    private func startWatchingConnectivity() {
+        let monitor = ConnectivityMonitor()
+        monitor.onReturn = { [weak self] in self?.retryWaitingWork() }
+        monitor.start()
+        connectivity = monitor
+    }
+
+    /// Network back, a launch, or a return to the app: everything waiting on the server tries now.
+    func retryWaitingWork() {
+        services.escalation.retryServerWork()
+        if let id = currentSession?.id, currentSession?.serverSessionID == nil { retrySessionLink(id, immediately: true) }
+        if registrationRetry != nil { Task { await syncRegistration() } }
+        Task { [services] in
+            await services.backend.flushOutbox()
+            await services.vault.uploadPending()
+        }
+        Task { await finishAccountDeletion() }
+    }
+
+    /// An erase that couldn't reach the server. Anything but a network problem ends it: a 401
+    /// means the device is already gone.
+    func finishAccountDeletion() async {
+        guard let credentials = store.pendingAccountDeletion else { return }
+        do {
+            _ = try await services.backend.deleteAccount(using: credentials)
+            store.pendingAccountDeletion = nil
+        } catch {
+            if (error as? BackendError)?.isWorthQueueing != true { store.pendingAccountDeletion = nil }
+        }
+    }
+
     /// The app came to the foreground: catch up on everything that can't run in the background.
     func appBecameActive() {
         drainSharedCommands()
@@ -505,6 +659,7 @@ final class AppModel {
         Task { await refreshPermissions() }   // They may be back from iOS Settings.
         guard forcedScreen == nil else { return }
         services.audio.resumeIfNeeded()
+        if launchFinished { retryWaitingWork() }
         enqueueActivity { [services] in await services.liveActivity.refresh() }
         if let escalation = services.escalation as? EscalationController, escalation.activeAlert != nil {
             Task { await escalation.resumeEvidence() }
@@ -548,9 +703,7 @@ final class AppModel {
     private func resumeGuardIfNeeded() async {
         guard var session = currentSession, let escalation = services.escalation as? EscalationController,
               escalation.level == .guarding, escalation.activeAlert == nil else { return }
-        if session.checkInInterval > 0, (session.nextCheckInAt ?? .distantPast) <= .now {
-            session.nextCheckInAt = .now.addingTimeInterval(session.checkInInterval)
-        }
+        session.nextCheckInAt = session.resumedCheckIn(now: .now)
         currentSession = session
         services.risk.reset()
         services.risk.configure(mode: session.mode, sensitivity: settings.sensitivity)
@@ -561,7 +714,11 @@ final class AppModel {
         if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
         startDrinkChecks(session)
         if !services.liveActivity.isActive { await services.liveActivity.start(session: session) }
-        if let id = session.serverSessionID { services.heartbeat.start(serverSessionID: id, interval: 60) }
+        if let id = session.serverSessionID {
+            services.heartbeat.start(serverSessionID: id, interval: 60)
+        } else {
+            retrySessionLink(session.id, immediately: true)
+        }
     }
 
     /// Starts a guard session in the scenario's mode and plays the scripted signals through the
@@ -586,7 +743,13 @@ final class AppModel {
         }
         if let escalation = services.escalation as? EscalationController {
             escalation.serverSessionIDProvider = { [weak self] in self?.currentSession?.serverSessionID }
+            escalation.onCancelUnconfirmed = { [weak self] in self?.markedSafe?.couldntConfirm = true }
+            escalation.onDeviceNotRecognized = { [weak self] in
+                guard let self, self.registrationRetry == nil else { return }
+                Task { await self.syncRegistration() }
+            }
         }
+        services.escalation.updatePolicies(settings.dispatchPolicies)
         if let risk = services.risk as? RiskEngine {
             risk.isSecondOpinionEnabled = { [weak self] in self?.settings.useSecondOpinion ?? false }
         }
@@ -607,7 +770,10 @@ final class AppModel {
                 if on {
                     self?.services.location.startAlertTracking()
                 } else if self?.currentSession == nil {
+                    // The hidden alert has run its course, and nothing else is using these.
                     self?.services.location.stopAlertTracking()
+                    self?.services.location.stop()
+                    self?.services.audio.stop()
                 }
             }
         }

@@ -27,7 +27,7 @@ struct SectionHeader<Trailing: View>: View {
 
 #Preview {
     VStack(spacing: 24) {
-        SectionHeader("Trusted contacts", subtitle: "They get a call and a live link.") { Button("Edit") {} }
+        SectionHeader("Trusted contacts", subtitle: "Your first contact gets a call. Everyone gets a live link.") { Button("Edit") {} }
         SectionHeader("Modes")
     }
     .padding()

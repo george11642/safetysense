@@ -17,6 +17,11 @@ struct EscalationTiming: Sendable, Equatable {
     var duressTrackingDuration: TimeInterval = 30 * 60
     /// Backend retries for alert creation / dispatch (delays in seconds).
     var retryDelays: [TimeInterval] = [1, 3, 6]
+    /// After those fail, how often work waiting for the server tries again. Network return and
+    /// the next launch also trigger it.
+    var serverRetryInterval: TimeInterval = 30
+    /// A drill's TEST alert closes this soon after, well inside the server's 90 s countdown.
+    var drillCloseDelay: TimeInterval = 20
 
     static let standard = EscalationTiming()
     /// No retry waits: for tests.
@@ -140,6 +145,8 @@ final class EvidenceHandoff: EvidenceHandling {
     }
 
     func commit(alertID: UUID, serverAlertID: String?, mode: GuardMode) async {
+        // The id arrived after capture started: `alert/create` was offline at first.
+        if let serverAlertID { vault.setServerAlertID(serverAlertID, for: alertID) }
         guard capturingAlertID == nil else { return }
         capturingAlertID = alertID
         let prebuffer = prebuffers.removeValue(forKey: alertID)

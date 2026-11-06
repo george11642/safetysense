@@ -363,7 +363,7 @@ struct ProfileSettingsView: View {
                         .navigationBarTitleDisplayMode(.inline)
                 }
             } footer: {
-                Text("Photo, description and medical notes, shared with dispatch only during an alert.")
+                Text("Photo, description and medical notes stay on this iPhone. SafetySense doesn't send them to dispatch yet.")
             }
             .listRowBackground(SSColor.surface)
         }

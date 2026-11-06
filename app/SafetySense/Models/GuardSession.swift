@@ -65,6 +65,54 @@ struct GuardSession: Codable, Sendable, Equatable, Identifiable {
 
     /// `sealed_details` string for `session/start`.
     var sealedDetailsString: String? {
-        sealedDate?.sealedSummary ?? ride?.sealedSummary
+        sealedDate?.sealedSummary ?? ride?.sealedSummary ?? walkSummary
+    }
+
+    /// A Walk Home's route for the live link: where to and by when. Nil with nothing to share.
+    var walkSummary: String? {
+        guard mode == .walk else { return nil }
+        var lines: [String] = []
+        if let destinationName, !destinationName.isEmpty { lines.append("Walking to: \(destinationName)") }
+        if let nextCheckInAt { lines.append("Expected by: \(nextCheckInAt.formatted(date: .omitted, time: .shortened))") }
+        if let followerName, !followerName.isEmpty { lines.append("Following along: \(followerName)") }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    /// When the check-in was missed while the app wasn't running, the next one to arm. An arrival
+    /// check that passed unanswered still needs an answer, so it comes up shortly, not an interval
+    /// from now. Repeating check-ins just pick the rhythm back up.
+    func resumedCheckIn(now: Date, arrivalGrace: TimeInterval = 60) -> Date? {
+        guard checkInInterval > 0 else { return nextCheckInAt }
+        if let next = nextCheckInAt, next > now { return next }
+        return now.addingTimeInterval(usesArrivalCheck ? arrivalGrace : checkInInterval)
+    }
+
+    /// The fields that identify someone or where they're going. `SettingsStore` keeps these in the
+    /// Keychain, never in the defaults plist.
+    struct SensitiveDetails: Codable, Sendable, Equatable {
+        var sealedDate: SealedDateDetails?
+        var ride: RideDetails?
+        var destinationName: String?
+        var destinationLatitude: Double?
+        var destinationLongitude: Double?
+        var followerName: String?
+
+        var isEmpty: Bool { self == SensitiveDetails() }
+    }
+
+    var sensitiveDetails: SensitiveDetails {
+        get {
+            SensitiveDetails(sealedDate: sealedDate, ride: ride, destinationName: destinationName,
+                             destinationLatitude: destinationLatitude, destinationLongitude: destinationLongitude,
+                             followerName: followerName)
+        }
+        set {
+            sealedDate = newValue.sealedDate
+            ride = newValue.ride
+            destinationName = newValue.destinationName
+            destinationLatitude = newValue.destinationLatitude
+            destinationLongitude = newValue.destinationLongitude
+            followerName = newValue.followerName
+        }
     }
 }

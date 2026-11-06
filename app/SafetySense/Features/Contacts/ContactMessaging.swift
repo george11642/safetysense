@@ -25,7 +25,7 @@ enum ContactMessage {
         let me = profile.map(\.firstName).flatMap { $0.isEmpty ? nil : $0 } ?? "your friend"
         return """
         TEST from SafetySense – nothing is wrong. This is a practice message from \(me). \
-        If \(me) ever needs help, a real alert comes as a call and a text with a live location link. \
+        If \(me) ever needs help, a real alert comes as a text with a live location link, and sometimes a call. \
         No need to do anything now.
         """
     }

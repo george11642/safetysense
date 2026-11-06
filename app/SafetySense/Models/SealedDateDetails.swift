@@ -35,6 +35,7 @@ struct SealedDateDetails: Codable, Sendable, Equatable {
         if let profileLink, !profileLink.isEmpty { lines.append("Profile: \(profileLink)") }
         let place = [venueName, venueAddress ?? ""].filter { !$0.isEmpty }.joined(separator: ", ")
         if !place.isEmpty { lines.append("Place: \(place)") }
+        if let expectedEnd { lines.append("Expected to end: \(expectedEnd.formatted(date: .omitted, time: .shortened))") }
         if let notes, !notes.isEmpty { lines.append("Notes: \(notes)") }
         return lines.joined(separator: "\n")
     }

@@ -10,6 +10,8 @@ final class SettingsStore {
     private let shared: SharedStore
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    /// This updates on every check-in, so the Keychain is only touched when the details change.
+    private var savedSessionDetails: GuardSession.SensitiveDetails?
 
     init(defaults: UserDefaults = AppGroup.defaults, secrets: SecretStore = KeychainSecretStore(),
          shared: SharedStore = .shared) {
@@ -61,9 +63,39 @@ final class SettingsStore {
         set { defaults.set(newValue, forKey: AppGroup.Keys.onboardingComplete) }
     }
 
+    /// The session, split in two: its bookkeeping in defaults, and everything that identifies
+    /// someone or where they're going (`GuardSession.SensitiveDetails`) in the Keychain.
     var currentSession: GuardSession? {
-        get { load(GuardSession.self, key: AppGroup.Keys.currentSession) }
-        set { save(newValue, key: AppGroup.Keys.currentSession) }
+        get {
+            guard var session = load(GuardSession.self, key: AppGroup.Keys.currentSession) else { return nil }
+            if !session.sensitiveDetails.isEmpty {
+                saveSession(session)   // From a build that kept these in the plist: move them now.
+            } else if let data = secrets.data(for: AppGroup.KeychainAccounts.sessionDetails),
+                      let details = try? decoder.decode(GuardSession.SensitiveDetails.self, from: data) {
+                session.sensitiveDetails = details
+            }
+            return session
+        }
+        set {
+            guard let newValue else {
+                save(GuardSession?.none, key: AppGroup.Keys.currentSession)
+                secrets.set(nil, for: AppGroup.KeychainAccounts.sessionDetails)
+                savedSessionDetails = nil
+                return
+            }
+            saveSession(newValue)
+        }
+    }
+
+    private func saveSession(_ session: GuardSession) {
+        var session = session
+        let details = session.sensitiveDetails
+        if details != savedSessionDetails {
+            secrets.set(details.isEmpty ? nil : try? encoder.encode(details), for: AppGroup.KeychainAccounts.sessionDetails)
+            savedSessionDetails = details
+        }
+        session.sensitiveDetails = GuardSession.SensitiveDetails()
+        save(session, key: AppGroup.Keys.currentSession)
     }
 
     var currentAlert: AlertRecord? {
@@ -107,15 +139,24 @@ final class SettingsStore {
         }
     }
 
+    /// Credentials kept only to finish `account/delete` once the network is back.
+    var pendingAccountDeletion: DeviceCredentials? {
+        get {
+            secrets.data(for: AppGroup.KeychainAccounts.pendingAccountDeletion)
+                .flatMap { try? decoder.decode(DeviceCredentials.self, from: $0) }
+        }
+        set {
+            secrets.set(newValue.flatMap { try? encoder.encode($0) },
+                        for: AppGroup.KeychainAccounts.pendingAccountDeletion)
+        }
+    }
+
     /// "Delete everything" (SPEC 11): wipes local state and secrets.
     func eraseAll() {
         AppGroup.Keys.appLocal.forEach { defaults.removeObject(forKey: $0) }
         shared.eraseAll()
-        for account in [AppGroup.KeychainAccounts.safetyPINHash, AppGroup.KeychainAccounts.duressPINHash,
-                        AppGroup.KeychainAccounts.safeWord, AppGroup.KeychainAccounts.deviceCredentials,
-                        AppGroup.KeychainAccounts.evidenceKey] {
-            secrets.set(nil, for: account)
-        }
+        for account in AppGroup.KeychainAccounts.erasable { secrets.set(nil, for: account) }
+        savedSessionDetails = nil
     }
 
     nonisolated static func hash(_ pin: String) -> Data {

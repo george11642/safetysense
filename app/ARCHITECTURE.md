@@ -91,6 +91,23 @@ An intent or a BGTask can launch the app with no scene, so `AppModel.onLaunch()`
 
 Alert intents run in the app's process with no unlock. "I'm okay" asks for authentication on every surface (Live Activity, notification, Siri), so someone else holding the phone can't answer for you. "Need help" is never gated. Deep links only navigate, because any app can open one.
 
+### Reaching the server
+
+Nothing that matters may be lost to a dead zone or a killed process.
+
+- **`alert/create`:** `EscalationController` owns it, because the answer drives the screen. Each alert goes in `PendingAlertStore` (Keychain, since an entry can be a hidden duress alert) and retries every `serverRetryInterval`, on network return and at launch, for two hours. `clientAlertId` is the local alert id, so the server can return the same alert instead of calling everyone again. A valid cancel just drops an alert that can't have landed, and is delivered to one that may have.
+- **`alert/cancel`, `session/end`:** `HTTPBackendClient` queues them in `BackendOutbox` (48 h) and retries on a timer, on network return and from the BG refresh. A lost one would let the watchdog act on something the person already closed. Until a cancel lands, Marked safe says contacts may not know.
+- **`session/start`:** `AppModel.retrySessionLink` until it lands or the session ends. An answer that arrives after the end is closed on the server.
+- **`register` / `contacts/set`:** `AppModel.syncRegistration` retries with backoff and re-registers on a 401. A nameless profile registers as `Profile.unnamed`, and a phone the server refuses is dropped rather than blocking registration. Home asks for a missing phone.
+- **Relaunch:** `onLaunch` adopts the persisted alert, restores pending ones, then polls `alert/status`. An adopted countdown keeps its real deadline (at least 3 s, so the poll can reconcile first).
+- **Watchdog alerts:** `session/heartbeat` returns the session's live alert, never a duress one, and `adoptServerAlert` puts it on screen. `closedServerAlertIDs` stops a closed alert or drill coming back.
+- **Evidence:** `uploadPending` drains until nothing can go, and retries on a backing-off timer, at launch, on network return and from the BG refresh. The key is on this iPhone only, so a server copy proves what was recorded but can't be played without it. The Vault says so.
+- **Staying alive:** `LocationGuard` runs coarse classic updates with pausing off for the whole session. Live updates pause when you stand still, and with no mic the heartbeat would then stop.
+- **Secrets at rest:** `SettingsStore` keeps `GuardSession.SensitiveDetails` in the Keychain and the rest of the session in defaults. `FreshInstall` clears Keychain leftovers on a reinstall. An erase that can't reach the server keeps its credentials only to finish `account/delete`.
+- **`BGTaskScheduler.submit` raises an uncatchable exception for an unregistered identifier,** so `scheduleAppRefresh` does nothing unless the live flavor registered it.
+
+Contacts see `AlertRecord.contactReason` (`AlertReasonText`, e.g. `Missed check-in during Night Out`), and the person sees `reason`. SMS and the voice call read it aloud, so keep it plain. The first contact gets a call and everyone gets a text. The contact list order is the call order, primary first.
+
 ### Saying what's really happening
 
 **`AlertDelivery`** (`model.alertDelivery`) says whether an alert from this build reaches anyone: `.real`, `.test` (live server, `dry_run`, always in Release) or `.demo` (mocks). Any words that promise help come from it: the countdown, Alert active, VoiceOver, the Live Activity (`GuardActivityAttributes.testNote`) and `StartAlertIntent`'s dialog. `.testModeBanner()` pins the banner on Home, Guard, the countdown and Alert active. Don't hard-code "help is on the way" anywhere else.
@@ -146,6 +163,7 @@ Swift DTOs use camelCase. Always encode and decode with `BackendCoding.makeEncod
 | Route | Request DTO | Response DTO |
 |---|---|---|
 | `register` | `RegisterRequest` | `RegisterResponse` (= `DeviceCredentials`) |
+| `profile/update` | `ProfileUpdateRequest` | `OKResponse` (404 until the function is redeployed, and ignored) |
 | `contacts/set` | `ContactsSetRequest` | `OKResponse` |
 | `session/start` | `SessionStartRequest` | `SessionStartResponse` |
 | `session/heartbeat` | `HeartbeatRequest` | `HeartbeatResponse` |

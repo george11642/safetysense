@@ -38,6 +38,10 @@ struct GuardActiveView: View {
                 FakeCallEntryRow { showFakeCall = true }
                 if model.services.flavor == .demo { demoControls }
                 actions
+                Text("Leave SafetySense running. Closing it from the app switcher stops check-ins, and your contacts are alerted a few minutes later.")
+                    .font(SSFont.caption)
+                    .foregroundStyle(SSColor.inkMuted)
+                    .multilineTextAlignment(.center)
             }
             .padding(.top, SSSpacing.sm)
             .padding(.bottom, SSSpacing.xl)
@@ -277,7 +281,7 @@ struct GuardActiveView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("If you need help").font(SSFont.headline)
-                    Text("\(NameList.join(model.contacts.map(\.firstName))) \(model.contacts.count == 1 ? "gets" : "get") a call and your live location.")
+                    Text(AlertPresentation.whoHears(model.contacts))
                         .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }

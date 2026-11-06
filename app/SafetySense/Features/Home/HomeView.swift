@@ -84,10 +84,14 @@ struct HomeView: View {
     @ViewBuilder
     private var notices: some View {
         let issues = model.permissions.issues(listening: model.listens(in: mode))
-        if model.banner != nil || !issues.isEmpty || !readiness.hasSafetyPIN {
+        if model.banner != nil || !issues.isEmpty || !readiness.hasSafetyPIN || model.isMissingPhone {
             VStack(spacing: SSSpacing.xs) {
                 if let banner = model.banner { NoticeCard(text: banner, systemImage: "wifi.exclamationmark") }
                 PermissionNotices(issues: issues)
+                if model.isMissingPhone {
+                    NoticeCard(text: "Add your phone number so a dispatcher can call you back.", systemImage: "phone",
+                               actionTitle: "Add") { model.selectedTab = .settings }
+                }
                 if !readiness.hasSafetyPIN {
                     NoticeCard(text: "Set a safety PIN so you can cancel an alert quickly.", systemImage: "lock.open",
                                actionTitle: "Set") { model.selectedTab = .settings }
@@ -176,7 +180,7 @@ struct HomeView: View {
 
     private var contactsCard: some View {
         VStack(alignment: .leading, spacing: SSSpacing.sm) {
-            SectionHeader("Trusted contacts", subtitle: "They get a call and a live link if you need help.") {
+            SectionHeader("Trusted contacts", subtitle: "Your first contact gets a call. Everyone gets a live link if you need help.") {
                 Button("Edit") { model.selectedTab = .contacts }
                     .frame(minWidth: 44, minHeight: 44)
             }

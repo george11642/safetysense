@@ -107,9 +107,10 @@ enum DirectAlertSender {
         let level = policies.startingLevel(for: trigger, in: mode)
 
         let response = try await backend.createAlert(AlertCreateRequest(
-            sessionId: session?.serverSessionID, level: level.rawValue, reason: command.alertReason,
+            sessionId: session?.serverSessionID, level: level.rawValue,
+            reason: AlertReasonText.contact(command.alertReason, mode: mode),
             trigger: trigger.rawValue, battery: DeviceBatteryStatus().batteryLevel,
-            dryRun: nil, dispatchPolicy: policy.rawValue))
+            dryRun: nil, dispatchPolicy: policy.rawValue, clientAlertId: command.id.uuidString.lowercased()))
 
         var external = ExternalAlertRecord(serverAlertID: response.alertId, shareURL: response.shareUrl,
                                            level: level.rawValue, trigger: trigger.rawValue,
