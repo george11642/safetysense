@@ -59,7 +59,7 @@ print(base64.b64encode(hmac.new(os.environ["TWILIO_AUTH_TOKEN"].encode(), data.e
 alert_for() { # state-dir -> creates a dry-run alert with one contact; writes alert + token
   post contacts/set "$(jq -n '{contacts:[{name:"Test Contact", phone: env.SAFETYSENSE_GEORGE_PHONE}]}')" "$1" > /dev/null
   local A; A=$(post alert/create '{"level":2,"reason":"Privacy test","trigger":"manual_sos","lat":35.0844,"lng":-106.6198,"accuracy":10,"battery":0.5,"dry_run":true,"dispatch_policy":"contacts_first"}' "$1")
-  echo "$A" | jq -r .alert_id > "$1/alert"; basename "$(echo "$A" | jq -r .share_url)" > "$1/token"
+  echo "$A" | jq -r .alert_id > "$1/alert"; basename "$(echo "$A" | jq -r .share_url)" | sed -E 's/^(.{32})-p$/\1/' > "$1/token"
 }
 
 if [ "$MODE" = all ]; then
@@ -147,7 +147,7 @@ elif [ "$MODE" = deferred ]; then
   post contacts/set '{"contacts":[]}' "$S" > /dev/null
   # Live (not dry-run) but with no contacts and contacts_first: nobody is called or texted, nothing is dispatched.
   A=$(post alert/create '{"level":2,"reason":"Deferred delete test","trigger":"manual_sos","dispatch_policy":"contacts_first"}' "$S")
-  AID=$(echo "$A" | jq -r .alert_id); TOKEN=$(basename "$(echo "$A" | jq -r .share_url)")
+  AID=$(echo "$A" | jq -r .alert_id); TOKEN=$(basename "$(echo "$A" | jq -r .share_url)" | sed -E 's/^(.{32})-p$/\1/')
   expect "nobody notified" "$(echo "$A" | jq -c .notified)" '^\[\]$'
   D=$(post account/delete '{}' "$S"); echo "  $D"
   expect "same response shape" "$D" '"ok":true,"deleted":\{"contacts":0,"sessions":0,"alerts":1'

@@ -151,6 +151,18 @@ async function shareUrl(token: string): Promise<string> {
   return (await flag<string>("share_base", "https://safetysense-live.vercel.app/a/")) + token;
 }
 
+// The same link with a marker, for the phone only. Contacts are sent the plain link. Anything the
+// phone shares can stay on it (Messages, the clipboard, a browser tab), and whoever holds the phone
+// can open it, so once duress is set this link reads like a normal cancel. See "share/get".
+const PHONE_LINK_MARK = "-p";
+const SHARE_TOKEN_CHARS = 32;
+function isPhoneLink(token: unknown): token is string {
+  return typeof token === "string" && token.length === SHARE_TOKEN_CHARS + PHONE_LINK_MARK.length && token.endsWith(PHONE_LINK_MARK);
+}
+async function phoneShareUrl(token: string): Promise<string> {
+  return shareUrl(token + PHONE_LINK_MARK);
+}
+
 // ------------------------------------------------------------------ sealed details (AES-256-GCM)
 async function sealedKey(): Promise<CryptoKey> {
   const raw = await secret("sealed_key");
@@ -749,7 +761,7 @@ const routes: Record<string, Handler> = {
     // Tells a phone that was out of reach about an alert the watchdog raised, so the person can
     // see it and stop it. A duress alert is never mentioned: the phone may be in someone's hands.
     const alert = live && !live.duress ? {
-      id: live.id, level: live.level, share_url: await shareUrl(live.share_token), trigger: live.trigger,
+      id: live.id, level: live.level, share_url: await phoneShareUrl(live.share_token), trigger: live.trigger,
       reason: live.reason, started_at: live.created_at, status: live.status, dispatch_policy: live.dispatch_policy,
     } : undefined;
     return json({ ok: true, server_time: new Date().toISOString(), ...(alert ? { alert } : {}) });
@@ -784,7 +796,7 @@ const routes: Record<string, Handler> = {
       // installed never follow it with a duress cancel, and this also closes the gap for those that do.
       duress: /^Duress PIN entered/.test(reason),
     });
-    return json({ alert_id: alert.id, share_url: await shareUrl(alert.share_token), notified });
+    return json({ alert_id: alert.id, share_url: await phoneShareUrl(alert.share_token), notified });
   },
 
   async "alert/escalate"({ req, body }) {
@@ -878,12 +890,23 @@ const routes: Record<string, Handler> = {
   async "share/get"({ body }) {
     const alert = await alertByToken(body.token);
     const device = must(await db.from("devices").select("name").eq("id", alert.device_id).single()) as { name: string };
-    // A duress alert is never over for contacts, whatever the phone was told.
-    const ended = !alert.duress && (alert.status === "cancelled" || alert.status === "resolved");
+    // A duress alert is never over for contacts, whatever the phone was told. The phone's own link
+    // agrees with the phone: anyone who shows it to whoever is holding it sees a normal cancel.
+    const coverStory = alert.duress && isPhoneLink(body.token);
+    const shownDuress = alert.duress && !coverStory;
+    const ended = coverStory || (!alert.duress && (alert.status === "cancelled" || alert.status === "resolved"));
     const live = !ended;
     const loc = live ? await latestLocation(alert) : null;
-    const events = must(await db.from("events").select(EVENT_COLS).eq("alert_id", alert.id)
+    let events = must(await db.from("events").select(EVENT_COLS).eq("alert_id", alert.id)
       .eq("internal", false).order("created_at", { ascending: false }).limit(40)) as EventRow[];
+    if (coverStory) {
+      // Same row a real cancel writes, and nothing from after it.
+      const at = (await duressAt(alert.id)) ?? alert.created_at;
+      events = [
+        { who: firstName(device.name), action: "marked_safe", detail: "Cancelled with their Safety PIN", created_at: at, delivery_status: null, error_code: null },
+        ...events.filter((e) => e.created_at < at),
+      ];
+    }
     let sealed: string | null = null, mode: string | null = null;
     if (alert.session_id) {
       const s = must(await db.from("sessions").select("mode,sealed_details").eq("id", alert.session_id).maybeSingle()) as
@@ -893,15 +916,15 @@ const routes: Record<string, Handler> = {
     }
     return json({
       first_name: firstName(device.name),
-      status: alert.duress ? (alert.dispatch_provider ? "dispatched" : "active") : alert.status,
+      status: coverStory ? "cancelled" : alert.duress ? (alert.dispatch_provider ? "dispatched" : "active") : alert.status,
       level: alert.level,
       reason: alert.reason,
       started_at: alert.created_at,
       dry_run: alert.dry_run,
-      duress: alert.duress,
-      duress_at: alert.duress ? await duressAt(alert.id) : null,
+      duress: shownDuress,
+      duress_at: shownDuress ? await duressAt(alert.id) : null,
       mode,
-      dispatch: alert.dispatch_provider ? { provider: alert.dispatch_provider, status: alert.dispatch_status } : null,
+      dispatch: alert.dispatch_provider && !coverStory ? { provider: alert.dispatch_provider, status: alert.dispatch_status } : null,
       location: loc ? { lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy, at: loc.created_at } : null,
       battery: loc?.battery ?? null,
       events: events.map((e) => eventOut(e)),
@@ -911,7 +934,9 @@ const routes: Record<string, Handler> = {
 
   async "share/action"({ body }) {
     const alert = await alertByToken(body.token);
-    if (alert.status === "cancelled" || alert.status === "resolved") throw new HttpError(409, "this alert has ended");
+    if (alert.status === "cancelled" || alert.status === "resolved" || (alert.duress && isPhoneLink(body.token))) {
+      throw new HttpError(409, "this alert has ended");
+    }
     const action = str(body.action, "action", 20)!;
     const name = (str(body.responder_name, "responder_name", 40, false) ?? "A contact").replace(/[<>]/g, "");
     if (action === "on_my_way") await addEvent(alert.id, name, "on_my_way", `${name} is on the way`);
@@ -1239,7 +1264,8 @@ async function requireSetupKey(req: Request) {
 
 async function alertByToken(token: unknown): Promise<Alert> {
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{24,64}$/.test(token)) throw new HttpError(404, "link not found");
-  const a = must(await db.from("alerts").select("*").eq("share_token", token).maybeSingle()) as Alert | null;
+  const plain = isPhoneLink(token) ? token.slice(0, SHARE_TOKEN_CHARS) : token;
+  const a = must(await db.from("alerts").select("*").eq("share_token", plain).maybeSingle()) as Alert | null;
   if (!a) throw new HttpError(404, "link not found");
   const age = (Date.now() - Date.parse(a.created_at)) / 1000;
   const endedAge = a.cancelled_at ? (Date.now() - Date.parse(a.cancelled_at)) / 1000 : 0;
@@ -1288,12 +1314,12 @@ async function relayRoute(req: Request, route: string, onError: () => Response,
   }
 }
 
-async function relayCaller(from: string): Promise<"contact" | "device" | "other"> {
+// Looked up by POST RPC, never a filter: a PostgREST filter puts the number in a GET URL, and the
+// gateway logs keep URLs. The RPC checks devices first, since a phone that is also on some contact
+// list must never be sent contact wording.
+export async function relayCaller(from: string): Promise<"contact" | "device" | "other"> {
   if (!from) return "other";
-  // Device first: a phone that is also on some contact list must never be sent contact wording.
-  if ((must(await db.from("devices").select("id").eq("phone", from).limit(1)) as unknown[]).length) return "device";
-  if ((must(await db.from("contacts").select("id").eq("phone", from).limit(1)) as unknown[]).length) return "contact";
-  return "other";
+  return must(await db.rpc("ss_relay_caller_kind", { p_phone: from })) as "contact" | "device" | "other";
 }
 
 // Every alarm shares one relay number, so a call can't say which alarm it's about. These are the
@@ -1319,11 +1345,9 @@ async function relayBlockers(candidates: Alert[]): Promise<Alert[]> {
 
 // Every device on the same phone number. A phone is one person: she can be forced to delete the
 // account and sign up again, and that new device still rings the phone in the same room.
-async function samePhoneDevices(deviceId: string): Promise<string[]> {
-  const d = must(await db.from("devices").select("phone").eq("id", deviceId).maybeSingle()) as { phone: string | null } | null;
-  if (!d?.phone) return [deviceId];
-  const same = must(await db.from("devices").select("id").eq("phone", d.phone)) as { id: string }[];
-  return [...new Set([deviceId, ...same.map((x) => x.id)])];
+export async function samePhoneDevices(deviceId: string): Promise<string[]> {
+  const same = must(await db.rpc("ss_same_phone_devices", { p_device: deviceId })) as string[];
+  return [...new Set([deviceId, ...same])];
 }
 
 // True if this alert, or any recent real alert on the same phone number, is under duress. An unknown alert counts.

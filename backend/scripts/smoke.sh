@@ -39,7 +39,7 @@ step "alert/create (level 2, dry run)"
 A=$(post alert/create "$(jq -n --arg s "$(cat "$STATE/session")" '{session_id:$s, level:2, reason:"Possible scream detected", trigger:"risk_engine", lat:35.0846, lng:-106.6201, accuracy:10, battery:0.63, dry_run:true, dispatch_policy:"contacts_first"}')" dev)
 echo "$A" | redact
 echo "$A" | jq -r .alert_id > "$STATE/alert"; echo "$A" | jq -r .share_url > "$STATE/share_url"
-TOKEN=$(basename "$(cat "$STATE/share_url")"); echo "$TOKEN" > "$STATE/token"
+TOKEN=$(basename "$(cat "$STATE/share_url")" | sed -E 's/^(.{32})-p$/\1/'); echo "$TOKEN" > "$STATE/token"
 
 step "alert/location"
 post alert/location "$(jq -n --arg a "$(cat "$STATE/alert")" '{alert_id:$a, lat:35.0850, lng:-106.6210, accuracy:8, battery:0.62}')" dev; echo

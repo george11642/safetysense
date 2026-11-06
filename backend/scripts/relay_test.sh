@@ -35,6 +35,8 @@ CONTACT=+15055550177
 STATE=${RELAY_STATE:-$(mktemp -d)}   # set RELAY_STATE to carry the scope-setup devices into scope-check
 
 pass=0; fail=0
+# share_url is the phone's link; contacts get it without the -p mark.
+contact_token() { basename "$(echo "$1" | jq -r .share_url)" | sed -E 's/^(.{32})-p$/\1/'; }
 ok()   { pass=$((pass+1)); printf '  PASS %s\n' "$1"; }
 bad()  { fail=$((fail+1)); printf '  FAIL %s (got: %s)\n' "$1" "$(printf %s "$2" | sed -E 's/\+1[0-9]{10}/<phone>/g' | head -c 400)"; }
 has()  { if printf %s "$2" | grep -Eq -- "$3"; then ok "$1"; else bad "$1" "$2"; fi; }
@@ -73,7 +75,7 @@ new_device() {
 }
 alert() { # level reason -> alert id; share token in $STATE/token. Live, not a dry run: there are no contacts to reach.
   local R; R=$(post alert/create "$(jq -n --argjson l "$1" --arg r "$2" --arg s "${SESSION_ID:-}" '{level:$l, reason:$r, trigger:"manual_sos", lat:35.0846, lng:-106.6201, accuracy:10.6, battery:0.6, dispatch_policy:"contacts_first"} + (if $s == "" then {} else {session_id:$s} end)')" dev)
-  basename "$(echo "$R" | jq -r .share_url)" > "$STATE/token"
+  contact_token "$R" > "$STATE/token"
   echo "$R" | jq -r .alert_id
 }
 cancel() { post alert/cancel "$(jq -n --arg a "$1" --argjson d "${2:-false}" '{alert_id:$a, duress:$d}')" dev; }
@@ -226,6 +228,10 @@ after)
   S=$(share); has "contacts still see it live" "$(echo "$S" | jq -r .status)" '^dispatched$'
   has "share/get says duress" "$(echo "$S" | jq -r .duress)" '^true$'
   has "share/get gives the time" "$(echo "$S" | jq -r .duress_at)" '^20'
+  S=$(post share/get "{\"token\":\"$(cat "$STATE/token")-p\"}")
+  has "the phone's link reads as cancelled" "$(echo "$S" | jq -r .status)" '^cancelled$'
+  has "the phone's link shows no duress" "$(echo "$S" | jq -c '[.duress,.duress_at,.dispatch,.location]')" '^\[false,null,null,null\]$'
+  hasnt "the phone's link shows nothing from after the PIN" "$(echo "$S" | jq -c .events)" 'escalated|Do not call'
   r=$(call "$DISPATCHER"); has "relay is still blocked" "$r" "$DURESS_WORDS"
 
   step "what the phone can see"
@@ -267,7 +273,7 @@ born)
   step "duress PIN with no alert running: reason alone marks it"
   CID=$(python3 -I -c 'import uuid; print(uuid.uuid4())')
   R=$(post alert/create "$(jq -n --arg c "$CID" '{level:2, reason:"Duress PIN entered", trigger:"manual_sos", lat:35.08, lng:-106.62, accuracy:9.4, client_alert_id:$c, dispatch_policy:"contacts_first"}')" dev)
-  basename "$(echo "$R" | jq -r .share_url)" > "$STATE/token"
+  contact_token "$R" > "$STATE/token"
   A=$(echo "$R" | jq -r .alert_id); has "client id honoured" "$A" "^$CID$"; sleep 1
   S=$(share)
   has "marked duress at creation" "$(echo "$S" | jq -r .duress)" '^true$'
@@ -297,7 +303,7 @@ selfcontact)
 
   step "profile/update can make a saved contact her own number later"
   post profile/update "$(jq -n --arg p "$FIRST" '{name:"Relay Test", phone:$p, campus:"UNM"}')" dev >/dev/null
-  R=$(dry); AL=$(echo "$R" | jq -r .alert_id); basename "$(echo "$R" | jq -r .share_url)" > "$STATE/token"
+  R=$(dry); AL=$(echo "$R" | jq -r .alert_id); contact_token "$R" > "$STATE/token"
   has "first run skips her" "$(echo "$R" | jq -r '[.notified[].name]|unique|join(",")')" '^Second Contact$'
   has "the next contact gets the sms and the call" "$(echo "$R" | jq -r '[.notified[].channel]|join(",")')" '^sms,call$'
   r=$(call "$FIRST"); has "her phone calling hears neutral words, not contact words" "$r" "$NEUTRAL_WORDS"
