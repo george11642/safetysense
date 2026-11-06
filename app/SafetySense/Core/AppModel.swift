@@ -83,6 +83,10 @@ final class AppModel {
     @ObservationIgnored private var commandObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var didLaunch = false
     @ObservationIgnored private var lastLevel: EscalationLevel = .guarding
+    /// Status notifications only go out when the app isn't on screen to show the same thing.
+    @ObservationIgnored var isAppActive: @MainActor () -> Bool = { UIApplication.shared.applicationState == .active }
+    @ObservationIgnored private var toldServerProblem = false
+    @ObservationIgnored private var toldConnectionAlertID: UUID?
     @ObservationIgnored private var responseAlertID: UUID?
     @ObservationIgnored private var seenResponses: Set<String> = []
     @ObservationIgnored private var launchFinished = false
@@ -111,6 +115,8 @@ final class AppModel {
 
     var escalationLevel: EscalationLevel { services.escalation.level }
     var isGuarding: Bool { currentSession != nil }
+    /// Whether an alert from this build reaches anyone. See `AlertDelivery`.
+    var alertDelivery: AlertDelivery { .current(flavor: services.flavor) }
 
     var overlay: GuardOverlay {
         switch services.escalation.level {
@@ -179,7 +185,8 @@ final class AppModel {
     func startGuard(mode: GuardMode, sealedDate: SealedDateDetails? = nil, ride: RideDetails? = nil,
                     destination: GuardDestination? = nil, arrivalCheckAfter: TimeInterval? = nil,
                     follower: TrustedContact? = nil, sendHeadsUp: Bool = false) async {
-        var session = GuardSession(mode: mode, checkInInterval: arrivalCheckAfter ?? settings.checkInInterval(for: mode),
+        var session = GuardSession(mode: mode,
+                                   checkInInterval: arrivalCheckAfter ?? mode.defaultArrivalCheck ?? settings.checkInInterval(for: mode),
                                    listening: mode == .walk ? settings.listenDuringWalk : nil,
                                    sealedDate: sealedDate, ride: ride)
         session.destinationName = destination?.name
@@ -190,6 +197,7 @@ final class AppModel {
         hasArrived = false
         markedSafe = nil
         toast = nil
+        toldServerProblem = false
         wantsHeadsUp = sendHeadsUp && follower != nil
         if GuardMode.guardModes.contains(mode) { homeMode = mode }
         currentSession = session
@@ -204,11 +212,12 @@ final class AppModel {
         if mode.usesMotion { try? services.motion.start(mode: mode) }
         try? services.location.start(mode: mode, destination: session.destinationFix)
         if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
+        startDrinkChecks(session)
         await services.liveActivity.start(session: session)
 
         do {
             let response = try await services.backend.startSession(SessionStartRequest(
-                mode: mode.rawValue, checkInIntervalS: Int(session.checkInInterval),
+                mode: mode.rawValue, checkInIntervalS: session.serverCheckInInterval,
                 graceS: Int(session.graceSeconds), sealedDetails: session.sealedDetailsString))
             session.serverSessionID = response.sessionId
             guard currentSession?.id == session.id else { return }
@@ -237,7 +246,8 @@ final class AppModel {
         let notifications = await services.notifications.authorizationState()
         let current = GuardPermissions(microphone: services.audio.microphonePermission,
                                        location: services.location.authorization,
-                                       notifications: notifications)
+                                       notifications: notifications,
+                                       timeSensitive: NotificationUrgency.isSupported)
         if current != permissions { permissions = current }
     }
 
@@ -277,8 +287,13 @@ final class AppModel {
         services.motion.stop()
         services.heartbeat.stop()
         services.notifications.cancelCheckIns()
+        services.notifications.cancelDrinkChecks()
         services.escalation.end()
         return serverSessionID
+    }
+
+    private func startDrinkChecks(_ session: GuardSession) {
+        if session.mode == .nightOut, settings.drinkCheckPrompts { services.notifications.scheduleDrinkChecks() }
     }
 
     private func closeSessionRemotely(_ serverSessionID: String?) async {
@@ -354,7 +369,27 @@ final class AppModel {
         }
         let new = responses.filter { !seenResponses.contains(key($0)) }.sorted { $0.at < $1.at }
         seenResponses.formUnion(new.map(key))
-        if let latest = new.last { toast = .response(who: latest.who, action: latest.action) }
+        if let latest = new.last {
+            let response = AppToast.response(who: latest.who, action: latest.action)
+            toast = response
+            if !isAppActive() { services.notifications.notify(title: response.title, body: response.detail ?? "", timeSensitive: true) }
+        }
+    }
+
+    /// Check-ins keep working offline, so this is a heads-up, not an alarm. Once per session.
+    func heartbeatBecameFailing() {
+        guard isGuarding, !toldServerProblem, !isAppActive() else { return }
+        toldServerProblem = true
+        services.notifications.notify(title: "Can't reach SafetySense's server",
+                                      body: "Check-ins still work on this iPhone. If you need help, call 911.",
+                                      timeSensitive: true)
+    }
+
+    /// An alert that didn't reach the server can't be seen from the Lock Screen, so say so once.
+    private func noteAlertConnection(alertID: UUID?) {
+        guard let alertID, let note = alertConnectionNote, toldConnectionAlertID != alertID, !isAppActive() else { return }
+        toldConnectionAlertID = alertID
+        services.notifications.notify(title: "Your alert needs attention", body: note, timeSensitive: true)
     }
 
     func runDrill() async {
@@ -429,6 +464,7 @@ final class AppModel {
         if forcedScreen == nil { WidgetMirror.setGuardActive(currentSession != nil) }
         if let vault = services.vault as? SecureEvidenceVault { vault.purge(olderThan: settings.retentionDays) }
         await refreshPermissions()
+        if !isGuarding { services.notifications.cancelDrinkChecks() }   // A session that ended with the app gone.
         if let external = ExternalAlertRecord.load() {
             ExternalAlertRecord.clear()
             if Date.now.timeIntervalSince(external.createdAt) < 2 * 3600 {
@@ -523,6 +559,7 @@ final class AppModel {
         if session.mode.usesMotion { try? services.motion.start(mode: session.mode) }
         try? services.location.start(mode: session.mode, destination: session.destinationFix)
         if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
+        startDrinkChecks(session)
         if !services.liveActivity.isActive { await services.liveActivity.start(session: session) }
         if let id = session.serverSessionID { services.heartbeat.start(serverSessionID: id, interval: 60) }
     }
@@ -577,6 +614,7 @@ final class AppModel {
         if let notifications = services.notifications as? NotificationService {
             notifications.onOpenLink = { [weak self] link in self?.open(link) }
         }
+        (services.heartbeat as? HeartbeatScheduler)?.onBecameFailing = { [weak self] in self?.heartbeatBecameFailing() }
         services.escalation.onChange = { [weak self] level, alert in
             guard let self else { return }
             if let alert, alert.isDrill { self.lastDrill = alert; return }
@@ -593,6 +631,7 @@ final class AppModel {
             }
             self.lastLevel = level
             if let alert { self.noteResponses(alertID: alert.id, events: alert.events) }
+            self.noteAlertConnection(alertID: alert?.id)
             WidgetMirror.setEscalationLevel(level)
             self.alertStateChanged(hasAlert: alert != nil, hadAlert: hadAlert)
             self.pushLiveActivity(level: level, alert: alert)
@@ -603,6 +642,7 @@ final class AppModel {
     private func alertStateChanged(hasAlert: Bool, hadAlert: Bool) {
         if hasAlert {
             services.location.startAlertTracking()   // Safe to repeat; covers an adopted alert too.
+            services.notifications.cancelDrinkChecks()
         } else if hadAlert {
             let duress = (services.escalation as? EscalationController)?.duressAlertID != nil
             if !duress { services.location.stopAlertTracking() }
@@ -611,7 +651,9 @@ final class AppModel {
     }
 
     private func pushLiveActivity(level: EscalationLevel, alert: AlertRecord?) {
-        let ladder = (services.escalation as? EscalationController)?.statusText ?? level.statusLine
+        let delivery = alertDelivery
+        let ladder = delivery.isReal ? (services.escalation as? EscalationController)?.statusText ?? level.statusLine
+                                     : delivery.statusLine(level)
         let status = LiveStatusLine.text(level: level, alert: alert, ladderStatus: ladder, listening: listening)
         let next = services.escalation.nextCheckInAt
         let deadline = services.escalation.stepDeadline

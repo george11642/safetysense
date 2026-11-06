@@ -19,6 +19,7 @@ struct AlertCountdownView: View {
 
     private var alert: AlertRecord? { model.services.escalation.activeAlert ?? model.currentAlert }
     private var total: TimeInterval { EscalationLevel.alert.autoEscalateAfter ?? 90 }
+    private var delivery: AlertDelivery { model.alertDelivery }
     private var deadline: Date {
         model.services.escalation.stepDeadline ?? alert?.dispatchDeadline ?? fallbackDeadline
     }
@@ -41,19 +42,20 @@ struct AlertCountdownView: View {
         .scrollBounceBehavior(.basedOnSize)
         // Pinned so both are always one tap away, whatever the screen size.
         .safeAreaInset(edge: .bottom, spacing: 0) { footerBar }
+        .testModeBanner()
         .ssScreen()
         .sensoryFeedback(.warning, trigger: arrived)
         .sensoryFeedback(.error, trigger: wrongPIN)
         .sensoryFeedback(.error, trigger: authFailed)
         .onAppear { arrived += 1 }
         .task(id: alert?.id) { if let alert { await model.ensureEvidenceCapture(for: alert) } }
-        .confirmationDialog("Send professional help now?", isPresented: $confirmSendNow, titleVisibility: .visible) {
-            Button("Send help now", role: .destructive) {
+        .confirmationDialog(delivery.sendHelpConfirmTitle, isPresented: $confirmSendNow, titleVisibility: .visible) {
+            Button(delivery.sendHelpTitle, role: .destructive) {
                 model.services.escalation.contactRequestedHelp(name: "You")
             }
             Button("Keep the countdown", role: .cancel) {}
         } message: {
-            Text("The monitoring center will call you, then send police to your location.")
+            Text(delivery.sendHelpConfirmMessage)
         }
         .confirmationDialog("Cancel this alert?", isPresented: $confirmNoPINCancel, titleVisibility: .visible) {
             Button("Cancel the alert", role: .destructive) { Task { await model.cancelAlertWithoutPIN() } }
@@ -65,7 +67,7 @@ struct AlertCountdownView: View {
 
     private var footerBar: some View {
         HStack(spacing: SSSpacing.xs) {
-            PrimaryButton("Send help now", systemImage: "light.beacon.max", role: .danger) { confirmSendNow = true }
+            PrimaryButton(delivery.sendHelpTitle, systemImage: "light.beacon.max", role: .danger) { confirmSendNow = true }
             Button { if let url = PhoneLink.url("911") { openURL(url) } } label: {
                 Label("911", systemImage: "phone.fill")
                     .font(SSFont.headline)
@@ -90,18 +92,18 @@ struct AlertCountdownView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: SSSpacing.xs) {
             HStack {
-                StatusPill(text: alert?.isDrill == true ? "Drill · test only" : "Alert", tint: SSColor.danger, pulsing: true)
+                StatusPill(text: alert?.isDrill == true ? "Drill · test only" : delivery.countdownPill, tint: SSColor.danger, pulsing: true)
                 Spacer()
                 if let start = alert?.startedAt {
                     Text("Sent \(start, format: .dateTime.hour().minute())").ssEyebrow(SSColor.warn)
                 }
             }
             HStack(alignment: .center, spacing: SSSpacing.md) {
-                RingTimer(deadline: deadline, total: total, tint: SSColor.danger, lineWidth: 8, caption: "to dispatch")
+                RingTimer(deadline: deadline, total: total, tint: SSColor.danger, lineWidth: 8, caption: delivery.ringCaption)
                     .frame(width: 120, height: 120)
-                    .accessibilityLabel("Time until professional help is sent")
+                    .accessibilityLabel(delivery.ringAccessibilityLabel)
                 VStack(alignment: .leading, spacing: SSSpacing.xxs) {
-                    Text("Your people are being told")
+                    Text(delivery.countdownHeadline)
                         .font(SSFont.title)
                         .fixedSize(horizontal: false, vertical: true)
                     if let why = alert.flatMap(AlertPresentation.why) {
@@ -119,16 +121,16 @@ struct AlertCountdownView: View {
         Card(padding: SSSpacing.sm) {
             VStack(alignment: .leading, spacing: SSSpacing.xxs) {
                 Text("Notified").ssEyebrow()
-                let people = AlertPresentation.people(alert?.notified ?? [])
+                let people = AlertPresentation.people(delivery.shown(alert?.notified ?? []))
                 if people.isEmpty {
                     HStack(spacing: SSSpacing.sm) {
-                        ProgressView().tint(SSColor.accent)
-                        Text("Calling and texting \(NameList.join(model.contacts.map(\.firstName)))…")
+                        if delivery.isReal { ProgressView().tint(SSColor.accent) }
+                        Text(delivery.reaching(NameList.join(model.contacts.map(\.firstName))))
                             .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                     }
                     .frame(minHeight: 44)
                 } else {
-                    let rows = AlertPresentation.countdownRows(people, events: alert?.events ?? [])
+                    let rows = AlertPresentation.countdownRows(people, events: delivery.shown(alert?.events ?? []))
                     ForEach(rows) { row in NotifiedGroupRow(row: row) }
                 }
             }
@@ -140,7 +142,7 @@ struct AlertCountdownView: View {
     private var pinSection: some View {
         if model.store.hasSafetyPIN {
             VStack(spacing: SSSpacing.xs) {
-                Text(attempts >= 3 ? "Forgot it? Tell the monitoring center you're okay when they call."
+                Text(attempts >= 3 ? delivery.forgotPINHint
                      : attempts > 0 ? "That PIN didn't match. Try again." : "Safe? Enter your PIN to cancel")
                     .font(SSFont.headline)
                     .foregroundStyle(attempts > 0 ? SSColor.warn : SSColor.ink)

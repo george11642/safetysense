@@ -48,17 +48,17 @@ struct OverlayHost: View {
         }
         .topToastHost()
         .animation(.smooth, value: model.overlay)
-        .onChange(of: model.overlay) { _, overlay in Self.announce(overlay) }
+        .onChange(of: model.overlay) { _, overlay in Self.announce(overlay, delivery: model.alertDelivery) }
     }
 
     /// VoiceOver users hear the change, and focus moves to the new screen. A cancel by either
     /// PIN reads the same, so this says nothing a Marked safe screen wouldn't.
-    private static func announce(_ overlay: GuardOverlay) {
+    private static func announce(_ overlay: GuardOverlay, delivery: AlertDelivery) {
         let text: String? = switch overlay {
         case .none, .guardActive: nil
         case .checkIn: "Check-in. You okay?"
-        case .alertCountdown: "Alert. Your people are being told."
-        case .alertActive: "Help is on the way."
+        case .alertCountdown: delivery.spokenAlert(.alert)
+        case .alertActive: delivery.spokenAlert(.dispatch)
         case .markedSafe: "You're marked safe."
         }
         guard let text else { return }

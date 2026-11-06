@@ -21,6 +21,7 @@ struct AlertActiveView: View {
     private var alert: AlertRecord? { model.services.escalation.activeAlert ?? model.currentAlert }
     private var events: [AlertEvent] { AlertPresentation.merge(alert?.events ?? [], remoteEvents) }
     private var dispatch: DispatchInfo? { remoteDispatch ?? alert?.dispatch }
+    private var delivery: AlertDelivery { model.alertDelivery }
 
     var body: some View {
         ScrollView {
@@ -41,13 +42,14 @@ struct AlertActiveView: View {
         .scrollIndicators(.hidden)
         // Fixed, side by side, so neither needs a scroll in an emergency.
         .safeAreaInset(edge: .bottom, spacing: 0) { safeDock }
+        .testModeBanner()
         .ssScreen()
         .sensoryFeedback(.success, trigger: newResponse)
         .sensoryFeedback(.error, trigger: authFailed)
         .task(id: alert?.id) { await run() }
         .sheet(isPresented: $showPIN) {
             PINEntrySheet(title: "I'm safe now",
-                          message: "Enter your safety PIN. The monitoring center may still call to confirm you're okay.",
+                          message: delivery.pinPrompt,
                           tint: SSColor.calm,
                           // Safety and duress both land on Marked safe; the model handles it.
                           verify: { await model.cancelAlert(pin: $0) },
@@ -66,7 +68,7 @@ struct AlertActiveView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: SSSpacing.xs) {
             HStack {
-                StatusPill(text: "Dispatch active", tint: SSColor.danger, pulsing: true)
+                StatusPill(text: delivery.dispatchPill, tint: SSColor.danger, pulsing: true)
                 if let mode = model.currentSession?.mode, mode != .everyday {
                     TagChip(text: mode.displayName, isOn: false)
                 }
@@ -76,16 +78,46 @@ struct AlertActiveView: View {
                         .font(SSFont.mono(13, weight: .semibold)).foregroundStyle(SSColor.inkMuted)
                 }
             }
-            Text("Help is on the way").font(SSFont.display)
-            Text("You're not alone. Stay where you are if it's safe, or move somewhere public.")
+            Text(delivery.dispatchHeadline).font(SSFont.display)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(delivery.dispatchDetail)
                 .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
     }
 
+    /// Without a real fix there's nothing to draw. A pin anywhere would read as your location.
+    @ViewBuilder
     private var map: some View {
-        let current = fix ?? .unmCampus
+        if let fix {
+            liveMap(fix)
+        } else {
+            noFixCard
+        }
+    }
+
+    private var noFixCard: some View {
+        let isOff = model.permissions.location == .denied
+        return VStack(spacing: SSSpacing.xs) {
+            Image(systemName: isOff ? "location.slash" : "location.magnifyingglass")
+                .font(.title2).foregroundStyle(SSColor.inkMuted)
+                .symbolEffect(.pulse, options: .repeating, isActive: !isOff)
+            Text(isOff ? "Location is off" : "Finding your location…").font(SSFont.headline)
+            Text(isOff ? "Your contacts can't see where you are. Turn on Location in iOS Settings, or tell them where you are."
+                       : "Your location appears here once your iPhone has a fix.")
+                .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(SSSpacing.md)
+        .frame(maxWidth: .infinity, minHeight: 160)
+        .background(SSColor.surface, in: RoundedRectangle(cornerRadius: SSRadius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: SSRadius.card, style: .continuous).stroke(SSColor.line, lineWidth: 1))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func liveMap(_ current: LocationFix) -> some View {
         let coordinate = CLLocationCoordinate2D(latitude: current.latitude, longitude: current.longitude)
         return Map(position: $camera, interactionModes: [.pan, .zoom]) {
             MapCircle(center: coordinate, radius: max(15, current.accuracy))
@@ -100,8 +132,7 @@ struct AlertActiveView: View {
         .frame(height: 220)
         .clipShape(RoundedRectangle(cornerRadius: SSRadius.card, style: .continuous))
         .overlay(alignment: .topLeading) {
-            Label(fix == nil ? "Finding your location…" : "Shared live with your contacts",
-                  systemImage: "location.fill")
+            Label(delivery.mapLabel, systemImage: "location.fill")
                 .font(SSFont.caption.weight(.semibold))
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
@@ -109,7 +140,7 @@ struct AlertActiveView: View {
         }
         .overlay(RoundedRectangle(cornerRadius: SSRadius.card, style: .continuous).stroke(SSColor.line, lineWidth: 1))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(fix == nil ? "Map. Finding your location." : "Map showing your live location, shared with your contacts.")
+        .accessibilityLabel("Map showing your live location. \(delivery.mapLabel).")
     }
 
     private var dispatchCard: some View {
@@ -126,7 +157,7 @@ struct AlertActiveView: View {
                         Text(dispatch.displayStatus.prefix(1).uppercased() + dispatch.displayStatus.dropFirst())
                             .font(SSFont.callout)
                         if dispatch.provider == .simulated {
-                            Text("Demo mode: no real responders are contacted.")
+                            Text(delivery.simulatedDispatchNote)
                                 .font(SSFont.caption).foregroundStyle(SSColor.warn)
                         } else {
                             Text("Noonlight sandbox: test dispatch, no real responders.")
@@ -135,9 +166,11 @@ struct AlertActiveView: View {
                     } else {
                         Text("Connecting to dispatch…").font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                     }
-                    Text("Answer if they call. They'll confirm you're okay before sending police.")
-                        .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let note = delivery.dispatchCallNote {
+                        Text(note)
+                            .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .accessibilityElement(children: .combine)
@@ -154,13 +187,13 @@ struct AlertActiveView: View {
             }
             Card {
                 VStack(spacing: SSSpacing.xs) {
-                    let people = AlertPresentation.people(alert?.notified ?? [])
+                    let people = AlertPresentation.people(delivery.shown(alert?.notified ?? []))
                     if people.isEmpty {
-                        Text("Reaching \(NameList.join(model.contacts.map(\.firstName)))…")
+                        Text(delivery.stillReaching(NameList.join(model.contacts.map(\.firstName))))
                             .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    ForEach(people) { person in NotifiedContactRow(person: person, events: events) }
+                    ForEach(people) { person in NotifiedContactRow(person: person, events: delivery.shown(events)) }
                 }
             }
         }
@@ -202,7 +235,7 @@ struct AlertActiveView: View {
     }
 
     private var pollSubtitle: String? {
-        if pollFailed { return "Reconnecting… your contacts are still being reached." }
+        if pollFailed { return delivery.reconnecting }
         guard let lastPoll else { return nil }
         return "Updated \(lastPoll.formatted(.dateTime.hour().minute().second()))"
     }

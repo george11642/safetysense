@@ -52,17 +52,31 @@ enum GuardMode: String, Codable, CodingKeyRepresentable, Sendable, CaseIterable,
     var usesMotion: Bool { self != .everyday }
     var usesLocation: Bool { true }
 
-    /// Default check-in interval in seconds (SPEC: 30–90 min during Night Out).
+    /// Walk and Ride check once at the time you should have arrived, plus stop detection,
+    /// instead of on a repeating schedule.
+    var usesArrivalCheck: Bool { self == .walk || self == .ride }
+
+    /// Repeating check-in interval in seconds, 0 for modes without one.
     var defaultCheckInInterval: TimeInterval {
         switch self {
-        case .everyday: 0
+        case .nightOut, .date: 20 * 60
+        case .everyday, .walk, .ride: 0
+        }
+    }
+
+    /// The arrival check for a Walk or Ride started without its setup screen (a Shortcut, or
+    /// answering a fake call). Same as each setup screen's default, so no Guard runs unchecked.
+    var defaultArrivalCheck: TimeInterval? {
+        switch self {
         case .walk: 15 * 60
-        case .nightOut: 45 * 60
-        case .date: 30 * 60
-        case .ride: 10 * 60
+        case .ride: 20 * 60
+        case .everyday, .nightOut, .date: nil
         }
     }
 
     /// Modes that offer a Guard session (Everyday is the passive default).
     static var guardModes: [GuardMode] { [.walk, .nightOut, .date, .ride] }
+
+    /// Modes with a repeating check-in the person can tune in Settings.
+    static var repeatingCheckInModes: [GuardMode] { guardModes.filter { $0.defaultCheckInInterval > 0 } }
 }

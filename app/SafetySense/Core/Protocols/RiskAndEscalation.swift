@@ -35,7 +35,13 @@ struct SecondOpinion: Codable, Sendable, Equatable {
 @MainActor
 protocol SecondOpinionProtocol: AnyObject {
     var isAvailable: Bool { get }
+    /// Plain-language reason it's unavailable, for Settings.
+    var unavailableReason: String? { get }
     func evaluate(transcript: String, signals: [RiskSignal], mode: GuardMode) async -> SecondOpinion?
+}
+
+extension SecondOpinionProtocol {
+    var unavailableReason: String? { nil }
 }
 
 /// Result of checking a PIN against the stored safety / duress PIN hashes.

@@ -32,6 +32,7 @@ struct HomeView: View {
             .padding(.bottom, SSSpacing.xxl)
         }
         .scrollIndicators(.hidden)
+        .testModeBanner()
         .ssScreen()
         .toolbar(.hidden, for: .navigationBar)
         .sensoryFeedback(.impact(weight: .medium), trigger: startTap)
@@ -51,7 +52,7 @@ struct HomeView: View {
             Button("Run drill") { Task { await model.runDrill(); refreshReadiness() } }
             Button("Not now", role: .cancel) {}
         } message: {
-            Text("Your contacts get a message clearly marked TEST. Nothing is dispatched.")
+            Text("A TEST alert goes through the server. Nobody is called or texted, and nothing is dispatched.")
         }
         .onAppear(perform: refreshReadiness)
     }
@@ -346,7 +347,7 @@ struct ReadinessSnapshot: Equatable {
                           cta: "Set up", isDone: settings.hasSetUpActionButton),
             ReadinessItem(id: .control, title: "Lock Screen control", detail: "One tap from Control Center",
                           cta: "Add", isDone: settings.hasAddedControl),
-            ReadinessItem(id: .drill, title: "Practice drill", detail: "Contacts get a message marked TEST",
+            ReadinessItem(id: .drill, title: "Practice drill", detail: "A TEST alert. Nobody is contacted",
                           cta: "Run", isDone: settings.hasCompletedDrill),
         ]
     }

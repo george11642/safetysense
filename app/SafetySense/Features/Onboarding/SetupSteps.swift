@@ -128,18 +128,18 @@ struct PermissionsStepView: View {
             case .microphone: "Microphone"
             case .location: "Location, Always"
             case .notifications: NotificationUrgency.isSupported ? "Time-Sensitive notifications" : "Notifications"
-            case .motion: "Motion & Fitness"
+            case .motion: "Motion"
             }
         }
 
         @MainActor var reason: String {
             switch self {
-            case .microphone: "Only during a Guard session you start, to notice a scream or your safe word. Sound stays on your iPhone."
+            case .microphone: "Only during a Guard session you start, to notice a scream or your safe word. Sound stays on your iPhone unless an alert starts."
             case .location: "So help can find you, even when your phone is locked. Shared only during a session or an alert."
             case .notifications: NotificationUrgency.isSupported
                 ? "So a \u{201C}You okay?\u{201D} check-in reaches you, even in a Focus mode."
                 : "So a \u{201C}You okay?\u{201D} check-in reaches you."
-            case .motion: "To notice a hard fall or a sudden impact while you're guarded."
+            case .motion: "To notice a hard fall or a sudden impact while you're guarded. iOS doesn't ask about this one."
             }
         }
 
@@ -160,7 +160,7 @@ struct PermissionsStepView: View {
 
     var body: some View {
         OnboardingPage(eyebrow: OnboardingStep.permissions.label, title: "What SafetySense needs, and why",
-                       subtitle: "iOS will ask you for each one. Say no to anything; you can change it later in Settings.") {
+                       subtitle: "iOS will ask you about most of these. Say no to anything; you can change it later in Settings.") {
             VStack(spacing: SSSpacing.sm) {
                 ForEach(Permission.allCases) { p in row(p) }
             }

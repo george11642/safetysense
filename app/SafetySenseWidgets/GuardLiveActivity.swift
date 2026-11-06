@@ -15,7 +15,7 @@ struct GuardLiveActivity: Widget {
                 .activitySystemActionForegroundColor(BrandPalette.ink)
                 .widgetURL(DeepLink.forLevel(context.state.level).url)
         } dynamicIsland: { context in
-            let style = GuardLevelStyle(level: context.state.level)
+            let style = GuardLevelStyle(level: context.state.level, testNote: context.attributes.testNote)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     ShieldBadge(style: style, size: 40)
@@ -48,6 +48,7 @@ struct GuardLiveActivity: Widget {
                             .foregroundStyle(BrandPalette.muted)
                             .lineLimit(2)
                         LevelDetail(attributes: context.attributes, state: context.state, style: style, compact: true)
+                        TestNote(text: context.attributes.testNote)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 4)
@@ -76,6 +77,10 @@ struct GuardLiveActivity: Widget {
 /// Copy, color and symbol for each escalation level (calm, never alarming in level 0).
 struct GuardLevelStyle {
     let level: Int
+    /// Set when this build contacts nobody, so nothing here promises help.
+    var testNote: String?
+
+    private var isTest: Bool { testNote != nil }
 
     var tint: Color {
         switch level {
@@ -89,8 +94,8 @@ struct GuardLevelStyle {
         switch level {
         case 0: "Guarding"
         case 1: "You okay?"
-        case 2: "Telling your people"
-        default: "Help is on the way"
+        case 2: isTest ? "Test alert" : "Telling your people"
+        default: isTest ? "Test dispatch" : "Help is on the way"
         }
     }
 
@@ -112,7 +117,7 @@ private struct LockScreenGuardView: View {
     let isStale: Bool
 
     var body: some View {
-        let style = GuardLevelStyle(level: state.level)
+        let style = GuardLevelStyle(level: state.level, testNote: attributes.testNote)
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 ShieldBadge(style: style, size: 44)
@@ -138,6 +143,7 @@ private struct LockScreenGuardView: View {
                 .accessibilityElement(children: .combine)
             }
             LevelDetail(attributes: attributes, state: state, style: style, compact: false)
+            TestNote(text: attributes.testNote)
             if isStale {
                 Label("Open SafetySense to refresh", systemImage: "arrow.clockwise")
                     .font(.caption2)
@@ -148,6 +154,21 @@ private struct LockScreenGuardView: View {
     }
 }
 
+/// Says at every level that nobody is contacted, in builds where that's true.
+private struct TestNote: View {
+    let text: String?
+
+    var body: some View {
+        if let text {
+            Label(text, systemImage: "testtube.2")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(BrandPalette.warnAmber)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+    }
+}
+
 /// What sits under the title for each level: next check-in, the answer buttons, or the
 /// countdown to dispatch.
 private struct LevelDetail: View {
@@ -155,6 +176,8 @@ private struct LevelDetail: View {
     let state: GuardActivityAttributes.ContentState
     let style: GuardLevelStyle
     let compact: Bool
+
+    private var isTest: Bool { attributes.testNote != nil }
 
     var body: some View {
         switch state.level {
@@ -174,7 +197,7 @@ private struct LevelDetail: View {
             VStack(alignment: .leading, spacing: 8) {
                 if let deadline = state.deadline {
                     DeadlineBar(start: state.levelStartedAt, deadline: deadline, tint: style.tint,
-                                label: "Your people are told if there's no answer")
+                                label: isTest ? "Test: nobody is told" : "Your people are told if there's no answer")
                 }
                 CheckInButtons()
             }
@@ -182,15 +205,16 @@ private struct LevelDetail: View {
             VStack(alignment: .leading, spacing: 6) {
                 if let deadline = state.deadline {
                     DeadlineBar(start: state.levelStartedAt, deadline: deadline, tint: style.tint,
-                                label: "Help is sent unless you cancel")
+                                label: isTest ? "Test: no help is sent" : "Help is sent unless you cancel")
                 }
-                Text(compact ? "Open SafetySense to cancel with your PIN."
-                             : "Open SafetySense to cancel with your Safety PIN. Your contacts have your live location.")
+                Text(isTest ? "If you need help, call 911."
+                            : compact ? "Open SafetySense to cancel with your PIN."
+                                      : "Open SafetySense to cancel with your Safety PIN. Your contacts have your live location.")
                     .font(.caption)
                     .foregroundStyle(BrandPalette.muted)
             }
         default:
-            Text("Stay somewhere safe if you can. If you're able to, call 911.")
+            Text(isTest ? "If you need help, call 911." : "Stay somewhere safe if you can. If you're able to, call 911.")
                 .font(.caption)
                 .foregroundStyle(BrandPalette.ink)
         }

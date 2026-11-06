@@ -20,6 +20,12 @@ struct AppSettings: Codable, Sendable, Equatable {
     var lastHomeMode: GuardMode?
 
     func checkInInterval(for mode: GuardMode) -> TimeInterval {
-        checkInIntervalOverrides[mode] ?? mode.defaultCheckInInterval
+        guard mode.defaultCheckInInterval > 0 else { return 0 }
+        return checkInIntervalOverrides[mode] ?? mode.defaultCheckInInterval
+    }
+
+    /// Overrides for modes that still repeat. One saved for Walk or Ride by an older build is ignored.
+    var hasCustomCheckIns: Bool {
+        GuardMode.repeatingCheckInModes.contains { checkInIntervalOverrides[$0] != nil }
     }
 }

@@ -43,8 +43,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
-        NSMicrophoneUsageDescription: "SafetySense listens only during a Guard session you start, so it can notice a scream or your safe word. Audio stays in a 30-second memory buffer and is never saved unless an alert starts."
-        NSSpeechRecognitionUsageDescription: "SafetySense recognizes your safe word and words like \"help\" or \"stop\" on your iPhone during a Guard session. Nothing you say is sent anywhere."
+        NSMicrophoneUsageDescription: "SafetySense listens only during a Guard session you start, so it can notice a scream or your safe word. Audio stays in a 30-second memory buffer. It's saved, encrypted, only if an alert starts."
+        NSSpeechRecognitionUsageDescription: "SafetySense recognizes your safe word and words like \"help\" or \"stop\" on your iPhone during a Guard session. Recognition stays on your iPhone. Recorded audio is uploaded, encrypted, only if an alert starts."
         NSLocationAlwaysAndWhenInUseUsageDescription: "If something goes wrong, your location lets your trusted contacts and responders find you, even if your phone is locked. SafetySense shares it only during a session or an alert."
         NSLocationWhenInUseUsageDescription: "Your location lets your trusted contacts and responders find you if you need help."
         NSMotionUsageDescription: "SafetySense notices a hard fall or a sudden impact during a Guard session so it can check on you."
@@ -140,6 +140,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.georgeteifel.SafetySenseTests
         GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
 
 schemes:
   SafetySense:

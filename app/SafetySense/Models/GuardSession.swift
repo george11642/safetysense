@@ -31,7 +31,7 @@ struct GuardSession: Codable, Sendable, Equatable, Identifiable {
         self.serverSessionID = serverSessionID
         self.mode = mode
         self.startedAt = startedAt
-        self.checkInInterval = checkInInterval ?? mode.defaultCheckInInterval
+        self.checkInInterval = checkInInterval ?? mode.defaultArrivalCheck ?? mode.defaultCheckInInterval
         self.graceSeconds = graceSeconds
         self.listening = listening ?? mode.listensByDefault
         self.sealedDate = sealedDate
@@ -49,7 +49,11 @@ struct GuardSession: Codable, Sendable, Equatable, Identifiable {
     }
 
     /// Walk and Ride check at the time you should have arrived, not on a repeating schedule.
-    var usesArrivalCheck: Bool { mode == .walk || mode == .ride }
+    var usesArrivalCheck: Bool { mode.usesArrivalCheck }
+
+    /// The interval sent to `session/start`. The server only accepts 15 s to 1 hour, and it uses
+    /// this for bookkeeping: the phone's own clock runs check-ins of any length.
+    var serverCheckInInterval: Int { Int(min(max(checkInInterval, 15), 3600)) }
 
     /// Destination as a fix for route / arrival checks (nil when none was picked).
     var destinationFix: LocationFix? {

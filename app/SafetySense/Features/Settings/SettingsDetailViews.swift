@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Shared look for Settings sub-pages.
-private extension View {
+extension View {
     func settingsListStyle(_ title: String) -> some View {
         scrollContentBackground(.hidden)
             .background(SSColor.background)
@@ -20,7 +20,7 @@ struct CheckInIntervalsView: View {
         @Bindable var model = model
         List {
             Section {
-                ForEach(GuardMode.guardModes) { mode in
+                ForEach(GuardMode.repeatingCheckInModes) { mode in
                     Picker(selection: binding(for: mode)) {
                         ForEach(Self.choices, id: \.self) { secs in
                             Text(label(secs, isDefault: secs == mode.defaultCheckInInterval)).tag(secs)
@@ -30,7 +30,7 @@ struct CheckInIntervalsView: View {
                     }
                 }
             } footer: {
-                Text("How often SafetySense asks \u{201C}You okay?\u{201D} during a session. You have 45 seconds to answer before your contacts are told.")
+                Text("How often SafetySense asks \u{201C}You okay?\u{201D} during a session. You have 45 seconds to answer before your contacts are told. Walk Home and Ride check once, at the time you should have arrived, and whenever you stop somewhere unexpected.")
             }
             .listRowBackground(SSColor.surface)
 
@@ -38,7 +38,7 @@ struct CheckInIntervalsView: View {
                 Toggle("Listen during Walk Home", isOn: $model.settings.listenDuringWalk)
                 Toggle("Drink-check reminders on Night Out", isOn: $model.settings.drinkCheckPrompts)
             } footer: {
-                Text("Drink checks are a gentle nudge to keep an eye on your drink. SafetySense can't detect drugging.")
+                Text("A quiet reminder about once an hour to keep an eye on your drink. SafetySense can't detect drugging.")
             }
             .listRowBackground(SSColor.surface)
         }

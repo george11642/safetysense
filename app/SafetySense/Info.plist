@@ -46,11 +46,11 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location lets your trusted contacts and responders find you if you need help.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SafetySense listens only during a Guard session you start, so it can notice a scream or your safe word. Audio stays in a 30-second memory buffer and is never saved unless an alert starts.</string>
+	<string>SafetySense listens only during a Guard session you start, so it can notice a scream or your safe word. Audio stays in a 30-second memory buffer. It's saved, encrypted, only if an alert starts.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>SafetySense notices a hard fall or a sudden impact during a Guard session so it can check on you.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>SafetySense recognizes your safe word and words like "help" or "stop" on your iPhone during a Guard session. Nothing you say is sent anywhere.</string>
+	<string>SafetySense recognizes your safe word and words like "help" or "stop" on your iPhone during a Guard session. Recognition stays on your iPhone. Recorded audio is uploaded, encrypted, only if an alert starts.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

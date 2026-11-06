@@ -32,16 +32,19 @@ public struct GuardActivityAttributes: Sendable {
     public var modeRawValue: String
     public var modeDisplayName: String
     public var startedAt: Date
+    /// Set when this build contacts nobody. The Live Activity says so at every level.
+    public var testNote: String?
 
     /// Walk and Ride check once at the time you should have arrived.
     public var checkInLabel: String {
         modeRawValue == "walk" || modeRawValue == "ride" ? "Arrival check" : "Next check-in"
     }
 
-    public init(modeRawValue: String, modeDisplayName: String, startedAt: Date) {
+    public init(modeRawValue: String, modeDisplayName: String, startedAt: Date, testNote: String? = nil) {
         self.modeRawValue = modeRawValue
         self.modeDisplayName = modeDisplayName
         self.startedAt = startedAt
+        self.testNote = testNote
     }
 }
 

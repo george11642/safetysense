@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Settings tab (SPEC 9.11): sensitivity, check-ins, safe word, PINs, who gets help first,
-/// discreet icon, data retention, delete everything, and a developer section.
+/// permissions, discreet icon, data retention, delete everything, about, and a Debug-only developer section.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var drillRunning = false
     @State private var drillNote: String?
     @State private var safeWordSet = false
+    @State private var pinSummary = PINSettingsView.summary(safety: false, duress: false)
 
     static let retentionChoices = [7, 14, 30, 90, 365]
 
@@ -21,13 +22,21 @@ struct SettingsView: View {
         List {
             // Same eyebrow + display title header as the other tabs.
             VStack(alignment: .leading, spacing: SSSpacing.xs) {
-                Text("Private to this iPhone").ssEyebrow(SSColor.accent)
+                Text("Yours to change").ssEyebrow(SSColor.accent)
                 Text("Settings").font(SSFont.display).accessibilityAddTraits(.isHeader)
             }
             .padding(.top, SSSpacing.md)
             .listRowInsets(EdgeInsets(top: 0, leading: SSSpacing.gutter - 16, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+
+            if model.permissions.notifications == .denied {
+                Section {
+                    PermissionNotices(issues: [.notifications])
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
 
             Section {
                 NavigationLink { ProfileSettingsView() } label: {
@@ -57,13 +66,15 @@ struct SettingsView: View {
                 NavigationLink { CheckInIntervalsView() } label: {
                     settingRow("Check-ins", value: checkInSummary, icon: "clock")
                 }
-                Toggle(isOn: $model.settings.useSecondOpinion) {
+                Toggle(isOn: Binding(get: { secondOpinionUnavailable == nil && model.settings.useSecondOpinion },
+                                     set: { model.settings.useSecondOpinion = $0 })) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("On-device AI second opinion")
-                        Text("Helps tell friends joking from real distress. Never the only reason for an alert, never blocks an SOS.")
+                        Text(secondOpinionUnavailable ?? "Helps tell friends joking from real distress. Never the only reason for an alert, never blocks an SOS.")
                             .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                     }
                 }
+                .disabled(secondOpinionUnavailable != nil)
             } header: {
                 Text("Detection")
             }
@@ -102,10 +113,11 @@ struct SettingsView: View {
             .listRowBackground(SSColor.surface)
 
             Section {
+                NavigationLink { PermissionsSettingsView() } label: {
+                    settingRow("Permissions", value: model.permissions.summary, icon: "checkmark.shield")
+                }
                 NavigationLink { PINSettingsView() } label: {
-                    settingRow("Safety & duress PINs",
-                               value: PINSettingsView.summary(safety: model.store.hasSafetyPIN, duress: model.store.hasDuressPIN),
-                               icon: "lock")
+                    settingRow("Safety & duress PINs", value: pinSummary, icon: "lock")
                 }
                 Toggle(isOn: $discreetIcon) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -137,7 +149,7 @@ struct SettingsView: View {
             } header: {
                 Text("Your data")
             } footer: {
-                Text("Evidence on this iPhone is deleted automatically after this many days. Location is kept only during a session or alert. Evidence is encrypted, and only you can unlock it. Delete everything removes your profile, contacts, PINs, safe word and evidence from this iPhone, and erases this iPhone's alerts, locations and uploaded evidence on the SafetySense server.")
+                Text("Evidence on this iPhone is deleted automatically after this many days. On the server, evidence and locations are deleted after 30 days and alerts after 90. Location is collected only during a session or alert. Evidence is encrypted, and only you can unlock it. Delete everything removes your profile, contacts, PINs, safe word and evidence from this iPhone, and erases this iPhone's alerts, locations and uploaded evidence on the SafetySense server.")
             }
             .listRowBackground(SSColor.surface)
 
@@ -157,6 +169,25 @@ struct SettingsView: View {
                 }
             } footer: {
                 Text("Sends a TEST alert through the server. Nobody is called and dispatch is never involved.")
+            }
+            .listRowBackground(SSColor.surface)
+
+            Section {
+                NavigationLink("Privacy") { LegalPageView(title: "Privacy", sections: LegalCopy.privacy) }
+                NavigationLink("Terms of use") { LegalPageView(title: "Terms of use", sections: LegalCopy.terms) }
+                if let url = LegalCopy.supportURL {
+                    Link(destination: url) {
+                        HStack {
+                            Text("Contact support")
+                            Spacer()
+                            Text(LegalCopy.supportEmail).foregroundStyle(SSColor.inkMuted)
+                        }
+                    }
+                    .foregroundStyle(SSColor.ink)
+                }
+                NavigationLink("About") { AboutView() }
+            } header: {
+                Text("About")
             }
             .listRowBackground(SSColor.surface)
 
@@ -185,6 +216,8 @@ struct SettingsView: View {
         .onAppear {
             discreetIcon = model.settings.discreetIcon
             safeWordSet = model.store.safeWord != nil
+            // `model.store` isn't observable, so read it each time this screen comes back.
+            pinSummary = PINSettingsView.summary(safety: model.store.hasSafetyPIN, duress: model.store.hasDuressPIN)
         }
         .onChange(of: discreetIcon) { _, on in
             guard on != model.settings.discreetIcon else { return }
@@ -220,8 +253,13 @@ struct SettingsView: View {
         return "\(v) (\(b))"
     }
 
-    private var checkInSummary: String {
-        model.settings.checkInIntervalOverrides.isEmpty ? "Default" : "Custom"
+    private var checkInSummary: String { model.settings.hasCustomCheckIns ? "Custom" : "Default" }
+
+    /// Why the second opinion can't run here. Only live builds ask: the demo has no model at all.
+    private var secondOpinionUnavailable: String? {
+        let opinion = model.services.secondOpinion
+        guard model.services.flavor == .live, !opinion.isAvailable else { return nil }
+        return opinion.unavailableReason ?? "The on-device second opinion isn't available right now."
     }
 
     private func retentionLabel(_ days: Int) -> String {

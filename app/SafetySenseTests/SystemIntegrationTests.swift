@@ -257,7 +257,7 @@ struct NotificationUrgencyTests {
     @Test func degradesWithoutTheCapability() {
         #expect(NotificationUrgency.level(for: .notSupported) == .active)
         #expect(NotificationUrgency.level(for: .enabled) == .timeSensitive)
-        #expect(NotificationUrgency.level(for: .disabled) == .timeSensitive)
+        #expect(NotificationUrgency.level(for: .disabled) == .active)
     }
 }
 

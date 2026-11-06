@@ -14,7 +14,7 @@ import Foundation
 struct StartAlertIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "SafetySense Alert"
     static let description = IntentDescription(
-        "Starts SafetySense's alert without opening the app. Your trusted contacts are called and get your live location. SafetySense adds to 911; it doesn't replace it.")
+        "Starts SafetySense's alert without opening the app. SafetySense adds to 911; it doesn't replace it.")
     static var openAppWhenRun: Bool { false }
     static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
 
@@ -33,18 +33,25 @@ struct StartAlertIntent: LiveActivityIntent {
 
         if let escalation = SystemBridge.escalation, SystemBridge.handle(command, escalation: escalation) {
             let reached = await SystemBridge.waitForServerAlert()
-            return .result(dialog: reached ? "SafetySense is on it."
-                                           : "SafetySense will keep trying. If you can, call 911.")
+            return .result(dialog: reached ? startedDialog : "SafetySense will keep trying. If you can, call 911.")
         }
 
         do {
             try await DirectAlertSender.send(command)
-            return .result(dialog: "SafetySense is on it.")
+            return .result(dialog: startedDialog)
         } catch {
             // Leave it for the app to pick up the moment it opens.
             SharedCommandQueue.enqueue(command)
             return .result(dialog: "SafetySense couldn't reach its server. If you can, call 911.")
         }
+    }
+}
+
+private extension StartAlertIntent {
+    /// A build that contacts nobody must not sound like help is coming.
+    var startedDialog: IntentDialog {
+        AlertDelivery.current(flavor: .live).isReal ? "SafetySense is on it."
+            : "This is a test build, so nobody was contacted. If you need help, call 911."
     }
 }
 

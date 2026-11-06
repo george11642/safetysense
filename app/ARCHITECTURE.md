@@ -33,6 +33,7 @@ swift Tools/generate_icons.swift SafetySense/Resources/Assets.xcassets # regener
 | `-ssDemo 1` | Demo services: no mic, no network, dispatch labelled "simulated" |
 | `-ssSkipOnboarding 1` | Marks onboarding done. Seeds the sample profile and contacts if they're empty |
 | `-ssReset 1` | Wipes persisted state at launch |
+| `-ssCleanShots 1` | Real alert wording and no test banner, for screenshots that have to match the design |
 
 Example: `xcrun simctl launch booted com.georgeteifel.SafetySense -ssScreen checkin`
 
@@ -90,6 +91,16 @@ An intent or a BGTask can launch the app with no scene, so `AppModel.onLaunch()`
 
 Alert intents run in the app's process with no unlock. "I'm okay" asks for authentication on every surface (Live Activity, notification, Siri), so someone else holding the phone can't answer for you. "Need help" is never gated. Deep links only navigate, because any app can open one.
 
+### Saying what's really happening
+
+**`AlertDelivery`** (`model.alertDelivery`) says whether an alert from this build reaches anyone: `.real`, `.test` (live server, `dry_run`, always in Release) or `.demo` (mocks). Any words that promise help come from it: the countdown, Alert active, VoiceOver, the Live Activity (`GuardActivityAttributes.testNote`) and `StartAlertIntent`'s dialog. `.testModeBanner()` pins the banner on Home, Guard, the countdown and Alert active. Don't hard-code "help is on the way" anywhere else.
+
+### Notifications
+
+**`NotificationUrgency`** (Shared) is the only place that picks an interruption level: `.timeSensitive` only when iOS reports `.enabled`, otherwise `.active`. Copy that promises a Focus breakthrough checks `NotificationUrgency.isSupported` or `GuardPermissions.timeSensitive`. A status notification (contact responded, server unreachable) goes out only when the app isn't active, since the app shows the same thing on screen. Night Out's hourly drink check is a quiet reminder that never touches the ladder.
+
+**Check-ins:** Night Out and Date repeat every 20 minutes, changeable in Settings. Walk and Ride have no repeating check-in, only the arrival check and stop detection. A Walk or Ride started without its setup screen uses `GuardMode.defaultArrivalCheck`. `session/start` accepts 15 to 3600 s, so send `GuardSession.serverCheckInInterval`, never the raw interval.
+
 - **`AppModel`** (`@Observable @MainActor`) is the single UI state object. It holds `profile`, `contacts`, `settings`, `hasCompletedOnboarding`, `currentSession`, `currentAlert`, `selectedTab`, `banner` and `forcedScreen`. Every stored property persists through `SettingsStore` in `didSet`. It is injected with `.environment(model)`, and views read it with `@Environment(AppModel.self) private var model`.
 - **`model.overlay`** (`none / guardActive / checkIn / alertCountdown / alertActive / markedSafe`) comes from `services.escalation.level`, `currentSession` and `markedSafe`. `RootView` shows it in a single `fullScreenCover` (`OverlayHost`).
 - **`ServiceContainer`** handles dependency injection. `.demo()` returns all mocks. `.live()` is the production wiring: each module swaps in its real class at the marked slot, and every slot falls back to a mock until then. Use `services.flavor == .demo` to show demo-only controls, such as "simulate scream".
@@ -112,7 +123,7 @@ Every service except the backend is `@MainActor`, an `AnyObject`, and reports th
 | `BackendClientProtocol` | 1:1 with the API (below) plus `setCredentials` and `isConfigured` | `MockBackendClient` (actor, records `calls`) |
 | `EvidenceVaultProtocol` | `startCapture(alertID:serverAlertID:prebuffer:)`, `stopCapture`, `unlock(reason:)` (Face ID), `decrypt`, `delete`, `deleteAll` | `MockEvidenceVault` |
 | `LiveActivityControllerProtocol` | `start(session:)`, `update(level:statusText:nextCheckInAt:deadline:)`, `end()` | `NoopLiveActivityController` |
-| `NotificationServiceProtocol` | `requestAuthorization`, `scheduleCheckIn(at:sessionID:)`, `cancelCheckIns`, `notify(title:body:timeSensitive:)` | `NoopNotificationService` |
+| `NotificationServiceProtocol` | `requestAuthorization`, `scheduleCheckIn(at:sessionID:)`, `cancelCheckIns`, `notify(title:body:timeSensitive:)`, `scheduleDrinkChecks`, `cancelDrinkChecks` | `NoopNotificationService` |
 | `HeartbeatServiceProtocol` | `start(serverSessionID:interval:)` (60 s), `stop`, `lastSentAt` | `NoopHeartbeatService` |
 
 Ladder rules every escalation controller must keep (SPEC 6.3 and 15):
@@ -124,7 +135,7 @@ Ladder rules every escalation controller must keep (SPEC 6.3 and 15):
 - On a Walk or Ride, an `unexpectedStop` signal raises a check-in whatever the score and sensitivity, because those modes have no repeating check-in. It leaves the arrival check where it was.
 - A duress PIN looks exactly like a cancel on screen, while the server escalates silently (`alert/cancel {duress:true}`).
 - The AI second opinion can never be the only reason to escalate, and it can never block a manual SOS.
-- A drill sends `dry_run: true`, contacts see TEST, and a drill never dispatches.
+- A drill sends `dry_run: true`: the server records a TEST alert, nobody is called or texted, and a drill never dispatches.
 
 ## Backend contract (Core/Backend/BackendDTOs.swift)
 

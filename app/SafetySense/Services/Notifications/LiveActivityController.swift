@@ -9,6 +9,7 @@ import os
 ///   buttons (`CheckInOkayIntent` / `CheckInNeedHelpIntent`, which run in the app's process).
 /// - During an alert it shows the countdown to dispatch, then "Help is on the way".
 /// - A contact's confirmed response replaces the status line ("Maya is on the way.").
+/// - A build that contacts nobody says so at every level (`AlertDelivery`).
 /// It also mirrors "guarding" for the Guard control and refreshes the controls.
 @MainActor
 final class LiveActivityController: LiveActivityControllerProtocol {
@@ -20,6 +21,7 @@ final class LiveActivityController: LiveActivityControllerProtocol {
     private var wanted: GuardActivityAttributes?
     private var lastState: GuardActivityAttributes.ContentState?
     private let log = Logger(subsystem: "com.georgeteifel.SafetySense", category: "live-activity")
+    private var delivery: AlertDelivery { .current(flavor: .live) }
 
     init() {
         // Adopt an activity left over from a previous launch of the same session.
@@ -52,7 +54,7 @@ final class LiveActivityController: LiveActivityControllerProtocol {
         await endAll()
         wanted = GuardActivityAttributes(modeRawValue: session.mode.rawValue,
                                          modeDisplayName: session.mode.displayName,
-                                         startedAt: session.startedAt)
+                                         startedAt: session.startedAt, testNote: delivery.liveActivityNote)
         lastState = state
         request()
     }
@@ -61,10 +63,10 @@ final class LiveActivityController: LiveActivityControllerProtocol {
         guard !isActive else { return }
         let session = GuardSession(mode: .everyday)
         wanted = GuardActivityAttributes(modeRawValue: session.mode.rawValue, modeDisplayName: "Alert",
-                                         startedAt: session.startedAt)
+                                         startedAt: session.startedAt, testNote: delivery.liveActivityNote)
         currentLevel = 0
         levelStartedAt = .now
-        lastState = GuardActivityAttributes.ContentState(level: 2, statusText: EscalationLevel.alert.statusLine,
+        lastState = GuardActivityAttributes.ContentState(level: 2, statusText: delivery.statusLine(.alert),
                                                          levelStartedAt: levelStartedAt)
         request()
     }
@@ -101,7 +103,7 @@ final class LiveActivityController: LiveActivityControllerProtocol {
                                                          levelStartedAt: levelStartedAt, deadline: deadline)
         lastState = state
         guard let activity else { return }
-        await Self.push(activity.id, content(for: state), alert: rose ? Self.alertConfiguration(for: level) : nil)
+        await Self.push(activity.id, content(for: state), alert: rose ? Self.alertConfiguration(for: level, delivery: delivery) : nil)
     }
 
     func end() async {
@@ -139,16 +141,15 @@ final class LiveActivityController: LiveActivityControllerProtocol {
         }
     }
 
-    private static func alertConfiguration(for level: EscalationLevel) -> AlertConfiguration? {
+    private static func alertConfiguration(for level: EscalationLevel, delivery: AlertDelivery) -> AlertConfiguration? {
         switch level {
         case .guarding:
             nil
         case .checkIn:
             AlertConfiguration(title: "You okay?", body: "Tap I'm okay, or Need help if you're not.", sound: .default)
-        case .alert:
-            AlertConfiguration(title: "Telling your people", body: "Open SafetySense to cancel with your PIN.", sound: .default)
-        case .dispatch:
-            AlertConfiguration(title: "Help is on the way", body: "Stay somewhere safe if you can. Call 911 if you're able.", sound: .default)
+        case .alert, .dispatch:
+            AlertConfiguration(title: LocalizedStringResource(stringLiteral: delivery.alertTitle(level)),
+                               body: LocalizedStringResource(stringLiteral: delivery.alertBody(level)), sound: .default)
         }
     }
 

@@ -14,7 +14,7 @@ import UserNotifications
 /// policy (default: straight to dispatch).
 public struct TriggerAlertIntent: LiveActivityIntent {
     public static let title: LocalizedStringResource = "SafetySense Alert"
-    public static let description = IntentDescription("Starts SafetySense's alert so your people, and help, are on the way.")
+    public static let description = IntentDescription("Starts SafetySense's alert. SafetySense adds to 911; it doesn't replace it.")
     public static var openAppWhenRun: Bool { false }
     public static var isDiscoverable: Bool { false }
     public static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
@@ -126,9 +126,10 @@ enum SharedCommandFallback {
     static func nudge() async {
         let content = UNMutableNotificationContent()
         content.title = "Tap to finish your alert"
-        content.body = "Open SafetySense so your people can be told. If you can, call 911."
+        content.body = "Open SafetySense to finish starting your alert. If you can, call 911."
         content.sound = .default
-        content.interruptionLevel = .timeSensitive
+        content.interruptionLevel = NotificationUrgency.level(
+            for: await UNUserNotificationCenter.current().notificationSettings().timeSensitiveSetting)
         try? await UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: "ss.status.pending-alert", content: content, trigger: nil))
     }

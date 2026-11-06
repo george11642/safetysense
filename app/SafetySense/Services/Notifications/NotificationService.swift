@@ -20,12 +20,15 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         static let okayAction = "ss.action.okay"
         static let needHelpAction = "ss.action.needHelp"
         static let checkInPrefix = "ss.checkin."
+        static let drinkCheck = "ss.drinkcheck"
         static let sessionKey = "sessionID"
         static let intervalKey = "interval"
     }
 
     /// Seconds after the check-in before a gentle second nudge (the in-app ladder gives 45 s).
     static let followUpDelay: TimeInterval = 25
+    /// About once an hour during a Night Out.
+    static let drinkCheckInterval: TimeInterval = 60 * 60
 
     /// Called when a check-in notification arrives while the app is open, so the in-app
     /// "You okay?" screen appears at the same moment. Set by `SystemBridge`.
@@ -87,7 +90,8 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
     }
 
     func authorizationState() async -> PermissionState {
-        switch await center.notificationSettings().authorizationStatus {
+        await refreshUrgency()   // Turned on or off in iOS Settings since the last look.
+        return switch await center.notificationSettings().authorizationStatus {
         case .notDetermined: .notAsked
         case .denied: .denied
         default: .granted
@@ -141,6 +145,30 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         content.interruptionLevel = timeSensitive ? NotificationUrgency.level() : .active
         content.relevanceScore = timeSensitive ? 0.9 : 0.4
         add(UNNotificationRequest(identifier: "ss.status.\(UUID().uuidString)", content: content, trigger: nil))
+    }
+
+    // MARK: Drink checks
+
+    func scheduleDrinkChecks() {
+        add(UNNotificationRequest(identifier: Identifier.drinkCheck, content: Self.drinkCheckContent(),
+                                  trigger: UNTimeIntervalNotificationTrigger(timeInterval: Self.drinkCheckInterval, repeats: true)))
+    }
+
+    func cancelDrinkChecks() {
+        center.removePendingNotificationRequests(withIdentifiers: [Identifier.drinkCheck])
+        center.removeDeliveredNotifications(withIdentifiers: [Identifier.drinkCheck])
+    }
+
+    /// A nudge, not a check-in: no sound, nothing to answer, and no effect on the ladder.
+    static func drinkCheckContent() -> UNNotificationContent {
+        let content = UNMutableNotificationContent()
+        content.title = "Drink check"
+        content.body = "Still got your drink? If you lost track of it, getting a fresh one is always fine. Feeling off? Tell someone you trust."
+        content.categoryIdentifier = Identifier.statusCategory
+        content.threadIdentifier = "ss.status"
+        content.interruptionLevel = .active
+        content.relevanceScore = 0.2
+        return content
     }
 
     // MARK: Check-ins
@@ -248,19 +276,6 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         onCheckInDue?()
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
     }
-}
-
-/// `.timeSensitive` where the capability is signed in, ordinary notifications where it isn't.
-@MainActor
-enum NotificationUrgency {
-    static var current: UNNotificationSetting = .enabled
-
-    static func level(for setting: UNNotificationSetting = current) -> UNNotificationInterruptionLevel {
-        setting == .notSupported ? .active : .timeSensitive
-    }
-
-    /// False when check-ins can't break through a Focus, so the app shouldn't promise that.
-    static var isSupported: Bool { current != .notSupported }
 }
 
 extension NotificationService: UNUserNotificationCenterDelegate {

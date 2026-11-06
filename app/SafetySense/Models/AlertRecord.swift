@@ -126,7 +126,7 @@ struct AlertRecord: Codable, Sendable, Equatable, Identifiable {
     var notified: [NotifiedContact]
     var events: [AlertEvent]
     var dispatch: DispatchInfo?
-    /// Practice drill: contacts get a message clearly marked TEST; never dispatches.
+    /// Practice drill: a TEST alert on the server. Nobody is contacted and it never dispatches.
     var isDrill: Bool
 
     init(id: UUID = UUID(), serverAlertID: String? = nil, shareURL: URL? = nil, sessionID: String? = nil,

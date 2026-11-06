@@ -24,6 +24,9 @@ protocol NotificationServiceProtocol: AnyObject {
     func scheduleCheckIn(at date: Date, sessionID: UUID)
     func cancelCheckIns()
     func notify(title: String, body: String, timeSensitive: Bool)
+    /// Night Out's quiet drink reminders. Repeats until cancelled.
+    func scheduleDrinkChecks()
+    func cancelDrinkChecks()
 }
 
 /// 60 s server heartbeat during a session (SPEC 6.1.6). If heartbeats stop without

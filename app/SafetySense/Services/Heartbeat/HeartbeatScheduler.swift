@@ -19,6 +19,8 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
     /// Why the last beat failed (nil when it got through).
     private(set) var lastError: String?
     var isFailing: Bool { lastError != nil }
+    /// The first failed beat after a good one. Set by `AppModel`.
+    var onBecameFailing: (@MainActor () -> Void)?
 
     private let backend: any BackendClientProtocol
     private let log = Logger(subsystem: "com.georgeteifel.SafetySense", category: "heartbeat")
@@ -107,7 +109,9 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
             stop()
             return
         } catch {
+            let wasFailing = isFailing
             lastError = (error as? BackendError)?.logDescription ?? "failed"
+            if !wasFailing { onBecameFailing?() }
             // HTTPBackendClient keeps the beat in its outbox; nothing else to do.
         }
 

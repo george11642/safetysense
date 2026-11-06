@@ -50,6 +50,9 @@ final class NoopNotificationService: NotificationServiceProtocol {
     func cancelCheckIns() { scheduled.removeAll() }
     private(set) var notes: [String] = []
     func notify(title: String, body: String, timeSensitive: Bool) { notes.append(title) }
+    private(set) var drinkChecksOn = false
+    func scheduleDrinkChecks() { drinkChecksOn = true }
+    func cancelDrinkChecks() { drinkChecksOn = false }
 }
 
 @MainActor

@@ -43,6 +43,7 @@ struct GuardActiveView: View {
             .padding(.bottom, SSSpacing.xl)
         }
         .scrollIndicators(.hidden)
+        .testModeBanner()
         .ssScreen()
         .sensoryFeedback(.error, trigger: authFailed)
         .task { await pollRisk() }

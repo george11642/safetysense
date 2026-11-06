@@ -63,6 +63,7 @@ enum BuildFlags {
 /// - `-ssSkipOnboarding 1`: mark onboarding done, seeding sample profile/contacts if empty and
 ///   safety PIN 2580 if none is set (QA only).
 /// - `-ssReset 1`: wipe persisted state on launch.
+/// - `-ssCleanShots 1`: real alert wording with no test banner, for screenshots of the design.
 /// - `-ssScenario nightOut`: start a Night Out guard and play `DemoScenarioPlayer` through the
 ///   same signal path the sensors use (works with live or demo services).
 /// - `-ssScenarioSpeed 0.5`: scenario time scale (1 = real time).
