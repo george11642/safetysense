@@ -53,7 +53,7 @@ Built and covered by unit tests, but the simulator can't prove these. Check them
 | Email draft | `submission/EMAIL_DRAFT.md` | Prototype link is filled in. Mary's email and the extra-credit line are still to fill. |
 | Architecture diagram | `design/architecture.svg` / `.png` | Embedded in PDF 4 and deck slide 10 |
 | App screenshots | `design/screens/` (old integration captures are in `design/screens/archive-integration/`) | Current UI, iPhone 17 Pro and 17e |
-| Demo video | `presentation/SafetySense-Demo.mp4` (16:9, 101 s), `-vertical.mp4`, `SafetySense-DemoClip-AppFlow.mp4` (39 s app and live-link cut), `SafetySense-AppLoop.mp4/.gif` | Remotion source is in `video/` |
+| Demo video | `presentation/SafetySense-Demo.mp4` (submission video, 16:9, 2:40; the 3D-and-app hybrid George chose). Older and alternate cuts: `presentation/videos/`. `SafetySense-DemoClip-AppFlow.mp4` (39 s app and live-link cut), `SafetySense-AppLoop.mp4/.gif` | Remotion source is in `video/` |
 | Finalist deck | `presentation/SafetySense-Finalist-Deck.pptx` + `.pdf` | 15 slides. The 39 s demo clip is embedded on slide 6, with speaker notes. |
 | Q&A prep and iPhone demo script | `presentation/QA_PREP.md`, `presentation/IPHONE_DEMO_SCRIPT.md` | |
 | Spec, brief, checklist | `docs/SPEC.md`, `docs/CONTEST_BRIEF.md`, `docs/SUBMISSION_CHECKLIST.md` | |

@@ -1,6 +1,6 @@
 # SafetySense demo video (Remotion)
 
-Outputs go to `../presentation/`: `SafetySense-Demo.mp4` (1920x1080), `SafetySense-Demo-vertical.mp4` (1080x1920), `SafetySense-AppLoop.mp4` / `.gif` (5 s silent loop for slides).
+The submission video is `../presentation/SafetySense-Demo.mp4` (1920x1080, composition `HybridV3`; render with `npm run render:submission`). Earlier and alternate cuts are in `../presentation/videos/`. Other outputs in `../presentation/`: `SafetySense-AppLoop.mp4` / `.gif` (5 s silent loop for slides).
 
 ```sh
 npm install                 # versions are pinned (remotion 4.0.538)
