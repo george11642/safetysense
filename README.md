@@ -19,7 +19,7 @@ Most safety apps rely on you pressing a button or running a timer. In a real ass
 
 ## How it works
 
-1. **Arm.** Start a Guard session from the app, the Action Button, a Lock Screen control, or Siri.
+1. **Arm.** Start a Guard session from the app. The Action Button, a Lock Screen control, or Siri can also start an alert directly, without opening the app (SPEC §7).
 2. **Watch.** The app checks sound events (Apple SoundAnalysis), a safe word and distress phrases (on-device SpeechAnalyzer), motion, location, and whether you answer check-ins. Audio is held in a 30-second buffer in memory and is never written to disk unless an alert fires.
 3. **Decide.** A deterministic, explainable risk engine combines these signals. On supported iPhones, an on-device Foundation Models check gives a second opinion. It can adjust the score but can never trigger an alert alone or block an SOS.
 4. **Respond.** Alerts climb a ladder:

@@ -37,7 +37,7 @@ Most of the apps below rely on the person pressing a button or running a timer. 
 | Mode | When | What's on | Default response |
 |---|---|---|---|
 | **Everyday** (default) | Always | No microphone. SOS triggers, trusted contacts, medical info, resources | Manual SOS only |
-| **Walk Home** | Walking to a car, dorm, or bus | Live location to one contact, arrival check, alert if you leave your route or stop for too long. Microphone optional | Contacts alerted if you don't arrive |
+| **Walk Home** | Walking to a car, dorm, or bus | Live location to one contact, arrival check, alert if you leave your route or stop for too long. Microphone optional; with the mic on, distress audio or words go up the full escalation ladder | Contacts alerted if you don't arrive; with the mic on, the full escalation ladder (dispatch policy is configurable per mode) |
 | **Night Out** | Party, bar, concert | Full Guard: on-device audio AI, motion, check-ins every 30–90 min, drink-check prompts, a buddy | Full escalation ladder |
 | **Date** | A first date from an app | Night Out, plus **sealed date details**: their name, photo, profile link and the place, kept encrypted and shown to your contact *only if* an alert fires | Full escalation ladder, plus a scheduled check-in |
 | **Ride** | Uber, Lyft, someone else driving | Log the plate and driver. Alert on route deviation or a stop longer than 3 min in an unexpected place | Check-in, then contacts |

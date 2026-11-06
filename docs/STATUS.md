@@ -49,7 +49,7 @@ Built and covered by unit tests, but the simulator can't prove these. Check them
 | Backend (Supabase Edge Function `api`, Postgres, pg_cron watchdog) | `backend/` | Live at `https://uvunyysuyuonhoviszmc.supabase.co/functions/v1/api/` (function v3). Cron jobs: watchdog (every minute) and retention (hourly). `account/delete`, SMS delivery receipts and a sign-up rate limit are live. Database holds only the simulator's "Alex" device; no alerts, events or evidence. |
 | Contact live-link page and landing page | `web/` (Vercel project `safetysense-live`) | Live at https://safetysense-live.vercel.app/ and `/a/<token>` |
 | Submission PDFs 1 to 5 | `submission/01-…` to `05-…` (HTML source next to each PDF) | Built. Pages: 1 / 1 / 4 / 6 / 4. The bio has placeholders. |
-| Prototype | Figma file `Mx4ZCAW032658aaX1uD0vp`; link in `submission/06-prototype-link/PROTOTYPE_LINK.md` | 22 frames and 4 flows, wired. **Public** (Anyone · can view), verified signed-out 2026-11-04. |
+| Prototype | Figma file `Mx4ZCAW032658aaX1uD0vp`; link in `submission/06-prototype-link/PROTOTYPE_LINK.md` | 34 screens, 5 overlays and 5 flows, wired (every tappable element has a destination; audit fixes 2026-11-04). **Public** (Anyone · can view), verified signed-out 2026-11-04. |
 | Email draft | `submission/EMAIL_DRAFT.md` | Prototype link is filled in. Mary's email and the extra-credit line are still to fill. |
 | Architecture diagram | `design/architecture.svg` / `.png` | Embedded in PDF 4 and deck slide 10 |
 | App screenshots | `design/screens/` (old integration captures are in `design/screens/archive-integration/`) | Current UI, iPhone 17 Pro and 17e |
