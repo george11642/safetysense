@@ -251,14 +251,15 @@ async function validTwilio(req: Request, route: string, form: URLSearchParams): 
 type Notified = { name: string; channel: "call" | "sms"; status: string };
 
 async function notifyContacts(alert: Alert, device: Device): Promise<Notified[]> {
-  const contacts = must(await db.from("contacts").select("id,name,phone").eq("device_id", device.id)) as
+  // contacts/set writes them in the phone's order, primary first.
+  const contacts = must(await db.from("contacts").select("id,name,phone").eq("device_id", device.id).order("created_at")) as
     { id: string; name: string; phone: string }[];
   const url = await shareUrl(alert.share_token);
   const from = await secret("twilio_from");
   const who = firstName(device.name);
   const out: Notified[] = [];
   if (contacts.length === 0) await addEvent(alert.id, "SafetySense", "no_contacts", "No trusted contacts are set up");
-  for (const c of contacts) {
+  for (const [index, c] of contacts.entries()) {
     // SMS (Twilio trial blocks US SMS with error 30034; recorded, never fatal)
     let smsStatus = "dry_run";
     let smsSid: string | null = null, smsDelivery: string | null = null, smsError: string | null = null;
@@ -281,7 +282,8 @@ async function notifyContacts(alert: Alert, device: Device): Promise<Notified[]>
       smsDelivery === "failed" ? `Text to ${c.name}: not delivered (error ${smsError})` : `Text to ${c.name}: ${smsStatus}`,
       false, { provider_sid: smsSid, delivery_status: smsDelivery, error_code: smsError });
 
-    // Voice call (works on the trial for verified numbers)
+    // Voice call: the first contact only, as the app promises. Everyone else gets the text.
+    if (index > 0) continue;
     let callStatus = "dry_run";
     if (!alert.dry_run) {
       const q = `token=${encodeURIComponent(alert.share_token)}&c=${c.id}`;
@@ -320,6 +322,9 @@ async function escalate(alert: Alert, reason: string, by: string, internal = fal
           phone: (device.phone ?? "").replace(/\D/g, "").replace(/^(\d{10})$/, "1$1"),
           pin: "1234",
           location: { coordinates: { lat: loc?.lat ?? 35.0844, lng: loc?.lng ?? -106.6504, accuracy: loc?.accuracy ?? 50 } },
+          // Noonlight has no duress or no-callback field. This free-text note is the only channel to
+          // dispatchers, and only reaches a new alarm: an alarm already sent can't be updated.
+          ...(alert.duress ? { instructions: { entry: "DURESS: person may be coerced. Do not call or text this phone. Send police." } } : {}),
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -375,9 +380,14 @@ async function cancelNoonlight(alert: Alert) {
 async function createAlert(opts: {
   device: Device; session: Session | null; level: 2 | 3; reason: string; trigger: string;
   lat: number | null; lng: number | null; accuracy: number | null; battery: number | null;
-  dryRun: boolean; policy: string;
+  dryRun: boolean; policy: string; clientAlertId?: string | null;
 }) {
   const { device, session } = opts;
+  // The phone retries until it hears back. A repeat of an alert that landed must not call anyone again.
+  if (opts.clientAlertId) {
+    const repeat = must(await db.from("alerts").select("*").eq("id", opts.clientAlertId).maybeSingle()) as Alert | null;
+    if (repeat?.device_id === device.id) return { alert: repeat, notified: [] as Notified[], reused: true };
+  }
   // One live alert per session: re-use it (and upgrade to level 3 if asked).
   if (session) {
     const existing = (must(await db.from("alerts").select("*").eq("session_id", session.id)
@@ -397,6 +407,7 @@ async function createAlert(opts: {
     if ((count ?? 0) >= MAX_LIVE_ALERTS_PER_HOUR) throw new HttpError(429, "too many alerts in the last hour; call 911 if you need help");
   }
   const alert = must(await db.from("alerts").insert({
+    ...(opts.clientAlertId ? { id: opts.clientAlertId } : {}),
     session_id: session?.id ?? null, device_id: device.id, level: opts.level, reason: opts.reason, trigger: opts.trigger,
     dispatch_policy: opts.policy, share_token: randomToken(24), dry_run: opts.dryRun,
   }).select("*").single()) as Alert;
@@ -525,6 +536,16 @@ const routes: Record<string, Handler> = {
     return json({ device_id: d.id, device_secret: secretValue });
   },
 
+  // Name and phone edits after registration, so contacts and dispatch aren't left with old values.
+  async "profile/update"({ req, body }) {
+    const device = await authDevice(req);
+    const name = str(body.name, "name", 80)!;
+    const ph = body.phone ? phone(body.phone, "phone") : null;
+    const campus = str(body.campus, "campus", 40, false);
+    must(await db.from("devices").update({ name, phone: ph, campus }).eq("id", device.id));
+    return json({ ok: true });
+  },
+
   async "contacts/set"({ req, body }) {
     const device = await authDevice(req);
     if (!Array.isArray(body.contacts) || body.contacts.length > 5) throw new HttpError(400, "contacts must be a list of up to 5");
@@ -532,7 +553,8 @@ const routes: Record<string, Handler> = {
       device_id: device.id, name: str(c?.name, `contacts[${i}].name`, 60)!, phone: phone(c?.phone, `contacts[${i}].phone`),
     }));
     must(await db.from("contacts").delete().eq("device_id", device.id));
-    if (rows.length) must(await db.from("contacts").insert(rows));
+    // One at a time: created_at keeps their order, and the first one gets the phone call.
+    for (const row of rows) must(await db.from("contacts").insert(row));
     return json({ ok: true });
   },
 
@@ -587,14 +609,22 @@ const routes: Record<string, Handler> = {
     if (battery !== null) patch.last_battery = battery;
     must(await db.from("sessions").update(patch).eq("id", s.id));
     // While an alert is live, every heartbeat also feeds the contacts' live map.
-    if (lat !== null && lng !== null && s.status === "alerted") {
-      const live = (must(await db.from("alerts").select("*").eq("session_id", s.id).in("status", ["active", "dispatched"]).limit(1)) as Alert[])[0];
-      if (live) {
+    let live: Alert | undefined;
+    if (s.status === "alerted") {
+      live = (must(await db.from("alerts").select("*").eq("session_id", s.id).in("status", ["active", "dispatched"])
+        .order("created_at", { ascending: false }).limit(1)) as Alert[])[0];
+      if (live && lat !== null && lng !== null) {
         await db.from("locations").insert({ alert_id: live.id, session_id: s.id, lat, lng, accuracy, battery });
         await pushNoonlightLocation(live, lat, lng, accuracy);
       }
     }
-    return json({ ok: true, server_time: new Date().toISOString() });
+    // Tells a phone that was out of reach about an alert the watchdog raised, so the person can
+    // see it and stop it. A duress alert is never mentioned: the phone may be in someone's hands.
+    const alert = live && !live.duress ? {
+      id: live.id, level: live.level, share_url: await shareUrl(live.share_token), trigger: live.trigger,
+      reason: live.reason, started_at: live.created_at, status: live.status, dispatch_policy: live.dispatch_policy,
+    } : undefined;
+    return json({ ok: true, server_time: new Date().toISOString(), ...(alert ? { alert } : {}) });
   },
 
   async "session/end"({ req, body }) {
@@ -621,6 +651,7 @@ const routes: Record<string, Handler> = {
       lat: num(body.lat, "lat", -90, 90), lng: num(body.lng, "lng", -180, 180),
       accuracy: num(body.accuracy, "accuracy", 0, 100000), battery: num(body.battery, "battery", 0, 1),
       dryRun: body.dry_run === true || session?.dry_run === true, policy,
+      clientAlertId: body.client_alert_id ? uuid(body.client_alert_id, "client_alert_id") : null,
     });
     return json({ alert_id: alert.id, share_url: await shareUrl(alert.share_token), notified });
   },
@@ -642,7 +673,7 @@ const routes: Record<string, Handler> = {
       // but silently escalates to dispatch. Contacts still see help is on the way.
       must(await db.from("alerts").update({ duress: true }).eq("id", alert.id));
       await addEvent(alert.id, "SafetySense", "duress", "Cancel entered with the duress PIN", true);
-      await escalate(alert, "The alert was escalated.", "SafetySense");
+      await escalate({ ...alert, duress: true }, "The alert was escalated.", "SafetySense");
       return json({ ok: true, status: "cancelled" });
     }
     if (alert.status === "active" || alert.status === "dispatched") {
