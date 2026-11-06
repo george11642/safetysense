@@ -209,7 +209,7 @@ export const Arm: React.FC = () => {
           </Scene3D>
           <Grade />
           {/* fix r2: bigger chips in their own band under the captions (they were small and fought the caption line) */}
-          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="Audio stays on this phone" y={0.885} size={54} />
+          <InfoPill at={W(3, "listens") - F0} out={W(3, "Nothing") - F0 - 6} icon="🎙" text="On-device while guarding" y={0.885} size={54} />
           <InfoPill at={W(3, "Nothing") - F0} icon="🔒" text="No audio saved unless something's wrong" y={0.885} size={44} />
         </>
       )}

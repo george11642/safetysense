@@ -356,7 +356,7 @@ export const HallwayScene: React.FC = () => {
         <pointLight position={[-0.4, 1.6, 1.6]} color="#ffe2cc" intensity={1.6} distance={3.5} decay={1.6} />
         {/* fix r2: a cool rim behind her once she sits, so her head and shoulders separate from the hall */}
         <pointLight position={[0.95, 1.35, -0.55]} color="#a8c8ff" intensity={2.6 * prog(f, sit, sit + 12)} distance={1.8} decay={1.6} />
-        <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 1, worry: 0.2, brow: -0.1, mouth: 0.08 } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
+        <Character look={MAYA} faceFill={0.6} act={0} life={f >= still ? 0.15 : 0.6} face={f >= still + 6 ? { blink: 1, worry: 0.2, brow: -0.1, mouth: 0.08 } : undefined} poseAdd={f >= still ? { neckTurn: 0.12 + 0.4 * prog(f, still, still + 18, "inOut"), neckNod: 0.12 - 0.24 * prog(f, still, still + 18, "inOut"), neckTilt: 0.3 - 0.08 * prog(f, still, still + 18, "inOut") } : undefined} position={[x, 0, z]} rotationY={-Math.PI / 2 + 0.25} holdR="phone" phoneScreen={f < okay ? sv("guard-night") : sv("checkin-night")} phoneGlow={f < okay ? 0.4 : 1}
           clips={[{ anim: "woozy", start: 0, speed: 0.8 }, { anim: "stumbleCatch", start: stumble, fade: 4 }, { anim: "sitRest", start: sit, fade: 14 }]} />
         <CameraRig rig={(fr) => {
           const d = lerp(4.0, 2.6, prog(fr, 0, noAns + 10, "inOut"));
@@ -459,7 +459,7 @@ export const Roommate: React.FC = () => {
         <>
           <Scene3D fog={{ color: "#1d1430", near: 4, far: 16 }} background="#1d1430">
             <Hallway pulse={0.7} />
-            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitRest", start: -60 }]} />
+            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitRest", start: -60 }]} poseAdd={{ neckTurn: 0.52, neckNod: -0.12, neckTilt: 0.22 }} face={{ blink: 1, worry: 0.2 }} />
             <Character look={ROOMMATE_HD} position={[-0.2, 0, rz]} rotationY={Math.PI} seed={6} clips={[{ anim: "walk", start: run - 10, speed: 1.7 }]} holdR="phone" phoneScreen={alert} phoneGlow={0.4} grip={0.75} face={{ worry: 0.8, brow: 0.6, mouth: 0.15 }} act={0} faceFill={0.5} />
             <pointLight position={[-0.2, 2.0, rz - 1.0]} color="#ffd8b8" intensity={2.4} distance={3} decay={1.6} />
             {/* r7: cut in on the action, a front tracking medium shot (waist up) that backs away ahead of her run */}
@@ -474,7 +474,7 @@ export const Roommate: React.FC = () => {
         <>
           <Scene3D fog={{ color: "#1d1430", near: 4, far: 16 }} background="#1d1430">
             <Hallway pulse={0.5} />
-            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitRest", start: -60 }]} />
+            <Character look={MAYA} position={[0.6, 0, 0]} rotationY={-Math.PI / 2 + 0.25} clips={[{ anim: "sitRest", start: -60 }]} poseAdd={{ neckTurn: 0.52, neckNod: -0.12, neckTilt: 0.22 }} face={{ blink: 1, worry: 0.2 }} />
             <Character look={ROOMMATE_HD} position={[-0.32, 0, 0.5]} rotationY={Math.PI / 2 - 0.55} seed={6} clips={[{ anim: "kneel", start: reach - 22 }]} faceFill={0.5} face={{ worry: 0.7, brow: 0.5 }} />
             <pointLight position={[-0.6, 1.8, 1.6]} color="#ffd8b8" intensity={2.2} distance={4} decay={1.6} />
             <pointLight position={[0.3, 1.8, -1.2]} color="#9fd8ff" intensity={2.4} distance={3} decay={1.6} />

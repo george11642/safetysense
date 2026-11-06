@@ -572,7 +572,7 @@ export const Duress: React.FC = () => {
     <PhoneInHand position={[-0.09, 1.09, -0.32]} toward={[-0.12, 1.24, -0.48]} screen={calm ? sv("guard-ride") : checkin ? sv("checkin-ride") : pinpadTex(filled)} tap={calm ? 0 : checkin ? prog(f, okTap, okTap + 3) * (1 - prog(f, okTap + 4, okTap + 7)) : tap} thumbAt={calm ? undefined : checkin ? [0.5, 0.578] : thumbAt} roll={-0.08} noHand />
   );
   const glitch = f >= isnt && f < isnt + 6;
-  const wipeK = prog(f, dispatch - 6, dispatch + 4, "inOut");
+  const wipeK = prog(f, dispatch - 2, dispatch + 3, "out"); // fix v2-r4: a quick clean red cut-through (the slow diagonal band read as a smeared tear)
   return (
     <AbsoluteFill style={{ background: "#07060c" }}>
       {!split ? (
@@ -606,13 +606,12 @@ export const Duress: React.FC = () => {
           </div>
           <PanelLabel text="DRIVER SEES" sub="a calm screen" color={C.ink} at={isnt + 3} top={300} />
           {/* the red wipe: a diagonal band sweeps left -> right, leaving a red tint behind it */}
-          {wipeK > 0 && (
-            <AbsoluteFill style={{ background: `linear-gradient(110deg, rgba(120,16,26,.62) 0%, rgba(120,16,26,.62) ${wipeK * 100 - 8}%, ${C.danger} ${wipeK * 100 - 2}%, rgba(0,0,0,0) ${wipeK * 100 + 4}%)` }} />
-          )}
+          {wipeK > 0 && <AbsoluteFill style={{ background: `rgba(120,16,26,${0.62 * wipeK})` }} />}
+          {f >= dispatch - 2 && f < dispatch + 2 && <AbsoluteFill style={{ background: C.danger, opacity: 0.55 * (1 - (f - dispatch + 2) / 4) }} />}
           {wipeK > 0.5 && (
             <div style={{ position: "absolute", left: 50, right: 50, top: 520, ...glass, borderRadius: 40, padding: "34px 40px 30px", borderColor: C.danger, background: "linear-gradient(180deg, rgba(60,12,18,.94), rgba(20,10,16,.96))", boxShadow: `0 0 80px ${C.danger}66, 0 20px 50px rgba(0,0,0,.6)`, opacity: fadeIn(f, dispatch, 5), transform: `scale(${0.85 + 0.15 * fadeIn(f, dispatch, 7)}) rotate(${-2 * (1 - fadeIn(f, dispatch, 7))}deg)` }}>
               <div style={{ fontFamily: OF.caption, fontWeight: 900, fontSize: 44, letterSpacing: 3, color: C.danger }}>DISPATCH SEES</div>
-              <div style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 34, color: C.ink, opacity: 0.85, marginBottom: 10 }}>silent alert · hidden from the driver</div>
+              <div style={{ fontFamily: OF.caption, fontWeight: 800, fontSize: 34, color: C.ink, opacity: 0.85, marginBottom: 10 }}>silent alert · no call to her phone</div>
               {[["Duress PIN used", dispatch + 2], ["Dispatch notified", dispatch + 9], ["Live location shared", dispatch + 16]].map(([t, at]) => (
                 <div key={t as string} style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 22, opacity: fadeIn(f, at as number, 5), transform: `translateX(${(1 - fadeIn(f, at as number, 6)) * 40}px)` }}>
                   <span style={{ width: 78, height: 78, flex: "none", borderRadius: 99, display: "grid", placeItems: "center", background: C.danger, fontFamily: OF.caption, fontWeight: 900, fontSize: 50, color: "#fff", transform: `scale(${0.6 + 0.4 * fadeIn(f, (at as number) + 2, 5)})` }}>✓</span>
