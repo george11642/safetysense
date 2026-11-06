@@ -13,7 +13,9 @@ struct TestModeBanner: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, SSSpacing.sm)
             .padding(.vertical, SSSpacing.xs)
+            // Opaque underneath: content scrolls behind it, and this line has to stay readable.
             .background(SSColor.warn.opacity(0.22), in: RoundedRectangle(cornerRadius: SSRadius.small, style: .continuous))
+            .background(SSColor.background, in: RoundedRectangle(cornerRadius: SSRadius.small, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: SSRadius.small, style: .continuous).stroke(SSColor.warn.opacity(0.6), lineWidth: 1))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(text)

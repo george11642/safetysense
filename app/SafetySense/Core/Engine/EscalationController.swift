@@ -91,6 +91,8 @@ final class EscalationController: EscalationControllerProtocol {
     /// A duress cancel hasn't landed yet. See `endSessionAfterDuressCancel`.
     @ObservationIgnored private var duressCancelPending = false
     @ObservationIgnored private var sessionEndAwaitingDuressCancel: String?
+    /// Settled in this run, so an older copy in the Keychain can't bring them back.
+    @ObservationIgnored private var settledPending: Set<UUID> = []
 
     init(backend: any BackendClientProtocol,
          clock: any EngineClock = SystemEngineClock(),
@@ -585,6 +587,13 @@ final class EscalationController: EscalationControllerProtocol {
     /// True while any clip is held out of the Vault, so a PIN reset must not unlock it.
     var isHidingClips: Bool { duressRecords.contains { $0.hiddenFrom != nil } }
 
+    /// An erase that has to keep the evidence. Everything listed now leaves the Vault too, and
+    /// no duress window or live link restarts.
+    func hideAllClips() {
+        sessionDuressRecords = DuressRecordStore.hiding(before: now, in: sessionDuressRecords)
+        duressStore.save(DuressRecordStore.hiding(before: now, in: duressStore.load()))
+    }
+
     /// The safety PIN was entered in the Vault, which only the person's own choice can do.
     func releaseVaultClips() {
         let released = duressRecords.map {
@@ -728,9 +737,10 @@ final class EscalationController: EscalationControllerProtocol {
 
     /// At launch: picks up alerts that hadn't reached the server when iOS ended the app. The one
     /// that was on screen comes back on screen, a hidden one goes out without a trace, and a duress
-    /// alert still inside its window goes back to sharing location and recording.
+    /// alert still inside its window goes back to sharing location and recording. Safe to run
+    /// again, which is how a launch from before the first unlock picks these up afterward.
     func restorePendingAlerts() {
-        for entry in pendingStore.load(now: now) where pendingCreates[entry.record.id] == nil {
+        for entry in unrestoredPending() {
             pendingCreates[entry.record.id] = entry
             known[entry.record.id] = entry.record
             dispatchReasons[entry.record.id] = entry.dispatchReason
@@ -758,11 +768,22 @@ final class EscalationController: EscalationControllerProtocol {
 
     private func stopTrackingPending(_ id: UUID) {
         pendingCreates[id] = nil
+        settledPending.insert(id)
         persistPending()
     }
 
+    /// Saved entries this run hasn't taken in. A cold-start SOS gets here before
+    /// `restorePendingAlerts`, and so does anything before the first unlock.
+    private func unrestoredPending() -> [PendingAlert] {
+        pendingStore.load(now: now).filter {
+            pendingCreates[$0.record.id] == nil && !settledPending.contains($0.record.id)
+        }
+    }
+
+    /// Never writes over those entries: one can be a killed process's hidden duress alert or a
+    /// cancel still owed to the server.
     private func persistPending() {
-        pendingStore.save(Array(pendingCreates.values))
+        pendingStore.save(Array(pendingCreates.values) + unrestoredPending())
     }
 
     /// `session/end` closes a session's watchdog alert unless it's marked duress, so one that gets

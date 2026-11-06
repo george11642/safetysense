@@ -68,8 +68,8 @@ enum GuardMode: String, Codable, CodingKeyRepresentable, Sendable, CaseIterable,
     /// answering a fake call). Same as each setup screen's default, so no Guard runs unchecked.
     var defaultArrivalCheck: TimeInterval? {
         switch self {
-        case .walk: 15 * 60
-        case .ride: 20 * 60
+        case .walk: 30 * 60
+        case .ride: 35 * 60
         case .everyday, .nightOut, .date: nil
         }
     }

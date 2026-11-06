@@ -84,7 +84,7 @@ enum GuardCopy {
     }
 
     static func quietLine(_ mode: GuardMode?) -> String {
-        mode == .nightOut ? EscalationLevel.guarding.statusLine : "Guarding quietly. Nothing is being saved."
+        mode == .nightOut ? EscalationLevel.guarding.statusLine : "Guarding quietly. No audio is being saved."
     }
 
     static func endTitle(_ mode: GuardMode?) -> String {

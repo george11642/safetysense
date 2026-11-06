@@ -226,6 +226,125 @@ struct ReleaseReviewTests {
         #expect(!store.hasParkedSafetyPIN)
     }
 
+    // MARK: Hidden evidence and "Delete everything"
+
+    private func modelHidingAClip(_ backend: EngineFakeBackend, vault: MockEvidenceVault,
+                                  store: SettingsStore) async throws -> (AppModel, EvidenceClip) {
+        store.setSafetyPIN("2580")
+        store.setDuressPIN("1111")
+        store.deviceCredentials = DeviceCredentials(deviceId: "d", deviceSecret: "s")
+        let model = makeModel(backend, clock: ManualEngineClock(now: .now), vault: vault, store: store)
+        model.hasCompletedOnboarding = true
+        let ladder = controller(model)
+        ladder.startHiddenDuressAlert(reason: "Duress PIN entered")
+        await ladder.settle()
+        let id = try #require(ladder.duressAlertID)
+        let clip = EvidenceClip(alertID: id, seq: 0, startedAt: .now, duration: 30, sha256: "x", fileName: "x", byteCount: 1)
+        vault.clips = [clip]
+        return (model, clip)
+    }
+
+    /// It went back to onboarding, and nothing that mattered went with it.
+    private func expectEvidenceKept(_ model: AppModel, _ vault: MockEvidenceVault, _ clip: EvidenceClip,
+                                    _ backend: EngineFakeBackend) async {
+        #expect(!model.hasCompletedOnboarding)
+        #expect(!model.store.hasSafetyPIN)
+        #expect(model.vaultClips.isEmpty)
+        #expect(vault.clips == [clip])
+        #expect(model.store.hasParkedSafetyPIN)
+        #expect(model.store.deviceCredentials != nil)
+        #expect(await backend.deletions == 0)
+        #expect(controller(model).duressAlertID != nil)
+    }
+
+    @Test func forgotYourPINAtDeleteEverythingKeepsHiddenEvidence() async throws {
+        let backend = EngineFakeBackend(), vault = MockEvidenceVault(), store = SettingsStore.ephemeral()
+        let (model, clip) = try await modelHidingAClip(backend, vault: vault, store: store)
+
+        await model.eraseEverything(confirmedBy: .other)   // What Face ID, a passcode or no passcode reach.
+
+        await expectEvidenceKept(model, vault, clip, backend)
+        _ = model.checkForMoreClips(pin: "2580")
+        #expect(model.vaultClips == [clip])
+    }
+
+    @Test func resettingPINsThenDeletingEverythingKeepsHiddenEvidence() async throws {
+        let backend = EngineFakeBackend(), vault = MockEvidenceVault(), store = SettingsStore.ephemeral()
+        let (model, clip) = try await modelHidingAClip(backend, vault: vault, store: store)
+
+        model.clearForgottenPINs()
+        #expect(!store.hasSafetyPIN)
+        await model.eraseEverything()   // No safety PIN left, so Settings doesn't ask for one.
+
+        await expectEvidenceKept(model, vault, clip, backend)
+    }
+
+    @Test func aPINSetAfterAForcedWipeCantDestroyWhatItHid() async throws {
+        let backend = EngineFakeBackend(), vault = MockEvidenceVault(), store = SettingsStore.ephemeral()
+        let (model, clip) = try await modelHidingAClip(backend, vault: vault, store: store)
+        await model.eraseUnderDuress()
+        await controller(model).settle()
+        store.setSafetyPIN("5555")
+
+        let newPIN = try #require(model.eraseConfirmation(for: "5555"))
+        #expect(newPIN == .other)
+        await model.eraseEverything(confirmedBy: newPIN)
+        await expectEvidenceKept(model, vault, clip, backend)
+
+        // The original PIN is still the person's way to really wipe the phone.
+        store.setSafetyPIN("5555")
+        #expect(model.eraseConfirmation(for: "0000") == nil)
+        let oldPIN = try #require(model.eraseConfirmation(for: "2580"))
+        #expect(oldPIN == .safetyPIN)
+        await model.eraseEverything(confirmedBy: oldPIN)
+        #expect(vault.clips.isEmpty)
+        #expect(!store.hasParkedSafetyPIN)
+        #expect(await backend.deletions == 1)
+    }
+
+    @Test func theSafetyPINStillDeletesEverythingItHid() async throws {
+        let backend = EngineFakeBackend(), vault = MockEvidenceVault(), store = SettingsStore.ephemeral()
+        let (model, _) = try await modelHidingAClip(backend, vault: vault, store: store)
+
+        let confirmation = try #require(model.eraseConfirmation(for: "2580"))
+        #expect(confirmation == .safetyPIN)
+        await model.eraseEverything(confirmedBy: confirmation)
+
+        #expect(vault.clips.isEmpty)
+        #expect(await backend.deletions == 1)
+        #expect(controller(model).duressAlertID == nil)
+    }
+
+    @Test func theDuressPINAtDeleteEverythingIsStillADuressErase() async throws {
+        let backend = EngineFakeBackend(), vault = MockEvidenceVault(), store = SettingsStore.ephemeral()
+        let (model, clip) = try await modelHidingAClip(backend, vault: vault, store: store)
+        #expect(model.eraseConfirmation(for: "1111") == .duressPIN)
+        await model.eraseEverything(confirmedBy: .duressPIN)
+        await expectEvidenceKept(model, vault, clip, backend)
+    }
+
+    @Test func aKeepEvidenceEraseAlsoClearsTheVaultWithoutStretchingTheWindow() async throws {
+        let backend = EngineFakeBackend(), vault = MockEvidenceVault(), store = SettingsStore.ephemeral()
+        let (model, clip) = try await modelHidingAClip(backend, vault: vault, store: store)
+        let earlier = EvidenceClip(alertID: UUID(), seq: 0, startedAt: .now.addingTimeInterval(-3600), duration: 30,
+                                   sha256: "y", fileName: "y", byteCount: 1)
+        vault.clips = [earlier, clip]
+        #expect(model.vaultClips == [earlier])
+
+        await model.eraseEverything()
+
+        #expect(model.vaultClips.isEmpty)
+        #expect(vault.clips == [earlier, clip])
+    }
+
+    @Test func hidingEverythingLeavesThePINMomentAlone() {
+        let entered = Date(timeIntervalSinceNow: -600)
+        let record = DuressRecord(alertID: UUID(), hiddenFrom: nil, enteredAt: entered)
+        let hiding = DuressRecordStore.hiding(before: .now, in: [record])
+        #expect(hiding[0].enteredAt == entered)
+        #expect(hiding[0].hiddenFrom != nil)
+    }
+
     // MARK: Staying awake
 
     @Test func noKeepAliveAsksForTheLongestGraceAndSaysSo() async throws {

@@ -2,6 +2,15 @@ import Foundation
 import Observation
 import UIKit
 
+/// What confirmed "Delete everything".
+enum EraseConfirmation: Equatable, Sendable {
+    /// The person's original safety PIN, the only thing that may destroy hidden evidence.
+    case safetyPIN
+    case duressPIN
+    /// Face ID, a passcode, no PIN at all, or a PIN set after evidence was hidden.
+    case other
+}
+
 enum MainTab: String, CaseIterable, Identifiable, Sendable {
     case home, contacts, vault, support, settings
     var id: String { rawValue }
@@ -86,6 +95,7 @@ final class AppModel {
     /// Walk Home: open the heads-up text over the Guard screen.
     var wantsHeadsUp = false
     @ObservationIgnored private var commandObserver: (any NSObjectProtocol)?
+    @ObservationIgnored private var unlockObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var didLaunch = false
     @ObservationIgnored private var lastLevel: EscalationLevel = .guarding
     /// Status notifications only go out when the app isn't on screen to show the same thing.
@@ -687,6 +697,16 @@ final class AppModel {
         }
     }
 
+    /// The PIN entered at "Delete everything", or nil for a wrong one. After a forced wipe or a PIN
+    /// reset the old safety PIN is the parked one, so it counts and a PIN set since doesn't.
+    func eraseConfirmation(for pin: String) -> EraseConfirmation? {
+        switch store.verifyPIN(pin) {
+        case .duress: .duressPIN
+        case .valid: store.hasParkedSafetyPIN && !store.isParkedSafetyPIN(pin) ? .other : .safetyPIN
+        case .invalid: store.isParkedSafetyPIN(pin) ? .safetyPIN : nil
+        }
+    }
+
     /// "Forgot your PIN?" in Settings. Face ID or a passcode is all it takes, and someone forcing
     /// the person could do that, so a PIN set afterward must not bring hidden clips back. The old
     /// safety PIN moves aside and stays the only one that does, as after a forced "Delete everything".
@@ -736,7 +756,23 @@ final class AppModel {
         Task { await startGuard(mode: .walk) }
     }
 
-    func eraseEverything() async {
+    /// True while something exists that only the original safety PIN may destroy.
+    private var hasEvidenceToProtect: Bool {
+        let escalation = services.escalation as? EscalationController
+        return escalation?.isHidingClips == true || escalation?.duressAlertID != nil || store.hasParkedSafetyPIN
+    }
+
+    /// Someone forcing the person can get past Face ID or set a new PIN, so while evidence is held
+    /// back an erase without the original safety PIN only looks like one. See `keepEvidenceAndReset`.
+    func eraseEverything(confirmedBy confirmation: EraseConfirmation = .other) async {
+        if confirmation == .duressPIN {
+            await eraseUnderDuress()
+            return
+        }
+        if confirmation == .other, hasEvidenceToProtect {
+            await keepEvidenceAndReset()
+            return
+        }
         await endGuard()
         registrationRetry?.cancel()
         registrationRetry = nil
@@ -755,6 +791,19 @@ final class AppModel {
         store.eraseAll()
         if keepForDeletion { store.pendingAccountDeletion = credentials }
         await services.backend.setCredentials(nil)
+        clearLocalState()
+    }
+
+    /// Reads the same as a full erase: the app goes back to onboarding. Like a forced wipe, it keeps
+    /// the clips, their key, the parked PIN, the server's data and any running duress alert, and
+    /// sends nothing new. Whatever was in the Vault leaves it until the old safety PIN is used.
+    private func keepEvidenceAndReset() async {
+        let escalation = services.escalation as? EscalationController
+        escalation?.hideAllClips()
+        await endGuard(underDuress: escalation?.duressAlertID != nil)
+        registrationRetry?.cancel()
+        registrationRetry = nil
+        store.eraseKeepingEvidence()
         clearLocalState()
     }
 
@@ -785,9 +834,15 @@ final class AppModel {
             }
             // A Control or button that ran in the widget extension.
             SharedCommandSignal.observe { Task { @MainActor [weak self] in self?.drainSharedCommands() } }
+            // A launch before the first unlock (a region event after a restart) reads nothing.
+            unlockObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.protectedDataBecameAvailable() }
+            }
         }
         if forcedScreen == nil { WidgetMirror.setGuardActive(currentSession != nil) }
-        if let vault = services.vault as? SecureEvidenceVault { vault.purge(olderThan: settings.retentionDays) }
+        if UIApplication.shared.isProtectedDataAvailable { reloadEvidenceIndex() }
+        applyEvidenceRetention()
         await refreshPermissions()
         if !isGuarding { services.notifications.cancelDrinkChecks() }   // A session that ended with the app gone.
         if let external = ExternalAlertRecord.load() {
@@ -816,6 +871,26 @@ final class AppModel {
         if let name = launch.scenario, hasCompletedOnboarding, forcedScreen == nil {
             await playScenario(named: name, speed: launch.scenarioSpeed)
         }
+    }
+
+    /// Duress clips stay past the retention limit: nothing but the safety PIN may remove them, and
+    /// a shorter "Keep data for" is no way around it.
+    private func applyEvidenceRetention() {
+        guard let vault = services.vault as? SecureEvidenceVault else { return }
+        let escalation = services.escalation as? EscalationController
+        vault.purge(olderThan: settings.retentionDays) { escalation?.vaultShows($0) == false }
+    }
+
+    private func reloadEvidenceIndex() {
+        (services.vault as? SecureEvidenceVault)?.reloadIndexAfterUnlock()
+    }
+
+    /// Whatever a launch before the first unlock couldn't read.
+    func protectedDataBecameAvailable() {
+        reloadEvidenceIndex()
+        applyEvidenceRetention()
+        guard forcedScreen == nil else { return }
+        (services.escalation as? EscalationController)?.restorePendingAlerts()
     }
 
     /// An alert that was running when iOS killed the app is still live on the server: show it

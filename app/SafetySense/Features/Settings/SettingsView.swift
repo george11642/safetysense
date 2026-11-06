@@ -233,14 +233,14 @@ struct SettingsView: View {
         }
         .confirmationDialog("Delete everything?", isPresented: $confirmErase, titleVisibility: .visible) {
             Button("Delete everything", role: .destructive) {
-                if model.store.hasSafetyPIN { erasePINPrompt = true } else { Task { await erase() } }
+                if model.store.hasSafetyPIN { erasePINPrompt = true } else { Task { await erase(confirmedBy: .other) } }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This ends any session and permanently removes your profile, contacts, PINs, safe word and saved evidence from this iPhone, and erases this iPhone's data on the SafetySense server. It can't be undone.")
         }
         .sheet(isPresented: $erasePINPrompt) {
-            ErasePINSheet { underDuress in Task { await erase(underDuress: underDuress) } }
+            ErasePINSheet { confirmation in Task { await erase(confirmedBy: confirmation) } }
         }
     }
 
@@ -308,17 +308,13 @@ struct SettingsView: View {
         drillRunning = false
     }
 
-    /// Both paths look the same: a forced wipe mustn't show that it was anything else.
-    private func erase(underDuress: Bool = false) async {
+    /// Every path looks the same: a forced wipe mustn't show that it was anything else.
+    private func erase(confirmedBy confirmation: EraseConfirmation) async {
         erasing = true
         _ = await IconSwitcher.apply(discreet: false)
         ResponderPhotoStore.deleteAll()
         DeveloperSettings.reset()
-        if underDuress {
-            await model.eraseUnderDuress()
-        } else {
-            await model.eraseEverything()
-        }
+        await model.eraseEverything(confirmedBy: confirmation)
         erasing = false
     }
 }
@@ -327,8 +323,8 @@ struct SettingsView: View {
 private struct ErasePINSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    /// True for the duress PIN, which looks the same here.
-    var onConfirmed: (_ underDuress: Bool) -> Void
+    /// The duress PIN looks the same here.
+    var onConfirmed: (EraseConfirmation) -> Void
     @State private var entry = ""
     @State private var error: String?
     @State private var shake = 0
@@ -343,13 +339,12 @@ private struct ErasePINSheet: View {
                         .font(SSFont.callout).foregroundStyle(error == nil ? SSColor.inkMuted : SSColor.warn)
                 }
                 PINPad(pin: $entry, tint: SSColor.danger) { pin in
-                    let result = model.store.verifyPIN(pin)
-                    if result == .invalid {
+                    if let confirmation = model.eraseConfirmation(for: pin) {
+                        dismiss()
+                        onConfirmed(confirmation)
+                    } else {
                         error = "That PIN didn't work. Try again."
                         shake += 1
-                    } else {
-                        dismiss()
-                        onConfirmed(result == .duress)
                     }
                 }
                 .modifier(ShakeEffect(shakes: CGFloat(shake)))
@@ -369,11 +364,12 @@ private struct ErasePINSheet: View {
     }
 
     /// Someone who forgot their PIN can still wipe their own phone, after proving it's theirs.
+    /// That isn't enough to destroy hidden evidence, which `eraseEverything` holds on to.
     private func confirmWithDevice() async {
         switch await DeviceAuth.authenticateOwner(reason: "Delete everything") {
         case .success, .unavailable:
             dismiss()
-            onConfirmed(false)
+            onConfirmed(.other)
         case .failed:
             error = "That didn't work. Try again."
             shake += 1

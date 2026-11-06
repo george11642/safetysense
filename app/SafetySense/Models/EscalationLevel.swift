@@ -21,7 +21,7 @@ enum EscalationLevel: Int, Codable, Sendable, CaseIterable, Comparable {
     /// Calm, non-alarming status line for each level.
     var statusLine: String {
         switch self {
-        case .guarding: "Nothing is saved unless something seems wrong."
+        case .guarding: "No audio is saved unless something seems wrong."
         case .checkIn: "Checking on you."
         case .alert: "Your people are being told."
         // Only for a dispatch nothing has confirmed: `statusText` shows the real status once it has.

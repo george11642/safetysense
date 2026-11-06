@@ -57,7 +57,8 @@ Contact's browser ──▶ safetysense-live.vercel.app/a/<token> ──▶ api/
   | Data | Kept for |
   |---|---|
   | Evidence rows **and** Storage objects | 30 days |
-  | Locations | 30 days |
+  | Locations, and the last location and battery on a session row | 30 days |
+  | Sessions the phone never closed (`active` or `alerted`) | 90 days after the last heartbeat |
   | Alerts and their events (and locations, by cascade) | 90 days |
   | Test (dry-run) alerts | 48 h (the share-link lifetime) |
   | Ended sessions | 90 days |
@@ -101,7 +102,7 @@ All routes are `POST` with a JSON body and return JSON. Errors look like `{error
 | `twilio/voice`, `twilio/gather`, `twilio/status`, `twilio/sms-status` | Twilio signature | TwiML / 204 |
 | `twilio/relay/voice`, `/screen`, `/accept`, `/dial-done`, `/sms` | Twilio signature | TwiML. A bad signature gets 403; any other failure gets the fail-safe TwiML |
 | `cron/watchdog` | `x-cron-secret` | `{}` → `{ok, heartbeat_lost, escalated}` |
-| `cron/retention` | `x-cron-secret` | `{}` → `{ok, evidence_rows, evidence_objects, orphan_objects, alerts, test_alerts, events, locations, sessions, sealed_cleared, devices_deleted, register_hits}` |
+| `cron/retention` | `x-cron-secret` | `{}` → `{ok, evidence_rows, evidence_objects, orphan_objects, alerts, test_alerts, events, locations, session_locations_cleared, sessions, stale_sessions, sealed_cleared, devices_deleted, register_hits}` |
 | `admin/setup` | `x-setup-key` + `setup_open` | `{twilio_sid, twilio_token, twilio_from, noonlight_token?, share_base?, close?}` → `{ok, stored}` |
 | `admin/selftest` | `x-setup-key` | `{}` → Twilio account fetch status, Noonlight configured or not, flags. Places no calls. |
 

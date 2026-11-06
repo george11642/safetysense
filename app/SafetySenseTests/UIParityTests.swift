@@ -414,6 +414,11 @@ struct UIParityTests {
         #expect(ride.sealedSummary == "Ride: Uber\nPlate: BXR 482")
     }
 
+    @Test func arrivalChecksMatchTheSetupScreensAndThePrototype() {
+        #expect(GuardMode.walk.defaultArrivalCheck == TimeInterval(1800))   // Frame 22: 1:50 to 2:20.
+        #expect(GuardMode.ride.defaultArrivalCheck == TimeInterval(2100))   // Frames 25, 26: 1:50 to 2:25.
+    }
+
     @Test func guardCopyMatchesEachMode() {
         #expect(GuardCopy.nextCheckInLabels(.nightOut).remaining == "Time left")
         #expect(GuardCopy.nextCheckInLabels(.date).title == "Next check-in")
@@ -423,7 +428,8 @@ struct UIParityTests {
         #expect(GuardCopy.endTitle(.date) == "End Date guard")
         #expect(GuardCopy.endTitle(.walk) == "I made it · End Guard")
         #expect(GuardCopy.endTitle(.ride) == "I've arrived · End Guard")
-        #expect(GuardCopy.quietLine(.walk) == "Guarding quietly. Nothing is being saved.")
+        #expect(GuardCopy.quietLine(.walk) == "Guarding quietly. No audio is being saved.")
+        #expect(GuardCopy.quietLine(.nightOut) == "No audio is saved unless something seems wrong.")
         let ride = SampleData.rideDetails
         #expect(GuardCopy.rideTitle(ride) == "Silver Camry · BXR 482")
         #expect(GuardCopy.rideTitle(ride, includesService: true) == "Uber · Silver Camry · BXR 482")

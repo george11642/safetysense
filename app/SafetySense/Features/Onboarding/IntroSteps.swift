@@ -60,7 +60,7 @@ struct PromisesStepView: View {
         Promise(id: 0, icon: "ear", title: "SafetySense listens during a Guard, or in an alert.",
                 body: "Listening happens during a Guard session you start, like a night out or a walk home. Any alert also turns the microphone on to record encrypted evidence, even if listening was off. When it's over, the microphone is off.",
                 tint: SSColor.calm),
-        Promise(id: 1, icon: "lock.shield", title: "Nothing is saved unless something's wrong.",
+        Promise(id: 1, icon: "lock.shield", title: "No audio is saved unless something's wrong.",
                 body: "Sound is checked on your iPhone in a 30-second memory loop and then forgotten. Only if an alert starts is it encrypted and kept as evidence, and only you can unlock it.",
                 tint: SSColor.accent),
         Promise(id: 2, icon: "phone.and.waveform", title: delivery.helpPromiseTitle,

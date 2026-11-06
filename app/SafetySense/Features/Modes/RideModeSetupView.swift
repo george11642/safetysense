@@ -7,7 +7,7 @@ struct RideModeSetupView: View {
     @State private var ride = RideDetails()
     @State private var car = ""
     @State private var destinationFix: LocationFix?
-    @State private var minutes = 20
+    @State private var minutes = 35
     @State private var listen = true
     @State private var isStarting = false
     @State private var started = 0

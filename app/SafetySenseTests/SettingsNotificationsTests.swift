@@ -133,7 +133,7 @@ struct StatusNotificationTests {
     @Test func walkWithoutSetupStillGetsAnArrivalCheck() async {
         let (model, _) = rig(active: true)
         await model.startGuard(mode: .walk)
-        #expect(model.currentSession?.checkInInterval == 900.0)
+        #expect(model.currentSession?.checkInInterval == 1800.0)
         #expect(model.currentSession?.nextCheckInAt != nil)
     }
 

@@ -339,7 +339,7 @@ extension GuardActivityAttributes {
 }
 
 extension GuardActivityAttributes.ContentState {
-    fileprivate static let guarding = Self(level: 0, statusText: "Nothing is saved unless something seems wrong.",
+    fileprivate static let guarding = Self(level: 0, statusText: "No audio is saved unless something seems wrong.",
                                            nextCheckInAt: .now.addingTimeInterval(900))
     fileprivate static let checkIn = Self(level: 1, statusText: "Checking on you.",
                                           levelStartedAt: .now, deadline: .now.addingTimeInterval(45))

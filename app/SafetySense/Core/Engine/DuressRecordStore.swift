@@ -60,6 +60,17 @@ struct DuressRecordStore: Sendable {
         return merged
     }
 
+    /// Every record hides whatever was saved up to `date`. The moments the PIN was entered stay
+    /// as they were, so a duress window can't be stretched by this.
+    static func hiding(before date: Date, in records: [DuressRecord]) -> [DuressRecord] {
+        records.map { record in
+            var hiding = record
+            hiding.hidesClipsBefore = date
+            hiding.hiddenFrom = record.hiddenFrom ?? date
+            return hiding
+        }
+    }
+
     /// Another duress PIN during the same window: it restarts, and a forced "Delete everything"
     /// also hides whatever was in the Vault up to now.
     static func renewing(_ id: UUID, at date: Date, hidesClipsBefore: Date?, in records: [DuressRecord]) -> [DuressRecord] {

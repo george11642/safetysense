@@ -1154,7 +1154,8 @@ const routes: Record<string, Handler> = {
     const ago = (ms: number) => new Date(now - ms).toISOString();
     const r = {
       evidence_rows: 0, evidence_objects: 0, orphan_objects: 0, alerts: 0, test_alerts: 0, events: 0,
-      locations: 0, sessions: 0, sealed_cleared: 0, devices_deleted: 0, register_hits: 0,
+      locations: 0, session_locations_cleared: 0, sessions: 0, stale_sessions: 0, sealed_cleared: 0,
+      devices_deleted: 0, register_hits: 0,
     };
 
     // 1) Evidence older than 30 days: Storage objects first, then rows.
@@ -1184,9 +1185,16 @@ const routes: Record<string, Handler> = {
     const evDel = must(await db.from("events").delete().lt("created_at", ago(ALERT_KEEP_DAYS * DAY_MS)).select("id")) as unknown[];
     r.events += evDel.length;
 
-    // 3) Location history 30 days; ended sessions 90 days; sealed date details once no share link can show them.
+    // 3) Location history 30 days, including the last fix and battery on the session row; ended sessions 90 days;
+    //    sessions the phone never closed 90 days after it went quiet; sealed details once no share link can show them.
     r.locations = (must(await db.from("locations").delete().lt("created_at", ago(LOCATION_KEEP_DAYS * DAY_MS)).select("id")) as unknown[]).length;
+    r.session_locations_cleared = (must(await db.from("sessions")
+      .update({ last_lat: null, last_lng: null, last_accuracy: null, last_battery: null })
+      .or("last_lat.not.is.null,last_lng.not.is.null,last_accuracy.not.is.null,last_battery.not.is.null")
+      .lt("last_heartbeat_at", ago(LOCATION_KEEP_DAYS * DAY_MS)).select("id")) as unknown[]).length;
     r.sessions = (must(await db.from("sessions").delete().eq("status", "ended").lt("started_at", ago(ALERT_KEEP_DAYS * DAY_MS)).select("id")) as unknown[]).length;
+    r.stale_sessions = (must(await db.from("sessions").delete().in("status", ["active", "alerted"])
+      .lt("last_heartbeat_at", ago(ALERT_KEEP_DAYS * DAY_MS)).select("id")) as unknown[]).length;
     r.sealed_cleared = (must(await db.from("sessions").update({ sealed_details: null }).not("sealed_details", "is", null)
       .lt("started_at", ago(SHARE_MAX_AGE_S * 1000)).select("id")) as unknown[]).length;
 

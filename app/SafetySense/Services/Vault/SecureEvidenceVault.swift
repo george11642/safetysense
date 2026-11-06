@@ -60,6 +60,9 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
     @ObservationIgnored private var uploadAgain = false
     @ObservationIgnored private var uploadRetry: Task<Void, Never>?
     @ObservationIgnored private var uploadRetryDelay: TimeInterval = SecureEvidenceVault.firstUploadRetry
+    /// There's an index on disk that this run hasn't read, as after a launch before the first
+    /// unlock. Until it's read, `clips` is only part of the list and must not replace it.
+    @ObservationIgnored private var indexUnread = false
     static let firstUploadRetry: TimeInterval = 30
     static let maxUploadRetry: TimeInterval = 300
 
@@ -74,7 +77,7 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
         self.microphone = useMicrophone ? EvidenceMicrophone() : nil
         try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true,
                                                  attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-        clips = loadIndex()
+        loadIndex(unlocked: false)
     }
 
     // MARK: EvidenceVaultProtocol
@@ -174,10 +177,19 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
         secrets.set(nil, for: AppGroup.KeychainAccounts.evidenceKey)
     }
 
-    /// Retention (SPEC 11): removes clips older than `days`.
-    func purge(olderThan days: Int, now: Date = .now) {
+    /// Retention (SPEC 11): removes clips older than `days`, except any `kept` holds on to.
+    func purge(olderThan days: Int, now: Date = .now, keeping kept: (EvidenceClip) -> Bool = { _ in false }) {
         let cutoff = now.addingTimeInterval(-Double(days) * 86_400)
-        for clip in clips where clip.startedAt < cutoff { try? delete(clip) }
+        for clip in clips where clip.startedAt < cutoff && !kept(clip) { try? delete(clip) }
+    }
+
+    /// The iPhone is unlocked, so an index that couldn't be read at launch can be now. Clips saved
+    /// since then join the older ones.
+    func reloadIndexAfterUnlock() {
+        guard indexUnread else { return }
+        let hasNewClips = !clips.isEmpty
+        loadIndex(unlocked: true)
+        if hasNewClips { saveIndex() }
     }
 
     // MARK: Sealing + upload
@@ -259,26 +271,52 @@ final class SecureEvidenceVault: EvidenceVaultProtocol {
         if let data = secrets.data(for: AppGroup.KeychainAccounts.evidenceKey), data.count == 32 {
             return SymmetricKey(data: data)
         }
+        // No key may only mean it can't be read yet, and a new one would strand every saved clip.
+        guard !indexUnread else { throw VaultError.locked }
         let key = SymmetricKey(size: .bits256)
-        secrets.set(key.withUnsafeBytes { Data($0) }, for: AppGroup.KeychainAccounts.evidenceKey)
+        guard secrets.set(key.withUnsafeBytes { Data($0) }, for: AppGroup.KeychainAccounts.evidenceKey) else {
+            throw VaultError.locked
+        }
         return key
     }
 
     private var indexURL: URL { directory.appending(path: "index.ssenc") }
 
     private func saveIndex() {
+        if indexUnread { loadIndex(unlocked: false) }
+        guard !indexUnread else { return }
         guard let json = try? JSONEncoder().encode(clips),
               let sealed = try? AES.GCM.seal(json, using: key(), authenticating: Data("index".utf8)).combined else { return }
         try? sealed.write(to: indexURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 
-    private func loadIndex() -> [EvidenceClip] {
-        guard let data = try? Data(contentsOf: indexURL),
-              let keyData = secrets.data(for: AppGroup.KeychainAccounts.evidenceKey), keyData.count == 32,
+    /// Reads the index in, keeping any clip this run already holds. If it can't be read it stays
+    /// on disk untouched. `unlocked` says the Keychain and files are available for sure, so an
+    /// index that still won't open can't be opened at all (its key didn't come along to a new
+    /// iPhone): it moves aside, never away, and new evidence starts a new list.
+    private func loadIndex(unlocked: Bool) {
+        guard FileManager.default.fileExists(atPath: indexURL.path) else {
+            indexUnread = false
+            return
+        }
+        guard let data = try? Data(contentsOf: indexURL) else {
+            indexUnread = true
+            return
+        }
+        guard let keyData = secrets.data(for: AppGroup.KeychainAccounts.evidenceKey), keyData.count == 32,
               let box = try? AES.GCM.SealedBox(combined: data),
               let json = try? AES.GCM.open(box, using: SymmetricKey(data: keyData), authenticating: Data("index".utf8)),
-              let clips = try? JSONDecoder().decode([EvidenceClip].self, from: json) else { return [] }
-        return clips.sorted { ($0.startedAt, $0.seq) < ($1.startedAt, $1.seq) }
+              let saved = try? JSONDecoder().decode([EvidenceClip].self, from: json) else {
+            indexUnread = true
+            if unlocked {
+                try? FileManager.default.moveItem(at: indexURL, to: directory.appending(path: "index-unreadable-\(UUID().uuidString).ssenc"))
+                indexUnread = false
+            }
+            return
+        }
+        indexUnread = false
+        clips = (saved.filter { old in !clips.contains { $0.id == old.id } } + clips)
+            .sorted { ($0.startedAt, $0.seq) < ($1.startedAt, $1.seq) }
     }
 
     // MARK: Helpers

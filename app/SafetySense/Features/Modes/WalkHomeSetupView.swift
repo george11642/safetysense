@@ -7,7 +7,7 @@ struct WalkHomeSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var destination = ""
     @State private var destinationFix: LocationFix?
-    @State private var minutes = 15
+    @State private var minutes = 30
     @State private var followerID: UUID?
     @State private var listen = true
     @State private var textFollower = false

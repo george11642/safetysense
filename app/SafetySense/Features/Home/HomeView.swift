@@ -22,8 +22,8 @@ struct HomeView: View {
                 notices
                 modePicker
                 startRing
-                FakeCallEntryRow { sheet = .fakeCall }
                 contactsCard
+                FakeCallEntryRow { sheet = .fakeCall }
                 checklist
                 quickDial
                 sosFooter

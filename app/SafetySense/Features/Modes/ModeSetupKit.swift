@@ -107,6 +107,7 @@ struct MinuteChips: View {
                         .font(SSFont.callout.weight(.semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                        .padding(.horizontal, SSSpacing.xxs)   // Six options leave the text no margin otherwise.
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .foregroundStyle(selected ? SSColor.onFill : SSColor.ink)
                         .background(selected ? SSColor.accent : SSColor.surface, in: Capsule())

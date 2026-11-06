@@ -178,6 +178,69 @@ struct MayHaveLandedTests {
         await first.backend.releaseCreates()
     }
 
+    /// A cold-start SOS runs before `restorePendingAlerts`, and must not write over a hidden
+    /// duress alert the killed process left behind.
+    @Test func aColdStartSOSKeepsAHiddenDuressAlertFromTheKilledProcess() async throws {
+        let pending = PendingAlertStore.memory, records = DuressRecordStore.memory
+        let first = LadderHarness(pendingAlerts: pending, duressRecords: records)
+        await first.backend.setFailCreates(true)
+        first.controller.startHiddenDuressAlert(reason: "Duress PIN entered")
+        await first.controller.settle()
+        let hidden = try #require(pending.load(now: first.clock.now).first { $0.hidden })
+
+        let second = LadderHarness(pendingAlerts: pending, duressRecords: records)
+        second.controller.triggerManual(.manualSOS, reason: "SOS")   // Before anything is restored.
+        #expect(pending.load(now: second.clock.now).contains { $0.record.id == hidden.record.id && $0.cancel == true })
+
+        second.controller.restorePendingAlerts()
+        await second.controller.settle()
+        #expect(second.controller.duressAlertID == hidden.record.id)
+        #expect(await second.backend.creates.contains { $0.clientAlertId == hidden.record.id.uuidString.lowercased() })
+        #expect(await second.backend.cancels.contains { $0.duress == true })
+    }
+
+    /// The same path, with a valid cancel still owed to an alert that may have landed.
+    @Test func aColdStartSOSKeepsACancelStillOwed() async throws {
+        let store = PendingAlertStore.memory
+        let first = LadderHarness(pendingAlerts: store)
+        await first.backend.setHoldCreates(true)
+        first.controller.triggerManual(.manualSOS, reason: "SOS")
+        while await first.backend.heldCount == 0 { await Task.yield() }
+        await first.controller.cancel(with: .valid)
+        let owed = try #require(store.load(now: first.clock.now).first)
+
+        let second = LadderHarness(pendingAlerts: store)
+        second.controller.triggerManual(.manualSOS, reason: "SOS")
+        await second.controller.settle()
+        #expect(store.load(now: second.clock.now).contains { $0.record.id == owed.record.id && $0.cancel == false })
+
+        second.controller.restorePendingAlerts()
+        await second.controller.settle()
+        #expect(await second.backend.cancels.map(\.alertId).contains(owed.record.id.uuidString.lowercased()))
+        await first.backend.releaseCreates()
+    }
+
+    /// What this run finished can't come back from an older saved copy, and restoring twice (at
+    /// launch, then after the first unlock) sends nothing twice.
+    @Test func restoringAgainRepeatsNothing() async throws {
+        let store = PendingAlertStore.memory
+        let first = LadderHarness(pendingAlerts: store)
+        await first.backend.setFailCreates(true)
+        first.controller.triggerManual(.manualSOS, reason: "SOS")
+        await first.controller.settle()
+        #expect(store.load(now: first.clock.now).count == 1)
+
+        let second = LadderHarness(pendingAlerts: store)
+        second.controller.restorePendingAlerts()
+        await second.controller.settle()
+        #expect(store.load(now: second.clock.now).isEmpty)
+        let sent = await second.backend.creates.count
+
+        second.controller.restorePendingAlerts()
+        await second.controller.settle()
+        #expect(await second.backend.creates.count == sent)
+    }
+
     /// P3: an attempt timed out after the PIN, the cancel failed, and the app was killed.
     @Test func aTimedOutAttemptAndAFailedCancelSurviveARelaunch() async throws {
         let store = PendingAlertStore.memory
