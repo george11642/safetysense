@@ -14,7 +14,7 @@ struct SafetySenseShortcuts: AppShortcutsProvider {
             systemImageName: "shield.lefthalf.filled"
         )
         AppShortcut(
-            intent: StartAlertIntent(source: .siri),
+            intent: StartAlertIntent(source: .voice),
             phrases: [
                 "\(.applicationName) alert",
                 "Start \(.applicationName) alert",

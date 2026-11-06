@@ -41,14 +41,16 @@ public struct TriggerAlertIntent: LiveActivityIntent {
 }
 
 /// Which surface fired the intent (lets the app log "Action Button" vs "Control").
+/// App Store Connect rejects an AppEnum with a case or title containing "Siri" (error 90626),
+/// so the voice surface is `.voice` here and stays `.siri` in `SharedCommand.Source`.
 public enum TriggerSourceEntity: String, AppEnum, Sendable {
-    case actionButton, controlCenter, siri, shortcut
+    case actionButton, controlCenter, voice, shortcut
 
     public static let typeDisplayRepresentation: TypeDisplayRepresentation = "Trigger source"
     public static let caseDisplayRepresentations: [TriggerSourceEntity: DisplayRepresentation] = [
         .actionButton: "Action Button",
         .controlCenter: "Control",
-        .siri: "Siri",
+        .voice: "Voice",
         .shortcut: "Shortcut",
     ]
 
@@ -56,7 +58,7 @@ public enum TriggerSourceEntity: String, AppEnum, Sendable {
         switch self {
         case .actionButton: .actionButton
         case .controlCenter: .controlCenter
-        case .siri: .siri
+        case .voice: .siri
         case .shortcut: .shortcut
         }
     }

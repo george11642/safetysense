@@ -37,9 +37,88 @@ Built and covered by unit tests, but the simulator can't prove these. Check them
 6. **Alert from a cold start:** Action Button with the app closed. Expect a location on the live link, and the Alert screen should only say evidence is recording if audio is really arriving.
 7. **Also still to do:** a 3+ minute stationary period, a false-positive pass against the under 1 per 10 hours target, a fast End then Start (CLMonitor reuse), a walk that reaches its destination, and a Live Activity on the 16e's Lock Screen (it has no Dynamic Island).
 
-**Josh, in the developer portal, whenever convenient:** enable the App Group and Time-Sensitive Notifications. Until then check-ins are ordinary notifications, so they don't break through a Focus, and onboarding says "Notifications". Once enabled, add both to the TestFlight entitlements files. Data migrates by itself.
+**TestFlight state (2026-11-06):** build 0.1.0 (2) is VALID and in internal testing, in the group "SafetySense Internal" (all builds), with George invited. Build 1 failed Apple's processing with error 90626, because an AppEnum case was named "Siri". `TriggerSourceEntity.siri` is now `.voice`, and `SharedCommand.Source` keeps `.siri`. Keep "Siri" out of AppEnum cases and titles. Internal only: no external groups, public link or review submissions.
+
+### Enable App Group + time-sensitive (Josh, whenever convenient)
+
+Until this is done, check-ins are ordinary notifications that don't break through a Focus, onboarding says "Notifications", and the app and widgets share data through the Keychain group. Nothing is broken in the meantime. Only Josh can do steps 1 to 4.
+
+In Certificates, Identifiers & Profiles (team K89F44WFKH):
+
+- [ ] 1. Under Identifiers > App Groups, create `group.com.georgeteifel.SafetySense`.
+- [ ] 2. Open App ID `com.georgeteifel.SafetySense`, turn on App Groups and assign that group.
+- [ ] 3. Open App ID `com.georgeteifel.SafetySense.Widgets`, turn on App Groups and assign the same group.
+- [ ] 4. On `com.georgeteifel.SafetySense` only, turn on Time Sensitive Notifications.
+- [ ] 5. Regenerate both App Store profiles, keeping the names `SafetySense App Store` and `SafetySense Widgets App Store`. Changing an App ID invalidates the old ones. Install the new ones on the build Mac.
+- [ ] 6. Restore the full entitlements in Release: add `com.apple.security.application-groups` to `app/SafetySense/TestFlight.entitlements` and `app/SafetySenseWidgets/TestFlight.entitlements`, and add `com.apple.developer.usernotifications.time-sensitive` to the app's file. Keep the `keychain-access-groups` entries: `testflight.sh` requires the shared group, and it holds the data to migrate.
+- [ ] 7. Upload a new build with `app/Tools/testflight.sh` (next build number) and confirm the Guard control still shows Guarding. Data moves from the Keychain to the App Group by itself.
 
 **Decisions to confirm:** `ITSAppUsesNonExemptEncryption` stays false because all encryption is Apple's (TLS, Keychain, CryptoKit). Arriving at a destination does not cancel the arrival check, since being at the door isn't the same as being safe. The privacy manifest declares name, phone, contacts, precise location and audio as collected for app functionality; match this if an App Store privacy label is ever filled in.
+
+## App and Figma parity (added 2026-11-05)
+
+The app now matches the prototype's screens and flows: Marked safe (both PINs, countdown and Alert Active), "I need help" going to the countdown, mode-specific Guards, the check-in toast, the fixed Alert dock, the contacts preview, and failure, permission and no-PIN states. 214 tests pass; Release compiles for the simulator.
+
+**Still open, because it lives outside `app/`:**
+
+1. **Live link duress states (frames 20 to 20ed2) and responses (18, 20b/c/d).** `share/get` needs to return `duress`, the duress time and `mode` (additive, no schema change), and `web/a.html` needs the states: confirmed response labels, "Dispatch already requested", and the reason line with mode. It also says "Noonlight has been asked to send help" for sandbox dispatch, which could mislead a real contact on a TestFlight build; only `simulated` gets honest wording today.
+
+**Decisions to confirm:**
+
+- Toast and timeline say "Maya is on the way", not Figma's "on her way", because contacts have no pronouns on file. Her "Her update…" line is "This update…" for the same reason.
+- Check-in defaults stay at Night Out 45 min and Date 30 min (SPEC: 30 to 90). The prototype's story uses 20. Changing them is one line in `GuardMode.defaultCheckInInterval`.
+- Night Out and Date Guards start with the End Guard button alone, without "Face ID/PIN" on the label; the auth gate is unchanged.
+- CNM Title IX (505-224-4000 x51240, Dean of Students) was checked on CNM's own Title IX page on 2026-11-05. It isn't in the SPEC fact-check table yet.
+
+## Duress callback relay (added 2026-11-06)
+
+Function version 11 is deployed, read back and identical to `index.ts`. Versions 6 to 10 were cut-off deploys that took the whole API down from 07:51 to 08:10 UTC on Nov 6. Noonlight now gets a relay number instead of the user's, and the Twilio number's webhooks point at the relay. **It's built and tested with simulated webhooks only. The gap is not closed.** Details and limits: `backend/README.md`, "Relay line and the duress callback gap".
+
+Live link duress states from item 1 above are partly done: `share/get` returns `duress`, the duress time and `mode`, and the page has a "Do not call or text" banner and honest sandbox wording. The frame-by-frame match isn't confirmed.
+
+**George:**
+
+1. **Before tonight's submission:** the Security and Purpose documents are out of date. Security says Noonlight holds the user's phone, and both describe duress as an open item with old wording. Replacement wording is in `docs/COMPETITOR_RESEARCH.md` section 6. Re-render the PDFs if you change them.
+2. **Also check** the Technical document, SPEC, deck and Q&A, which say monitoring texts and calls the user. A dispatcher's text no longer reaches her, and a call reaches her only if she presses 1.
+3. **Ask Noonlight** the questions in the README. The big one is whether a relay number is allowed at all.
+
+**Decisions to confirm:**
+
+- Silent triggers (`safe_word`, `action_button`) forward like any other alert, so a dispatcher's call could ring in front of an attacker. Treating them like duress is a small server change, but a false alarm then couldn't be sorted out by phone.
+- If someone else answers a forwarded call and presses 1, the relay can't tell. The dispatcher talks to that person.
+
+**Other session (`app/`):**
+
+- Commit the bare-duress work. The server now also handles the old behaviour for installed builds.
+- A later alert in the same session merges into a duress alert, so a genuine alert closes itself on screen. Help is already going; please check this is acceptable.
+- iOS microphone and location indicators stay on for about 30 minutes after a fake cancel, visible to someone holding the phone. Consider disclosing that.
+
+## Release review fixes (added 2026-11-06)
+
+**Not live yet:** the `applyDuress` re-raise of a cancelled alert in `backend/supabase/functions/api/index.ts` is committed but not deployed. The app needs no deploy for its side of that fix. It holds `session/end` until the duress cancel lands.
+
+**Not live yet:** the `session/end` change in `backend/supabase/functions/api/index.ts` is committed but not deployed. Until it is, End Guard in a dead zone can still leave a `heartbeat_lost` alert the phone can't see. TestFlight sessions are `dry_run`, so nobody is contacted in the meantime.
+
+**Still open:** `web/a.html` doesn't have the confirmed response states or "dispatch already requested" (frames 18, 20b to 20d, 20eb to 20ed2). It was outside this work's allowed paths. George needs to allow the change or accept the gap in writing.
+
+**Decisions to confirm:**
+
+- A failed call now reads "Couldn't reach" even when the text got out. It used to show the text's status.
+- After "Forgot your PIN?", clips hidden by a duress PIN come back only with the old safety PIN. Someone who really forgot it can't bring them back.
+- A duress PIN during a running duress window restarts the 30 minutes.
+
+## Round 6 fixes (added 2026-11-06)
+
+**Not live yet:** retention now clears the last location and battery on session rows after 30 days and deletes sessions the phone never closed, 90 days after their last heartbeat (`backend/supabase/functions/api/index.ts`). It type-checks but hasn't run or been deployed. Until it's deployed, the 30-day location line in Settings and Privacy isn't true for those session rows. A deploy also carries the two earlier "Not live yet" changes. Use the CLI command in `backend/README.md`, since cut-off MCP deploys took the API down on Nov 6, then smoke test.
+
+**Still open:** the live-link states in `web/a.html` (frames 18, 20b to 20d, 20eb to 20ed2). George needs to allow the change or accept the gap in writing.
+
+**Decisions to confirm:**
+
+- Walk now defaults to 30 min and Ride to 35, matching frames 22, 25 and 26. Shortcuts and a fake call's Walk guard use the same defaults.
+- The prototype and any deck or PDF copy of "Nothing is saved unless something's wrong" should change to "No audio is saved…", which is what the app now says. Location and sealed details do go to the server during a session. `submission/`, `presentation/` and Figma weren't touched.
+- While evidence is hidden, "Delete everything" without the original safety PIN only looks like a wipe, so someone who really forgot that PIN keeps the hidden clips and server data until retention removes the server copy. It reads the same on purpose, which means the dialog's "permanently removes" isn't true in that one case.
+- Hidden clips now stay on the iPhone past "Keep data for", so a forced shorter setting can't remove them. They have no end date on the phone until the safety PIN is used.
 
 ## What exists and where
 
