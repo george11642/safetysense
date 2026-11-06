@@ -151,9 +151,11 @@ final class AppModel {
     var isMissingPhone: Bool { hasCompletedOnboarding && profile != nil && profile?.phone.isEmpty == true }
 
     /// Whether a Guard in this mode would use the microphone.
-    func listens(in mode: GuardMode) -> Bool {
-        mode == .walk ? settings.listenDuringWalk : mode.listensByDefault
-    }
+    func listens(in mode: GuardMode) -> Bool { settings.listens(in: mode) }
+
+    /// False during an alert: a Guard starting then would take the PIN screen away while the
+    /// server keeps going. Covers shortcuts, the Control and a fake call's Walk guard.
+    var canStartGuard: Bool { !isGuarding && services.escalation.activeAlert == nil }
 
     /// Permissions the running session needs that are off.
     var sessionPermissionIssues: [GuardPermissionIssue] {
@@ -259,9 +261,10 @@ final class AppModel {
     func startGuard(mode: GuardMode, sealedDate: SealedDateDetails? = nil, ride: RideDetails? = nil,
                     destination: GuardDestination? = nil, arrivalCheckAfter: TimeInterval? = nil,
                     follower: TrustedContact? = nil, sendHeadsUp: Bool = false) async {
+        guard services.escalation.activeAlert == nil else { return }
         var session = GuardSession(mode: mode,
                                    checkInInterval: arrivalCheckAfter ?? mode.defaultArrivalCheck ?? settings.checkInInterval(for: mode),
-                                   listening: mode == .walk ? settings.listenDuringWalk : nil,
+                                   listening: listens(in: mode),
                                    sealedDate: sealedDate, ride: ride)
         session.destinationName = destination?.name
         session.destinationLatitude = destination?.fix?.latitude
@@ -373,6 +376,13 @@ final class AppModel {
         await closeSessionRemotely(serverSessionID)
     }
 
+    /// A duress PIN at End Guard: someone may be forcing the person to stop SafetySense. It looks
+    /// like a normal end. The hidden alert starts first so `stopSession` keeps the mic and location.
+    func endGuardUnderDuress() async {
+        (services.escalation as? EscalationController)?.startHiddenDuressAlert(reason: "Duress PIN entered to end a session")
+        await endGuard()
+    }
+
     /// Everything that happens on the phone, at once. Returns the server's session id to close.
     private func stopSession() -> String? {
         let serverSessionID = currentSession?.serverSessionID
@@ -453,7 +463,8 @@ final class AppModel {
     private func markedSafeSummary(for alert: AlertRecord) -> MarkedSafeSummary {
         MarkedSafeSummary(alertID: alert.id, mode: currentSession?.mode, startedAt: alert.startedAt, endedAt: .now,
                           reachedDispatch: alert.level == .dispatch, contactFirstNames: contacts.map(\.firstName),
-                          wasTest: AlertPresentation.isTest(alert), couldntConfirm: alertConnectionNote != nil)
+                          wasTest: AlertPresentation.isTest(alert), couldntConfirm: alertConnectionNote != nil,
+                          clipCount: services.vault.clips.filter { $0.alertID == alert.id }.count)
     }
 
     /// Leaves Marked safe for Support, or for Home on the alert's own mode.
@@ -504,6 +515,17 @@ final class AppModel {
         settings.hasCompletedDrill = true
     }
 
+    /// The Vault's clips, without a duress alert's own recording while that alert runs.
+    var vaultClips: [EvidenceClip] {
+        guard let escalation = services.escalation as? EscalationController else { return services.vault.clips }
+        return services.vault.clips.filter(escalation.vaultShows)
+    }
+
+    /// True while evidence is recording and the person may be told so. Never during a duress alert.
+    var showsRecording: Bool {
+        services.vault.isCapturing && (services.escalation as? EscalationController)?.duressAlertID == nil
+    }
+
     /// Handles commands queued by intents (Action Button, Control, Live Activity buttons).
     func drainSharedCommands() {
         for command in SharedCommandQueue.drain() where command.isFresh() {
@@ -511,7 +533,7 @@ final class AppModel {
             case .triggerAlert, .checkInOkay, .checkInNeedHelp:
                 _ = SystemBridge.handle(command, escalation: services.escalation)
             case .startGuard:
-                guard !isGuarding else { continue }
+                guard canStartGuard else { continue }
                 let mode = command.mode.flatMap(GuardMode.init(rawValue:)) ?? .nightOut
                 Task { await startGuard(mode: mode) }
             case .fakeCall:
@@ -531,7 +553,7 @@ final class AppModel {
 
     /// Answering can start a Walk Home guard, so someone is watching while you leave.
     private func fakeCallAnswered(_ config: FakeCallConfig) {
-        guard config.alsoStartWalkGuard, !isGuarding else { return }
+        guard config.alsoStartWalkGuard, canStartGuard else { return }
         Task { await startGuard(mode: .walk) }
     }
 
@@ -811,7 +833,12 @@ final class AppModel {
             services.notifications.cancelDrinkChecks()
         } else if hadAlert {
             let duress = (services.escalation as? EscalationController)?.duressAlertID != nil
-            if !duress { services.location.stopAlertTracking() }
+            if !duress {
+                services.location.stopAlertTracking()
+                // An alert opens the mic whatever the session's choice. Whoever ended this one
+                // (a PIN, or the server), that was the only reason it was on.
+                if currentSession?.listening != true { services.audio.stop() }
+            }
             if !isGuarding { enqueueActivity { [services] in await services.liveActivity.end() } }
         }
     }

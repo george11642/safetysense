@@ -36,6 +36,22 @@ struct SetupField: View {
     }
 }
 
+/// The Walk and Ride microphone choice, with what it doesn't cover said at the toggle.
+struct ListenOnTheWayToggle: View {
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Label("Listen on the way", systemImage: "mic").font(SSFont.body)
+                Text("Notices a scream or your safe word on your phone. Any alert turns the mic on and uploads encrypted audio, even with this off.")
+                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+            }
+        }
+        .tint(SSColor.accent)
+    }
+}
+
 /// "Who sees this, and when" explainer used by the Date and Ride setups.
 struct SealedExplainer: View {
     let title: String

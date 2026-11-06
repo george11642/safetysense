@@ -43,6 +43,15 @@ actor EngineFakeBackend: BackendClientProtocol {
     func setFailEscalations(_ value: Bool) { failEscalations = value }
     func setStatus(_ response: AlertStatusResponse?) { statusResponse = response }
     func setHoldCreates(_ value: Bool) { holdCreates = value }
+    private var holdEscalations = false
+    private var escalationGate: CheckedContinuation<Void, Never>?
+    func setHoldEscalations(_ value: Bool) { holdEscalations = value }
+    var isHoldingEscalation: Bool { escalationGate != nil }
+    func releaseEscalation() {
+        holdEscalations = false
+        escalationGate?.resume()
+        escalationGate = nil
+    }
     var heldCount: Int { gates.count }
     func releaseCreates() {
         holdCreates = false
@@ -120,6 +129,7 @@ actor EngineFakeBackend: BackendClientProtocol {
 
     func escalateAlert(_ request: AlertEscalateRequest) async throws -> AlertEscalateResponse {
         escalations.append(request)
+        if holdEscalations { await withCheckedContinuation { escalationGate = $0 } }
         if failEscalations { throw BackendError.transport("offline") }
         return AlertEscalateResponse(dispatch: DispatchDTO(provider: "simulated", alarmId: "sim-1", status: "requested"))
     }

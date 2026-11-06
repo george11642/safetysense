@@ -8,6 +8,7 @@ struct RideModeSetupView: View {
     @State private var car = ""
     @State private var destinationFix: LocationFix?
     @State private var minutes = 20
+    @State private var listen = true
     @State private var isStarting = false
     @State private var started = 0
 
@@ -50,6 +51,8 @@ struct RideModeSetupView: View {
                     MinuteChips(minutes: $minutes, options: [15, 20, 30, 35, 45, 60])
                 }
 
+                Card { ListenOnTheWayToggle(isOn: $listen) }
+
                 SealedExplainer(title: "Shared only if you need help", points: [
                     ("eye.slash", "Your contacts don't see the car or driver unless an alert fires."),
                     ("location.north.line", "During the ride SafetySense watches for a long unplanned stop or going off route."),
@@ -63,7 +66,8 @@ struct RideModeSetupView: View {
         .pinnedFooter {
             PrimaryButton("Start Ride guard", systemImage: "car.fill", isLoading: isStarting) { start() }
                 .disabled(!canStart)
-            Text(canStart ? "Arrival check at \(arrivalTime). \(NameList.join(model.contacts.map(\.firstName))) \(model.contacts.count == 1 ? "gets" : "get") the plate only if an alert fires."
+            Text(canStart ? model.alertDelivery.rideFooter(arrival: arrivalTime, names: NameList.join(model.contacts.map(\.firstName)),
+                                                           count: model.contacts.count)
                  : "Add the plate to start.")
                 .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                 .multilineTextAlignment(.center)
@@ -76,6 +80,7 @@ struct RideModeSetupView: View {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
         }
         .sensoryFeedback(.success, trigger: started)
+        .onAppear { listen = model.settings.listensDuringRide }
     }
 
     /// A little license-plate preview that fills in as you type.

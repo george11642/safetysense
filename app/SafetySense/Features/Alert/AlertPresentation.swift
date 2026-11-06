@@ -112,8 +112,9 @@ enum AlertPresentation {
     }
 
     /// `Maya gets a call and your live location. Jordan and Sam get it by text.`
-    static func whoHears(_ contacts: [TrustedContact]) -> String {
+    static func whoHears(_ contacts: [TrustedContact], delivery: AlertDelivery) -> String {
         guard let first = contacts.first(where: \.isPrimary) ?? contacts.first else { return "Add a trusted contact so someone hears from you." }
+        guard delivery.isReal else { return delivery.reaching(NameList.join(contacts.map(\.firstName))) }
         let others = contacts.filter { $0.id != first.id }.map(\.firstName)
         let lead = "\(first.firstName) gets a call and your live location."
         guard !others.isEmpty else { return lead }

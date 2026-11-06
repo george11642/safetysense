@@ -16,6 +16,9 @@ struct MarkedSafeSummary: Sendable, Equatable {
     /// The server couldn't be reached during the alert, so nobody can be promised anything.
     /// Comes from the connection alone, so it reads the same for both PINs.
     var couldntConfirm = false
+    /// Clips saved when the PIN went in. Taken once, because a duress alert keeps recording and
+    /// a count that rose on this screen would tell the two PINs apart.
+    var clipCount = 0
 
     /// `2:11`, the clock without AM or PM, as the prototype's summary line reads.
     static func clock(_ date: Date) -> String {

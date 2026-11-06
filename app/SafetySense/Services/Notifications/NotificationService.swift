@@ -45,7 +45,11 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
     private let center: UNUserNotificationCenter
     private let log = Logger(subsystem: "com.georgeteifel.SafetySense", category: "notifications")
 
-    init(center: UNUserNotificationCenter = .current()) {
+    /// Whether this build's alerts reach anyone, so a check-in only promises what's true.
+    private let flavor: ServiceContainer.Flavor
+
+    init(flavor: ServiceContainer.Flavor = .live, center: UNUserNotificationCenter = .current()) {
+        self.flavor = flavor
         self.center = center
         super.init()
         center.delegate = self
@@ -190,7 +194,7 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
 
         let first = UNMutableNotificationContent()
         first.title = "Quick check-in"
-        first.body = "Are you okay? If we don't hear from you, SafetySense will let your people know."
+        first.body = AlertDelivery.current(flavor: flavor).checkInNotificationBody
         first.sound = .default
         first.categoryIdentifier = Identifier.checkInCategory
         first.threadIdentifier = Identifier.checkInPrefix + sessionID.uuidString

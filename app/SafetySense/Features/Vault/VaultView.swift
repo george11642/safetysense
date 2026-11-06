@@ -125,7 +125,7 @@ struct VaultView: View {
         unlocked = false
     }
 
-    private func refresh() { clips = vault.clips }
+    private func refresh() { clips = model.vaultClips }
 
     // MARK: Unlocked
 
@@ -137,7 +137,7 @@ struct VaultView: View {
 
     @ViewBuilder
     private var unlockedContent: some View {
-        if vault.isCapturing {
+        if model.showsRecording {
             Card(tint: SSColor.danger) {
                 Label("Recording encrypted evidence now", systemImage: "record.circle")
                     .font(SSFont.headline).foregroundStyle(SSColor.danger)

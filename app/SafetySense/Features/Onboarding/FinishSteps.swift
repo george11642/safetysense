@@ -107,8 +107,8 @@ struct ResponderStepView: View {
     var next: () -> Void
 
     var body: some View {
-        OnboardingPage(eyebrow: "\(OnboardingStep.responder.label) · Optional", title: "Help responders find you",
-                       subtitle: "If an alert reaches professional dispatch, this helps them recognize you and care for you. Fill in as much or as little as you like.") {
+        OnboardingPage(eyebrow: "\(OnboardingStep.responder.label) · Optional", title: "Your responder profile",
+                       subtitle: "Your description and medical notes, kept on this iPhone. SafetySense doesn't send them to dispatch yet. Fill in as much or as little as you like.") {
             ResponderProfileForm()
         } footer: {
             PrimaryButton("Continue", systemImage: "arrow.right", action: next)

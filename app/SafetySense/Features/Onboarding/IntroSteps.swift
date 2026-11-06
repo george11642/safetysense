@@ -42,6 +42,7 @@ struct WelcomeStepView: View {
 // MARK: 2. Three promises
 
 struct PromisesStepView: View {
+    @Environment(AppModel.self) private var model
     var next: () -> Void
     @State private var page = 0
     @ScaledMetric(relativeTo: .body) private var cardHeight: CGFloat = 400
@@ -54,29 +55,31 @@ struct PromisesStepView: View {
         let tint: Color
     }
 
-    static let promises = [
-        Promise(id: 0, icon: "ear", title: "SafetySense only listens when you turn it on.",
-                body: "Listening happens during a Guard session you start, like a night out or a walk home. When it ends, the microphone is off.",
+    static func promises(delivery: AlertDelivery) -> [Promise] { [
+        Promise(id: 0, icon: "ear", title: "SafetySense listens during a Guard, or in an alert.",
+                body: "Listening happens during a Guard session you start, like a night out or a walk home. Any alert also turns the microphone on to record encrypted evidence, even if listening was off. When it's over, the microphone is off.",
                 tint: SSColor.calm),
         Promise(id: 1, icon: "lock.shield", title: "Nothing is saved unless something's wrong.",
                 body: "Sound is checked on your iPhone in a 30-second memory loop and then forgotten. Only if an alert starts is it encrypted and kept as evidence, and only you can unlock it.",
                 tint: SSColor.accent),
         Promise(id: 2, icon: "phone.and.waveform", title: "Help comes even if you can't tap.",
-                body: "If you don't answer a check-in, say your safe word, or your phone goes dark, SafetySense calls your people, then professional dispatch.",
+                body: delivery.helpPromiseBody,
                 tint: SSColor.warn),
-    ]
+    ] }
+
+    private var promises: [Promise] { Self.promises(delivery: model.alertDelivery) }
 
     var body: some View {
         OnboardingPage(eyebrow: OnboardingStep.promises.label, title: "Three promises") {
             TabView(selection: $page) {
-                ForEach(Self.promises) { p in
+                ForEach(promises) { p in
                     PromiseCard(promise: p, isCurrent: page == p.id).tag(p.id).padding(.horizontal, 2)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: min(cardHeight, 640))
             HStack(spacing: 8) {
-                ForEach(Self.promises) { p in
+                ForEach(promises) { p in
                     Capsule().fill(page == p.id ? SSColor.accent : SSColor.line)
                         .frame(width: page == p.id ? 22 : 8, height: 8)
                 }
@@ -86,8 +89,8 @@ struct PromisesStepView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Promise \(page + 1) of 3")
         } footer: {
-            PrimaryButton(page < Self.promises.count - 1 ? "Next" : "Sounds good", systemImage: "arrow.right") {
-                if page < Self.promises.count - 1 { withAnimation(.smooth) { page += 1 } } else { next() }
+            PrimaryButton(page < promises.count - 1 ? "Next" : "Sounds good", systemImage: "arrow.right") {
+                if page < promises.count - 1 { withAnimation(.smooth) { page += 1 } } else { next() }
             }
         }
         .sensoryFeedback(.selection, trigger: page)

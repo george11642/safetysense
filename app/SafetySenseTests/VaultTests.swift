@@ -52,6 +52,6 @@ struct VaultTests {
     @Test func phoneLinksAndNames() {
         #expect(PhoneLink.url("1-800-656-4673")?.absoluteString == "tel:18006564673")
         #expect(NameList.join(["Maya", "Jordan", "Sam"]) == "Maya, Jordan and Sam")
-        #expect(SupportDirectory.quickDial(for: .cnm).first?.phone == "505-224-3002")
+        #expect(SupportDirectory.quickDial(for: .cnm).first?.phone == "505-224-3001")
     }
 }

@@ -94,8 +94,8 @@ struct AlertReasonTests {
         let maya = TrustedContact(name: "Maya Chen", phone: "+15055550111", isPrimary: true)
         let jordan = TrustedContact(name: "Jordan Lee", phone: "+15055550112")
         let sam = TrustedContact(name: "Sam Ortiz", phone: "+15055550113")
-        #expect(AlertPresentation.whoHears([maya]) == "Maya gets a call and your live location.")
-        #expect(AlertPresentation.whoHears([jordan, maya, sam]) == "Maya gets a call and your live location. Jordan and Sam get it by text.")
+        #expect(AlertPresentation.whoHears([maya], delivery: .real) == "Maya gets a call and your live location.")
+        #expect(AlertPresentation.whoHears([jordan, maya, sam], delivery: .real) == "Maya gets a call and your live location. Jordan and Sam get it by text.")
     }
 
     @Test func staysInsideTheServersLimit() {
@@ -364,7 +364,9 @@ struct DurableAlertTests {
         second.controller.restorePendingAlerts()
         await second.controller.settle()
         #expect(second.controller.activeAlert == nil)
-        #expect(await second.backend.creates.first?.level == 3)
+        // Level 2, so the flag is on the server before dispatch starts: only a new alarm carries it.
+        #expect(await second.backend.creates.first?.level == 2)
+        #expect(await second.backend.cancels.map(\.duress) == [true])
     }
 
     @Test func aValidCancelOfAnAlertThatNeverLandedTellsNobody() async {

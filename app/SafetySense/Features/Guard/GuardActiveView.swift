@@ -33,12 +33,15 @@ struct GuardActiveView: View {
                 nextCheckInCard
                 if usesSensorCells { sensors } else { sensorChips }
                 if hasSealedCard { sealedCard } else { Card { RiskMeterView(assessment: assessment) } }
+                endButton
+                HoldToSOSButton(title: "Hold if you need help") {
+                    model.triggerSOS(.manualSOS, reason: "SOS held during \(session?.mode.displayName ?? "Guard")")
+                }
                 if session?.followerName != nil { followerCard }
                 contactsCard
                 FakeCallEntryRow { showFakeCall = true }
                 if model.services.flavor == .demo { demoControls }
-                actions
-                Text("Leave SafetySense running. Closing it from the app switcher stops check-ins, and your contacts are alerted a few minutes later.")
+                Text(model.alertDelivery.closingTheAppNote)
                     .font(SSFont.caption)
                     .foregroundStyle(SSColor.inkMuted)
                     .multilineTextAlignment(.center)
@@ -90,6 +93,9 @@ struct GuardActiveView: View {
         }
     }
 
+    /// The test banner takes the height the ring gives back, so the End button stays on screen.
+    private var ringSize: CGFloat { model.alertDelivery.bannerText == nil ? 220 : 190 }
+
     private var elapsedRing: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let start = session?.startedAt ?? context.date
@@ -105,7 +111,7 @@ struct GuardActiveView: View {
                 }
                 .padding(SSSpacing.lg)
             }
-            .frame(width: 220, height: 220)
+            .frame(width: ringSize, height: ringSize)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Guarding for \(Duration.seconds(elapsed).formatted(.units(allowed: [.hours, .minutes], width: .wide)))")
         }
@@ -268,7 +274,8 @@ struct GuardActiveView: View {
         guard let session, let contact = model.contacts.first(where: { $0.id == session.followerID }) else { return }
         headsUp = ContactMessageDraft(contact: contact, kind: .headsUp,
                                       body: ContactMessage.headsUp(destination: session.destinationName ?? "",
-                                                                   eta: session.nextCheckInAt ?? .now))
+                                                                   eta: session.nextCheckInAt ?? .now,
+                                                                   delivery: model.alertDelivery))
     }
 
     private var contactsCard: some View {
@@ -281,7 +288,7 @@ struct GuardActiveView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("If you need help").font(SSFont.headline)
-                    Text(AlertPresentation.whoHears(model.contacts))
+                    Text(AlertPresentation.whoHears(model.contacts, delivery: model.alertDelivery))
                         .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -322,16 +329,11 @@ struct GuardActiveView: View {
 
     // MARK: Actions
 
-    private var actions: some View {
-        VStack(spacing: SSSpacing.sm) {
-            HoldToSOSButton(title: "Hold if you need help") {
-                model.triggerSOS(.manualSOS, reason: "SOS held during \(session?.mode.displayName ?? "Guard")")
-            }
-            let arrives = session?.usesArrivalCheck == true
-            PrimaryButton(GuardCopy.endTitle(session?.mode), systemImage: arrives ? "checkmark" : nil,
-                          role: arrives ? .calm : .secondary, isLoading: isEnding) {
-                Task { await requestEnd() }
-            }
+    private var endButton: some View {
+        let arrives = session?.usesArrivalCheck == true
+        return PrimaryButton(GuardCopy.endTitle(session?.mode), systemImage: arrives ? "checkmark" : nil,
+                             role: arrives ? .calm : .secondary, isLoading: isEnding) {
+            Task { await requestEnd() }
         }
     }
 
@@ -349,10 +351,9 @@ struct GuardActiveView: View {
 
     /// Normal and duress ends look the same. Duress also raises a silent dispatch alert.
     private func finishEnd(duress: Bool) {
-        if duress { SilentDuress.fire(model: model) }
         isEnding = true
         Task {
-            await model.endGuard()
+            if duress { await model.endGuardUnderDuress() } else { await model.endGuard() }
             isEnding = false
         }
     }

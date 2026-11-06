@@ -36,9 +36,10 @@ struct CheckInIntervalsView: View {
 
             Section {
                 Toggle("Listen during Walk Home", isOn: $model.settings.listenDuringWalk)
+                Toggle("Listen during Ride", isOn: $model.settings.listensDuringRide)
                 Toggle("Drink-check reminders on Night Out", isOn: $model.settings.drinkCheckPrompts)
             } footer: {
-                Text("A quiet reminder about once an hour to keep an eye on your drink. SafetySense can't detect drugging.")
+                Text("Any alert turns the microphone on and uploads encrypted audio, even with listening off. Drink checks are a quiet reminder about once an hour to keep an eye on your drink. SafetySense can't detect drugging.")
             }
             .listRowBackground(SSColor.surface)
         }

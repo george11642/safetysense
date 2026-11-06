@@ -121,6 +121,8 @@ final class EvidenceHandoff: EvidenceHandling {
     private var prebuffers: [UUID: Data] = [:]
     private var capturingAlertID: UUID?
     private var gates: [UUID: EvidenceChunkGate] = [:]
+    /// Alerts already stopped. A commit that arrives late must not restart anything for them.
+    private var stoppedAlertIDs: Set<UUID> = []
 
     init(audio: any AudioGuardService, vault: any EvidenceVaultProtocol) {
         self.audio = audio
@@ -147,10 +149,14 @@ final class EvidenceHandoff: EvidenceHandling {
     func commit(alertID: UUID, serverAlertID: String?, mode: GuardMode) async {
         // The id arrived after capture started: `alert/create` was offline at first.
         if let serverAlertID { vault.setServerAlertID(serverAlertID, for: alertID) }
-        guard capturingAlertID == nil else { return }
+        guard capturingAlertID == nil, !stoppedAlertIDs.contains(alertID) else { return }
         capturingAlertID = alertID
         let prebuffer = prebuffers.removeValue(forKey: alertID)
         try? await vault.startCapture(alertID: alertID, serverAlertID: serverAlertID, prebuffer: prebuffer)
+        guard capturingAlertID == alertID else {
+            if capturingAlertID == nil { vault.stopCapture() }   // A stop landed during that await.
+            return
+        }
         var gate = gates[alertID] ?? EvidenceChunkGate()
         let held = gate.open()
         gates[alertID] = gate
@@ -164,7 +170,13 @@ final class EvidenceHandoff: EvidenceHandling {
     /// fail from the background, so `resume` tries again when the app opens.
     private func startMicIfNeeded(alertID: UUID, mode: GuardMode) async {
         guard let guardAudio = audio as? AudioGuard else { return }
-        if !guardAudio.isRunning { try? await guardAudio.start(mode: mode, safeWord: nil) }
+        if !guardAudio.isRunning {
+            try? await guardAudio.start(mode: mode, safeWord: nil)
+            guard capturingAlertID == alertID else {
+                guardAudio.stop()   // Stopped while the mic was opening: don't leave it on.
+                return
+            }
+        }
         if guardAudio.isRunning, guardAudio.evidenceAlertID != alertID { stream(guardAudio, alertID: alertID) }
     }
 
@@ -174,6 +186,7 @@ final class EvidenceHandoff: EvidenceHandling {
     }
 
     func stop(alertID: UUID) {
+        stoppedAlertIDs.insert(alertID)
         prebuffers.removeValue(forKey: alertID)
         gates.removeValue(forKey: alertID)
         (audio as? AudioGuard)?.endEvidenceStream()

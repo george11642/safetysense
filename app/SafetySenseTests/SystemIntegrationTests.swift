@@ -348,6 +348,7 @@ struct SystemWiringTests {
 
     @Test func listeningOffStaysNil() async {
         let (model, services) = rig()
+        model.settings.listensDuringRide = false
         await model.startGuard(mode: .ride)
         (services.audio as? MockAudioGuardService)?.simulate(listening: .listening)
         #expect(model.listening == nil)

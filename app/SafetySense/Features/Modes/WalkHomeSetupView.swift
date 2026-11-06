@@ -9,7 +9,7 @@ struct WalkHomeSetupView: View {
     @State private var destinationFix: LocationFix?
     @State private var minutes = 15
     @State private var followerID: UUID?
-    @State private var listen = false
+    @State private var listen = true
     @State private var textFollower = false
     @State private var isStarting = false
     @State private var started = 0
@@ -41,15 +41,7 @@ struct WalkHomeSetupView: View {
 
                 Card {
                     VStack(alignment: .leading, spacing: SSSpacing.sm) {
-                        Toggle(isOn: $listen) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Label("Listen on the way", systemImage: "mic")
-                                    .font(SSFont.body)
-                                Text("Notices a scream or your safe word. Audio stays on your phone.")
-                                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
-                            }
-                        }
-                        .tint(SSColor.accent)
+                        ListenOnTheWayToggle(isOn: $listen)
                         if follower != nil {
                             Divider().overlay(SSColor.line)
                             Toggle(isOn: $textFollower) {
@@ -65,6 +57,9 @@ struct WalkHomeSetupView: View {
                     }
                 }
 
+                Text("Your destination, arrival time and who's following go to SafetySense's server, encrypted. Your contacts see them only if an alert starts.")
+                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.top, SSSpacing.md)
             .padding(.bottom, SSSpacing.lg)
@@ -72,7 +67,7 @@ struct WalkHomeSetupView: View {
         .scrollDismissesKeyboard(.interactively)
         .pinnedFooter {
             PrimaryButton("Start walking", systemImage: "figure.walk", isLoading: isStarting) { start() }
-            Text("If you don't arrive, \(NameList.join(model.contacts.map(\.firstName))) \(model.contacts.count == 1 ? "is" : "are") alerted.")
+            Text(model.alertDelivery.walkFooter(NameList.join(model.contacts.map(\.firstName)), count: model.contacts.count))
                 .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                 .multilineTextAlignment(.center)
         }

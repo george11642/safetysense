@@ -44,8 +44,8 @@ enum GuardMode: String, Codable, CodingKeyRepresentable, Sendable, CaseIterable,
     /// Whether the on-device audio guard runs by default in this mode.
     var listensByDefault: Bool {
         switch self {
-        case .everyday, .walk, .ride: false
-        case .nightOut, .date: true
+        case .everyday: false
+        case .walk, .nightOut, .date, .ride: true
         }
     }
 

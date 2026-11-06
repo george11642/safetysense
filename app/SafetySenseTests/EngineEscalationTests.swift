@@ -258,9 +258,10 @@ struct EngineEscalationTests {
         await h.controller.settle()
         let creates = await h.backend.creates
         #expect(creates.count == 1)
-        #expect(creates.first?.level == 3)
-        #expect(creates.first?.dispatchPolicy == "dispatch_immediately")
-        #expect(await h.backend.escalations.count == 1)
+        #expect(creates.first?.level == 2)
+        #expect(creates.first?.dispatchPolicy == "contacts_first")
+        // The cancel raises it, so the flag is on the server before dispatch starts.
+        #expect(await h.backend.cancels.map(\.duress) == [true])
         #expect(h.controller.duressAlertID != nil)
     }
 

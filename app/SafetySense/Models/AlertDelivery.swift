@@ -45,6 +45,60 @@ enum AlertDelivery: Sendable, Equatable {
         }
     }
 
+    // MARK: Before an alert
+
+    private var noAnswerResult: String { "a \(word.lowercased()) alert starts. Nobody is contacted." }
+
+    /// Under the check-in. `names` are who'd be alerted.
+    func noAnswerNote(_ names: String) -> String {
+        isReal ? "If you don't answer, \(names) will be alerted with your live location."
+               : "If you don't answer, \(noAnswerResult)"
+    }
+
+    var checkInNotificationBody: String {
+        isReal ? "Are you okay? If we don't hear from you, SafetySense will let your people know."
+               : "Are you okay? This is a \(word.lowercased()) build, so nobody is contacted. If you need help, call 911."
+    }
+
+    var closingTheAppNote: String {
+        let note = "Leave SafetySense running. Closing it from the app switcher stops check-ins"
+        return isReal ? "\(note), and your contacts are alerted a few minutes later."
+                      : "\(note). Nobody is contacted in this \(word.lowercased()) build."
+    }
+
+    var dateEndCheckNote: String {
+        let note = "One more check at that time, on top of your regular check-ins."
+        return isReal ? "\(note) No answer in 45 seconds alerts your contacts."
+                      : "\(note) With no answer in 45 seconds, \(noAnswerResult)"
+    }
+
+    var dateSetupSubtitle: String {
+        isReal ? "Enjoy your date. If something goes wrong, your people will know who you were with and where."
+               : "Enjoy your date. Nobody is contacted in this \(word.lowercased()) build. If you need help, call 911."
+    }
+
+    var dateAlertPoint: String {
+        isReal ? "If an alert fires, your contacts see them on your live link while the alert is active."
+               : "If a \(word.lowercased()) alert fires, your contacts aren't sent the live link."
+    }
+
+    func walkFooter(_ names: String, count: Int) -> String {
+        isReal ? "If you don't arrive, \(names) \(count == 1 ? "is" : "are") alerted."
+               : "If you don't arrive, \(noAnswerResult)"
+    }
+
+    func rideFooter(arrival: String, names: String, count: Int) -> String {
+        isReal ? "Arrival check at \(arrival). \(names) \(count == 1 ? "gets" : "get") the plate only if an alert fires."
+               : "Arrival check at \(arrival). In this \(word.lowercased()) build, nobody is sent the plate."
+    }
+
+    /// Onboarding's third promise.
+    var helpPromiseBody: String {
+        let start = "If you don't answer a check-in, say your safe word, or your phone goes dark,"
+        return isReal ? "\(start) SafetySense calls your people, then professional dispatch."
+                      : "\(start) SafetySense starts a \(word.lowercased()) alert. This build contacts nobody, so if you need help, call 911."
+    }
+
     // MARK: Alert countdown
 
     var countdownPill: String { isReal ? "Alert" : "\(word) alert" }

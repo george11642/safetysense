@@ -25,12 +25,12 @@ struct DateModeSetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: SSSpacing.lg) {
                 SetupHeader(mode: .date, title: "Who are you meeting?",
-                            subtitle: "Enjoy your date. If something goes wrong, your people will know who you were with and where.")
+                            subtitle: model.alertDelivery.dateSetupSubtitle)
 
                 SealedExplainer(title: "Sealed until you need help", points: [
-                    ("eye.slash", "Nobody sees these details during a normal date, not your contacts and not SafetySense."),
-                    ("bell.badge", "If an alert fires, your contacts see them on your live link while the alert is active."),
-                    ("lock.rotation", "The photo stays encrypted on this phone. The text details are sealed on the server."),
+                    ("eye.slash", "Your contacts don't see these details during a normal date."),
+                    ("bell.badge", model.alertDelivery.dateAlertPoint),
+                    ("lock.rotation", "The photo stays encrypted on this phone. The text details are encrypted on SafetySense's server, which holds the key so it can open them for your live link."),
                 ])
 
                 VStack(alignment: .leading, spacing: SSSpacing.md) {
@@ -63,7 +63,7 @@ struct DateModeSetupView: View {
                         if hasEndTime {
                             DatePicker("Expected end", selection: $endTime, in: Date.now..., displayedComponents: [.hourAndMinute])
                                 .font(SSFont.body)
-                            Text("One more check at that time, on top of your regular check-ins. No answer in 45 seconds alerts your contacts.")
+                            Text(model.alertDelivery.dateEndCheckNote)
                                 .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                         }
                     }

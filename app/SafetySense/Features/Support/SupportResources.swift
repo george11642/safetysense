@@ -63,8 +63,8 @@ enum SupportDirectory {
         phone: "505-277-5251", isAllHours: false, kind: .report, campuses: [.unm])
 
     static let cnmSecurity = SupportResource(
-        id: "cnm-security", name: "CNM Security", detail: "24/7 dispatch for every CNM campus.",
-        phone: "505-224-3002", isAllHours: true, kind: .report, campuses: [.cnm])
+        id: "cnm-security", name: "CNM Security", detail: "Emergency dispatch for every CNM campus. Officers patrol 24/7.",
+        phone: "505-224-3001", isAllHours: true, kind: .report, campuses: [.cnm])
 
     static let cnmTitleIX = SupportResource(
         id: "cnm-titleix", name: "CNM Title IX",

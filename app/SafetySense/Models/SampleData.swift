@@ -35,7 +35,8 @@ enum SampleData {
     static func markedSafe(reachedDispatch: Bool, mode: GuardMode = .nightOut) -> MarkedSafeSummary {
         MarkedSafeSummary(alertID: evidence[0].alertID, mode: mode, startedAt: .now.addingTimeInterval(-1200),
                           endedAt: .now, reachedDispatch: reachedDispatch,
-                          contactFirstNames: contacts.map(\.firstName))
+                          contactFirstNames: contacts.map(\.firstName),
+                          clipCount: evidence.filter { $0.alertID == evidence[0].alertID }.count)
     }
 
     static func alert(level: EscalationLevel = .alert, secondsAgo: Double = 20) -> AlertRecord {

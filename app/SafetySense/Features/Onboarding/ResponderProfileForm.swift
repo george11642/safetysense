@@ -56,7 +56,7 @@ struct ResponderProfileForm: View {
         let currentPhoto = photo
         VStack(alignment: .leading, spacing: SSSpacing.lg) {
             HStack(spacing: SSSpacing.md) {
-                PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+                PhotosPicker(selection: $photoItem, matching: .images) {
                     ZStack {
                         if let photo = currentPhoto {
                             Image(uiImage: photo).resizable().scaledToFill()
@@ -86,7 +86,7 @@ struct ResponderProfileForm: View {
             textArea("Medical notes", placeholder: "Conditions, medications, where you keep an inhaler or EpiPen", text: $medical)
             textArea("Allergies", placeholder: "Medicines, foods", text: $allergies)
 
-            Label("Stays on your iPhone. Shared with professional dispatch only if an alert reaches them.",
+            Label("Stays on this iPhone. SafetySense doesn't send this to dispatch yet.",
                   systemImage: "lock.shield")
                 .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
         }

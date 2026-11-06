@@ -81,7 +81,7 @@ final class ServiceContainer {
         // No HeartbeatScheduler here: its background refresh talks to the live backend client
         // and its BGTask is only registered for the live flavor.
         return assemble(flavor: .demo, engine: engine, backend: backend, vault: vault, device: device,
-                        liveActivity: LiveActivityController(), notifications: NotificationService(),
+                        liveActivity: LiveActivityController(), notifications: NotificationService(flavor: .demo),
                         heartbeat: NoopHeartbeatService())
     }
 
@@ -109,7 +109,7 @@ final class ServiceContainer {
         let engine = GuardEngine.makeLive(backend: backend, vault: vault, device: device)
         #endif
         return assemble(flavor: .live, engine: engine, backend: backend, vault: vault, device: device,
-                        liveActivity: LiveActivityController(), notifications: NotificationService(),
+                        liveActivity: LiveActivityController(), notifications: NotificationService(flavor: .live),
                         heartbeat: HeartbeatScheduler(backend: backend))
     }
 

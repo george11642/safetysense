@@ -85,8 +85,8 @@ struct TrustedContactsEditor: View {
 
     private func draft(_ c: TrustedContact, _ kind: ContactMessageDraft.Kind) -> ContactMessageDraft {
         ContactMessageDraft(contact: c, kind: kind,
-                            body: kind == .intro ? ContactMessage.intro(to: c, from: model.profile)
-                                                 : ContactMessage.test(to: c, from: model.profile))
+                            body: kind == .intro ? ContactMessage.intro(to: c, from: model.profile, delivery: model.alertDelivery)
+                                                 : ContactMessage.test(to: c, from: model.profile, delivery: model.alertDelivery))
     }
 
     private func pickFromContacts() {

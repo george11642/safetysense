@@ -441,8 +441,8 @@ struct UIParityTests {
         #expect(model.currentSession?.followerNotified == nil)
         #expect(model.wantsHeadsUp)
         await model.endGuard()
-        #expect(ContactMessage.headsUp(destination: "", eta: .now).hasPrefix("Heading home,"))
-        #expect(ContactMessage.headsUp(destination: "Coronado Hall", eta: .now).hasPrefix("Heading to Coronado Hall,"))
+        #expect(ContactMessage.headsUp(destination: "", eta: .now, delivery: .real).hasPrefix("Heading home,"))
+        #expect(ContactMessage.headsUp(destination: "Coronado Hall", eta: .now, delivery: .real).hasPrefix("Heading to Coronado Hall,"))
     }
 
     @Test func vaultTitleReadsLikeThePrototype() throws {

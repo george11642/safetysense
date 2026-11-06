@@ -49,7 +49,7 @@ enum CampusResources {
     static let loboRespect = SafetyResource(name: "LoboRESPECT Advocacy Center", detail: "UNM, confidential advocates",
                                             number: "505-277-2911", kind: .advocacy, available247: true)
     static let cnmSecurity = SafetyResource(name: "CNM Security dispatch", detail: "All CNM campuses",
-                                            number: "505-224-3001", kind: .campusPolice)
+                                            number: "505-224-3001", kind: .campusPolice, available247: true)
 
     /// Campus-specific numbers first, then the ones everyone gets.
     static func local(for campus: Campus) -> [SafetyResource] {

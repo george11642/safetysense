@@ -5,7 +5,6 @@ import SwiftUI
 /// timing, same haptic. Nothing below may read anything that differs between them.
 struct MarkedSafeView: View {
     @Environment(AppModel.self) private var model
-    @State private var clipCount = 0
     @State private var appeared = 0
 
     private var summary: MarkedSafeSummary? { model.markedSafe }
@@ -43,10 +42,7 @@ struct MarkedSafeView: View {
         .ssScreen()
         .background(backdrop)
         .sensoryFeedback(.success, trigger: appeared)
-        .task {
-            appeared += 1
-            await watchClips()
-        }
+        .task { appeared += 1 }
     }
 
     private var backdrop: some View {
@@ -75,7 +71,7 @@ struct MarkedSafeView: View {
                     .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                     .fixedSize(horizontal: false, vertical: true)
                 if let summary {
-                    Text(summary.summaryLine(clipCount: clipCount))
+                    Text(summary.summaryLine(clipCount: summary.clipCount))
                         .font(SSFont.mono(11, weight: .medium)).foregroundStyle(SSColor.accent)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, SSSpacing.xxs)
@@ -84,15 +80,6 @@ struct MarkedSafeView: View {
         }
     }
 
-    /// The clip index is readable while the Vault is locked, so this never asks for Face ID.
-    /// The last chunk can land just after the cancel, so it's read again for a few seconds.
-    private func watchClips() async {
-        guard let id = summary?.alertID else { return }
-        for _ in 0..<6 {
-            clipCount = model.services.vault.clips.filter { $0.alertID == id }.count
-            try? await Task.sleep(for: .seconds(1))
-        }
-    }
 }
 
 #Preview("After dispatch") {

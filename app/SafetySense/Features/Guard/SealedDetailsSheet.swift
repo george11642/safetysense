@@ -10,7 +10,7 @@ struct SealedDetailsSheet: View {
         VStack(alignment: .leading, spacing: SSSpacing.sm) {
             Text(content.eyebrow).ssEyebrow(SSColor.accent)
             Text("Sealed until an alert fires").font(SSFont.title)
-            Text("During a normal \(content.noun) nobody can read this: not \(Self.names(contactNames)), and not SafetySense. If an alert fires, it appears on their live link:")
+            Text("During a normal \(content.noun), \(Self.names(contactNames)) can't read this. It's encrypted on SafetySense's server, which holds the key. If an alert fires, it appears on their live link:")
                 .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 2) {

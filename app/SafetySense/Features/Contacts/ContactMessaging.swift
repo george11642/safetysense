@@ -4,8 +4,15 @@ import SwiftUI
 /// Texts the user sends *themselves* from Messages (SafetySense never texts on their behalf here).
 enum ContactMessage {
     /// SPEC 8.4: each contact gets a text explaining what SafetySense is and what to do if alerted.
-    static func intro(to contact: TrustedContact, from profile: Profile?) -> String {
+    /// A build that contacts nobody says so, because this goes to a real person who'd count on it.
+    static func intro(to contact: TrustedContact, from profile: Profile?, delivery: AlertDelivery) -> String {
         let me = profile.map(\.firstName).flatMap { $0.isEmpty ? nil : $0 } ?? "me"
+        guard delivery.isReal else {
+            return """
+            Hi \(contact.firstName), I added you as a trusted contact in SafetySense, a safety app I'm testing. \
+            This test version doesn't call or text anyone, so it won't reach you if I need help. – \(me)
+            """
+        }
         return """
         Hi \(contact.firstName), I added you as a trusted contact in SafetySense, a safety app I use when I'm out. \
         If I ever need help and can't reach my phone, SafetySense will call and text you with a link to my live location. \
@@ -15,14 +22,22 @@ enum ContactMessage {
     }
 
     /// Walk Home: lets the person following along know what's happening.
-    static func headsUp(destination: String, eta: Date) -> String {
+    static func headsUp(destination: String, eta: Date, delivery: AlertDelivery) -> String {
         let place = destination.isEmpty ? "home" : "to \(destination)"
-        return "Heading \(place), should be there by \(eta.formatted(date: .omitted, time: .shortened)). SafetySense will let you know if I don't make it."
+        let plan = "Heading \(place), should be there by \(eta.formatted(date: .omitted, time: .shortened))."
+        return delivery.isReal ? "\(plan) SafetySense will let you know if I don't make it."
+                               : "\(plan) The safety app I'm testing won't contact you, so check on me if you don't hear from me."
     }
 
     /// A practice message so the contact knows what an alert looks like. Clearly marked TEST.
-    static func test(to contact: TrustedContact, from profile: Profile?) -> String {
+    static func test(to contact: TrustedContact, from profile: Profile?, delivery: AlertDelivery) -> String {
         let me = profile.map(\.firstName).flatMap { $0.isEmpty ? nil : $0 } ?? "your friend"
+        guard delivery.isReal else {
+            return """
+            TEST from SafetySense – nothing is wrong. This is a practice message from \(me). \
+            This test version doesn't call or text anyone, so it can't alert you. No need to do anything now.
+            """
+        }
         return """
         TEST from SafetySense – nothing is wrong. This is a practice message from \(me). \
         If \(me) ever needs help, a real alert comes as a text with a live location link, and sometimes a call. \
@@ -142,6 +157,6 @@ private struct MessageFallbackSheet: View {
 #Preview("Fallback") {
     let contact = SampleData.contacts[0]
     MessageFallbackSheet(draft: ContactMessageDraft(contact: contact, kind: .intro,
-                                                    body: ContactMessage.intro(to: contact, from: SampleData.profile))) {}
+                                                    body: ContactMessage.intro(to: contact, from: SampleData.profile, delivery: .real))) {}
         .preferredColorScheme(.dark)
 }

@@ -46,7 +46,7 @@ struct CheckInView: View {
                     }
                 }
 
-                Text("If you don't answer, \(NameList.join(model.contacts.map(\.firstName))) will be alerted with your live location.")
+                Text(model.alertDelivery.noAnswerNote(NameList.join(model.contacts.map(\.firstName))))
                     .font(SSFont.callout)
                     .foregroundStyle(SSColor.inkMuted)
                     .multilineTextAlignment(.center)
@@ -56,6 +56,7 @@ struct CheckInView: View {
             .padding(.bottom, SSSpacing.xl)
         }
         .scrollIndicators(.hidden)
+        .testModeBanner()
         .ssScreen()
         .sensoryFeedback(.warning, trigger: nudge)
         .sensoryFeedback(.impact(weight: .heavy, intensity: 1), trigger: urgentNudge)
