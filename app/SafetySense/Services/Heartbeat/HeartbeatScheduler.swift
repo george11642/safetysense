@@ -21,6 +21,8 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
     var isFailing: Bool { lastError != nil }
     /// The first failed beat after a good one. Set by `AppModel`.
     var onBecameFailing: (@MainActor () -> Void)?
+    /// The server has no open session under this id, and the phone may still think it has.
+    var onSessionClosed: (@MainActor (String) -> Void)?
 
     private let backend: any BackendClientProtocol
     private let log = Logger(subsystem: "com.georgeteifel.SafetySense", category: "heartbeat")
@@ -109,9 +111,12 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
             // called. Coming back, the person needs to see it and be able to stop it.
             if let alert = response.alert { escalation?.adoptServerAlert(alert) }
         } catch BackendError.http(let status, _) where status == 409 || status == 404 {
-            // The server already ended this session (ended elsewhere or erased). Stop quietly.
+            // A beat from before a re-link says nothing about the session running now.
+            guard sessionID == serverSessionID else { return }
+            // Beating into an ended session helps nobody. Whoever owns it decides what's next.
             log.notice("Session closed on the server; stopping heartbeats")
             stop()
+            onSessionClosed?(sessionID)
             return
         } catch {
             let wasFailing = isFailing

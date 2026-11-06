@@ -46,7 +46,11 @@ final class MockEvidenceVault: EvidenceVaultProtocol {
     }
     func unlock(reason: String) async -> Bool { isUnlocked = true; return true }
     func lock() { isUnlocked = false }
-    func decrypt(_ clip: EvidenceClip) async throws -> Data { Data() }
+    /// `-ssDemo`: silence as long as the clip, so the Vault's player has something to play.
+    func decrypt(_ clip: EvidenceClip) async throws -> Data {
+        guard simulatesRecording else { return Data() }
+        return WAV.encode(samples: [Int16](repeating: 0, count: Int(clip.duration) * 16_000), sampleRate: 16_000)
+    }
     func delete(_ clip: EvidenceClip) throws { clips.removeAll { $0.id == clip.id } }
     func deleteAll() throws { clips.removeAll() }
 }

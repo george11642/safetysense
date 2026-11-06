@@ -26,6 +26,7 @@ public enum AppGroup {
         public static let onboardingComplete = "ss.onboardingComplete"
         public static let currentSession = "ss.currentSession"
         public static let currentAlert = "ss.currentAlert"
+        public static let sessionStartMayHaveLanded = "ss.sessionStartMayHaveLanded"
         public static let alertHistory = "ss.alertHistory"
         public static let evidenceIndex = "ss.evidenceIndex"
         /// Pre-`SharedStore` queue (JSON array of `SharedCommand`). Only read to migrate it.
@@ -51,6 +52,7 @@ public enum AppGroup {
         public static let appLocal = [
             profile, contacts, settings, onboardingComplete, currentSession, currentAlert, alertHistory,
             evidenceIndex, heartbeatSessionID, heartbeatLastSentAt, backendOutbox, externalAlert,
+            sessionStartMayHaveLanded,
         ]
     }
 

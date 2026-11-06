@@ -170,7 +170,7 @@ struct AlertActiveView: View {
                                 .font(SSFont.caption).foregroundStyle(SSColor.warn)
                         }
                     } else {
-                        Text("Connecting to dispatch…").font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
+                        Text(delivery.connectingToDispatch).font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                     }
                     if let note = delivery.dispatchCallNote(confirmed: confirmed) {
                         Text(note)

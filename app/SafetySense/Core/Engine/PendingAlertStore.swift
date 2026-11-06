@@ -10,6 +10,7 @@ struct PendingAlert: Codable, Sendable, Equatable {
     /// A hidden duress alert: restored and sent, never shown.
     var hidden = false
     /// An attempt may have reached the server, so a valid cancel still has to be delivered.
+    /// Saved before each attempt goes out, so a process that dies mid-request still knows.
     /// With this false, a valid cancel just drops the entry: nobody was ever told.
     var mayHaveLanded = false
     /// The server no longer knows this session (`alert/create` answered 404): send it without.

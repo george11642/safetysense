@@ -89,7 +89,7 @@ struct HomeView: View {
                 if let banner = model.banner { NoticeCard(text: banner, systemImage: "wifi.exclamationmark") }
                 PermissionNotices(issues: issues)
                 if model.isMissingPhone {
-                    NoticeCard(text: "Add your phone number so a dispatcher can call you back.", systemImage: "phone",
+                    NoticeCard(text: model.alertDelivery.missingPhoneNotice, systemImage: "phone",
                                actionTitle: "Add") { model.selectedTab = .settings }
                 }
                 if !readiness.hasSafetyPIN {

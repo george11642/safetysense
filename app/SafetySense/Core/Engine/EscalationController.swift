@@ -88,6 +88,9 @@ final class EscalationController: EscalationControllerProtocol {
     @ObservationIgnored private var dispatchReasons: [UUID: String] = [:]
     @ObservationIgnored private var seenServerEvents: Set<String> = []
     @ObservationIgnored private var inflight: [UUID: Task<Void, Never>] = [:]
+    /// A duress cancel hasn't landed yet. See `endSessionAfterDuressCancel`.
+    @ObservationIgnored private var duressCancelPending = false
+    @ObservationIgnored private var sessionEndAwaitingDuressCancel: String?
 
     init(backend: any BackendClientProtocol,
          clock: any EngineClock = SystemEngineClock(),
@@ -154,6 +157,15 @@ final class EscalationController: EscalationControllerProtocol {
         connectionNote = nil
         scheduleNextCheckIn()
         emit()
+    }
+
+    /// The session a relaunch brings back, loaded before anything can raise an alert, because an
+    /// intent can start the ladder before `AppModel.onLaunch` gets to `begin`. Starts no timers.
+    func restore(session: GuardSession, policies: DispatchPolicySettings) {
+        guard self.session == nil, activeAlert == nil else { return }
+        self.session = session
+        self.policies = policies
+        arrivalDeadline = session.usesArrivalCheck ? session.nextCheckInAt : nil
     }
 
     /// Settings changed. Without a session this is the only way an SOS sees them.
@@ -414,6 +426,7 @@ final class EscalationController: EscalationControllerProtocol {
         if duress {
             // Evidence and location keep flowing; the server escalates silently.
             known[record.id] = record
+            duressCancelPending = true
             beginDuressTracking(alertID: record.id, hiddenFrom: now, serverAlertID: record.serverAlertID)
         } else {
             record.status = .cancelled
@@ -473,6 +486,7 @@ final class EscalationController: EscalationControllerProtocol {
         known[record.id] = record
         dispatchReasons[record.id] = reason
         trackPending(PendingAlert(record: record, cancel: true, dispatchReason: reason, hidden: true))
+        duressCancelPending = true
         evidence?.prepare(alertID: record.id)
         beginDuressTracking(alertID: record.id, hiddenFrom: .distantPast, hidesClipsBefore: hidingAllClips ? t : nil)
         track { [weak self] in await self?.createOnServer(alertID: record.id) }
@@ -751,6 +765,18 @@ final class EscalationController: EscalationControllerProtocol {
         pendingStore.save(Array(pendingCreates.values))
     }
 
+    /// `session/end` closes a session's watchdog alert unless it's marked duress, so one that gets
+    /// there ahead of the duress cancel would call off the help that was asked for. It waits for
+    /// the cancel. If the cancel never lands, the session just stays open: help is the safe side.
+    func endSessionAfterDuressCancel(_ serverSessionID: String) {
+        guard !duressCancelPending else {
+            sessionEndAwaitingDuressCancel = serverSessionID
+            return
+        }
+        let backend = self.backend
+        track { _ = try? await backend.endSession(SessionEndRequest(sessionId: serverSessionID)) }
+    }
+
     private func createOnServer(alertID: UUID) async {
         guard pendingCreates[alertID] != nil, !creating.contains(alertID) else { return }
         creating.insert(alertID)
@@ -790,13 +816,21 @@ final class EscalationController: EscalationControllerProtocol {
             let delay = delays.removeFirst()
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
             guard pendingCreates[alertID]?.cancel != false else { break }   // A PIN landed during that wait.
+            // Saved first: the process can die with this request on its way. An earlier attempt
+            // that may have landed still may have, whatever happens to this one.
+            let earlierMayHaveLanded = pendingCreates[alertID]?.mayHaveLanded ?? false
+            pendingCreates[alertID]?.mayHaveLanded = true
+            persistPending()
             do {
                 answer = try await backend.createAlert(request(ctx))
                 break
             } catch {
                 let backendError = error as? BackendError ?? .transport("request failed")
                 failure = backendError
-                if !backendError.neverReachedServer { pendingCreates[alertID]?.mayHaveLanded = true }
+                if backendError.neverReachedServer {
+                    pendingCreates[alertID]?.mayHaveLanded = earlierMayHaveLanded
+                    persistPending()
+                }
                 if pendingCreates[alertID]?.cancel == false { break }
                 // A location or battery value is never worth an alert: send it again without them.
                 if case .http(400, _) = backendError, pendingCreates[alertID]?.dropsOptionalFields != true {
@@ -937,10 +971,18 @@ final class EscalationController: EscalationControllerProtocol {
         let request = AlertCancelRequest(alertId: serverID, duress: duress)
         do {
             _ = try await withRetry { try await backend.cancelAlert(request) }
+            if duress { duressCancelLanded() }
         } catch {
             // Queued in the client's outbox, which keeps trying.
             onCancelUnconfirmed?()
         }
+    }
+
+    private func duressCancelLanded() {
+        duressCancelPending = false
+        guard let sessionID = sessionEndAwaitingDuressCancel else { return }
+        sessionEndAwaitingDuressCancel = nil
+        endSessionAfterDuressCancel(sessionID)
     }
 
     private func pushLocation(alertID: UUID) async {

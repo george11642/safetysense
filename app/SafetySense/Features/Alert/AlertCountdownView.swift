@@ -20,6 +20,8 @@ struct AlertCountdownView: View {
     private var alert: AlertRecord? { model.services.escalation.activeAlert ?? model.currentAlert }
     private var total: TimeInterval { EscalationLevel.alert.autoEscalateAfter ?? 90 }
     private var delivery: AlertDelivery { model.alertDelivery }
+    /// A drill is recorded on the server, but it never goes to anyone.
+    private var reachedServer: Bool { alert?.serverAlertID != nil && alert?.isDrill != true }
     private var deadline: Date {
         model.services.escalation.stepDeadline ?? alert?.dispatchDeadline ?? fallbackDeadline
     }
@@ -95,7 +97,7 @@ struct AlertCountdownView: View {
                 StatusPill(text: alert?.isDrill == true ? "Drill · test only" : delivery.countdownPill, tint: SSColor.danger, pulsing: true)
                 Spacer()
                 if let start = alert?.startedAt {
-                    Text("Sent \(start, format: .dateTime.hour().minute())").ssEyebrow(SSColor.warn)
+                    Text("\(delivery.startedLabel(reachedServer: reachedServer)) \(start, format: .dateTime.hour().minute())").ssEyebrow(SSColor.warn)
                 }
             }
             HStack(alignment: .center, spacing: SSSpacing.md) {
@@ -120,7 +122,7 @@ struct AlertCountdownView: View {
     private var notifiedCard: some View {
         Card(padding: SSSpacing.sm) {
             VStack(alignment: .leading, spacing: SSSpacing.xxs) {
-                Text("Notified").ssEyebrow()
+                Text(delivery.notifiedHeading(reachedServer: reachedServer)).ssEyebrow()
                 let people = AlertPresentation.people(delivery.shown(alert?.notified ?? []))
                 if people.isEmpty {
                     HStack(spacing: SSSpacing.sm) {

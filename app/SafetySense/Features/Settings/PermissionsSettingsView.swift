@@ -12,11 +12,11 @@ struct PermissionsSettingsView: View {
         List {
             Section {
                 row("Microphone", state: Self.label(permissions.microphone), isOn: permissions.microphone == .granted,
-                    detail: "Only during a Guard session you start. Sound stays in a 30-second memory loop unless an alert starts.",
+                    detail: "During a Guard session you start. Any alert also turns it on and records encrypted audio. Otherwise sound stays in a 30-second memory loop.",
                     icon: "mic.fill")
                 row("Location", state: Self.label(permissions.location), isOn: permissions.location == .always,
                     detail: permissions.location == .whenInUse
-                        ? "While Using stops when your phone locks. Choose Always so help can find you then."
+                        ? model.alertDelivery.locationWhileUsingNote
                         : "Shared only during a session or an alert.",
                     icon: "location.fill")
                 row("Notifications", state: Self.label(permissions.notifications), isOn: permissions.notifications == .granted,

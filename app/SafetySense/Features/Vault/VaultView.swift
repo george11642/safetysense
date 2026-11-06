@@ -19,6 +19,7 @@ struct VaultView: View {
     @State private var copied = 0
     @State private var checkingForClips = false
     @State private var checkedForClips = false
+    @State private var player = ClipPlayer()
 
     private var vault: any EvidenceVaultProtocol { model.services.vault }
 
@@ -39,6 +40,7 @@ struct VaultView: View {
         .sensoryFeedback(.success, trigger: copied)
         .sensoryFeedback(.success, trigger: unlocked) { _, new in new }
         .onChange(of: scenePhase) { _, phase in if phase != .active { relock() } }
+        .onChange(of: model.overlay) { _, overlay in if overlay != .none { player.stop() } }   // An alert covers this screen.
         .onDisappear(perform: relock)
         .sheet(item: $export) { item in
             VaultExportSheet(export: item)
@@ -57,17 +59,18 @@ struct VaultView: View {
             Button("Keep it", role: .cancel) {}
         } message: { clip in
             Text(clip.uploaded
-                 ? "This removes it from your phone. A backed-up encrypted copy stays on the server until your retention period ends."
+                 ? "This removes it from your phone. A backed-up encrypted copy stays on the server for up to 30 days."
                  : "This removes it from your phone. It can't be undone.")
         }
         .confirmationDialog("Delete every clip?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
             Button("Delete all evidence", role: .destructive) {
+                player.stop()
                 model.deleteVaultClips()
                 refresh()
             }
             Button("Keep it", role: .cancel) {}
         } message: {
-            Text("This can't be undone. You don't have to decide anything today.")
+            Text("This removes every clip from your phone, and it can't be undone. Any encrypted copy on the server stays for up to 30 days. You don't have to decide anything today.")
         }
     }
 
@@ -130,6 +133,7 @@ struct VaultView: View {
     }
 
     private func relock() {
+        player.stop()
         vault.lock()
         unlocked = false
         checkedForClips = false
@@ -203,26 +207,13 @@ struct VaultView: View {
 
     private func clipRow(_ clip: EvidenceClip) -> some View {
         HStack(spacing: SSSpacing.sm) {
-            Image(systemName: clip.kind == .audio ? "waveform" : "location")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(SSColor.accent)
-                .frame(width: 40, height: 40)
-                .background(SSColor.accentSoft, in: RoundedRectangle(cornerRadius: SSRadius.small, style: .continuous))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(clip.startedAt, format: .dateTime.hour().minute().second()).font(SSFont.headline)
-                    Text(clip.duration.clockText).font(SSFont.mono(13)).foregroundStyle(SSColor.inkMuted)
-                }
-                Text("SHA-256 \(Self.shortHash(clip.sha256))")
-                    .font(SSFont.mono(12)).foregroundStyle(SSColor.inkMuted)
-                    .lineLimit(1)
-                Label(clip.uploaded ? "Encrypted copy on the server" : "On this phone only",
-                      systemImage: clip.uploaded ? "checkmark.icloud" : "iphone")
-                    .font(SSFont.caption)
-                    .foregroundStyle(clip.uploaded ? SSColor.calm : SSColor.inkMuted)
+            if clip.kind == .audio {
+                Button { togglePlayback(clip) } label: { clipSummary(clip).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(player.isPlaying(clip) ? "Stop" : "Play") clip from \(clip.startedAt.formatted(date: .omitted, time: .standard)), \(clip.duration.clockText) long")
+            } else {
+                clipSummary(clip)
             }
-            Spacer(minLength: 0)
             Menu {
                 Button { Task { await prepareExport([clip], id: clip.id) } } label: {
                     Label("Share this clip", systemImage: "square.and.arrow.up")
@@ -243,7 +234,50 @@ struct VaultView: View {
         }
         .padding(.horizontal, SSSpacing.md)
         .padding(.vertical, SSSpacing.sm)
-        .accessibilityElement(children: .combine)
+    }
+
+    private func clipSummary(_ clip: EvidenceClip) -> some View {
+        HStack(spacing: SSSpacing.sm) {
+            Group {
+                if player.isLoading(clip) {
+                    ProgressView().tint(SSColor.accent)
+                } else {
+                    Image(systemName: clipIcon(clip)).contentTransition(.symbolEffect(.replace))
+                }
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(SSColor.accent)
+            .frame(width: 44, height: 44)
+            .background(SSColor.accentSoft, in: RoundedRectangle(cornerRadius: SSRadius.small, style: .continuous))
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(clip.startedAt, format: .dateTime.hour().minute().second()).font(SSFont.headline)
+                    Text(clip.duration.clockText).font(SSFont.mono(13)).foregroundStyle(SSColor.inkMuted)
+                }
+                Text("SHA-256 \(Self.shortHash(clip.sha256))")
+                    .font(SSFont.mono(12)).foregroundStyle(SSColor.inkMuted)
+                    .lineLimit(1)
+                // The bar sits on the label's line, so the row keeps its height while it plays.
+                Label(clip.uploaded ? "Encrypted copy on the server" : "On this phone only",
+                      systemImage: clip.uploaded ? "checkmark.icloud" : "iphone")
+                    .font(SSFont.caption)
+                    .foregroundStyle(clip.uploaded ? SSColor.calm : SSColor.inkMuted)
+                    .opacity(player.playback(of: clip) == nil ? 1 : 0)
+                    .overlay {
+                        if let playing = player.playback(of: clip) {
+                            ProgressView(timerInterval: playing, countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                                .tint(SSColor.accent)
+                        }
+                    }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func clipIcon(_ clip: EvidenceClip) -> String {
+        guard clip.kind == .audio else { return "location" }
+        return player.isPlaying(clip) ? "stop.fill" : "play.fill"
     }
 
     private func alertTitle(_ clips: [EvidenceClip]) -> String {
@@ -268,7 +302,19 @@ struct VaultView: View {
 
     // MARK: Actions
 
+    private func togglePlayback(_ clip: EvidenceClip) {
+        Task {
+            do {
+                try await player.toggle(clip, vault: vault)
+                errorText = nil
+            } catch {
+                errorText = (error as? LocalizedError)?.errorDescription ?? "Couldn't play that clip."
+            }
+        }
+    }
+
     private func delete(_ clip: EvidenceClip) {
+        if player.isPlaying(clip) { player.stop() }
         do { try vault.delete(clip) } catch { errorText = "Couldn't delete that clip. Try again." }
         withAnimation(.smooth) { refresh() }
     }

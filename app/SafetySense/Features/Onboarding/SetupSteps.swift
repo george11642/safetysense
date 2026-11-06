@@ -11,8 +11,8 @@ struct ContactsStepView: View {
     var next: () -> Void
 
     var body: some View {
-        OnboardingPage(eyebrow: "\(OnboardingStep.contacts.label) · Required", title: "Who should we call?",
-                       subtitle: "Choose 1 to \(TrustedContact.maxCount) people. They don't need the app. Send each one the intro text so a call from SafetySense isn't a surprise.") {
+        OnboardingPage(eyebrow: "\(OnboardingStep.contacts.label) · Required", title: model.alertDelivery.contactsQuestion,
+                       subtitle: model.alertDelivery.contactsStepSubtitle(max: TrustedContact.maxCount)) {
             TrustedContactsEditor(context: .onboarding)
         } footer: {
             PrimaryButton(model.contacts.isEmpty ? "Add at least one person" : "Continue", systemImage: "arrow.right", action: next)
@@ -132,10 +132,10 @@ struct PermissionsStepView: View {
             }
         }
 
-        @MainActor var reason: String {
+        @MainActor func reason(_ delivery: AlertDelivery) -> String {
             switch self {
-            case .microphone: "Only during a Guard session you start, to notice a scream or your safe word. Sound stays on your iPhone unless an alert starts."
-            case .location: "So help can find you, even when your phone is locked. Shared only during a session or an alert."
+            case .microphone: "During a Guard session you start, to notice a scream or your safe word. Any alert also turns it on and records encrypted audio. Sound stays on your iPhone unless an alert starts."
+            case .location: delivery.locationReason
             case .notifications: NotificationUrgency.isSupported
                 ? "So a \u{201C}You okay?\u{201D} check-in reaches you, even in a Focus mode."
                 : "So a \u{201C}You okay?\u{201D} check-in reaches you."
@@ -165,7 +165,7 @@ struct PermissionsStepView: View {
                 ForEach(Permission.allCases) { p in row(p) }
             }
             if status[.location] == .partial {
-                Text("While Using stops when your phone locks. For help to find you then, open iOS Settings, tap Location and choose Always.")
+                Text(model.alertDelivery.locationWhileUsingSetupNote)
                     .font(SSFont.caption).foregroundStyle(SSColor.warn)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -198,7 +198,7 @@ struct PermissionsStepView: View {
 
     private func row(_ p: Permission) -> some View {
         let s = status[p] ?? .notAsked
-        return SetupRow(systemImage: p.icon, title: p.title, detail: p.reason, done: s == .granted) {
+        return SetupRow(systemImage: p.icon, title: p.title, detail: p.reason(model.alertDelivery), done: s == .granted) {
             switch s {
             case .notAsked:
                 Button("Allow") { Task { await ask(p) } }

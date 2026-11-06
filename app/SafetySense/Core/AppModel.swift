@@ -101,6 +101,14 @@ final class AppModel {
     @ObservationIgnored private var registrationRetry: Task<Void, Never>?
     /// Keeps trying `session/start` until the session is linked or over.
     @ObservationIgnored private var sessionLinkRetry: Task<Void, Never>?
+    /// The last `session/start` queued. The server ends a device's open sessions at each one, with
+    /// no transaction, so only one is ever on the wire. Never cancelled: one that was sent has to
+    /// be heard out, because it may have opened a session.
+    @ObservationIgnored private var sessionStartQueue: Task<Bool, Never>?
+    /// The `session/start` for this Guard, so a second caller joins it instead of sending another.
+    @ObservationIgnored private var sessionLink: (id: UUID, task: Task<Bool, Never>)?
+    /// Keeps trying to close a session whose start got no answer. See `closeOrphanedStart`.
+    @ObservationIgnored private var orphanRetry: Task<Void, Never>?
     /// Waits between `session/start` attempts, in seconds. The last one repeats.
     @ObservationIgnored var sessionLinkDelays: [TimeInterval] = [5, 15, 30, 60]
     /// Keeps Live Activity calls in order, since each one awaits ActivityKit.
@@ -302,8 +310,38 @@ final class AppModel {
 
     /// One `session/start`. Until it lands there are no heartbeats and the watchdog isn't covering
     /// this session, so false means try again. Returns true when there's nothing left to do.
+    /// A call while this session's start is on the wire waits for that one.
     private func linkSession(_ id: UUID) async -> Bool {
+        if let sessionLink, sessionLink.id == id { return await sessionLink.task.value }
         guard let session = currentSession, session.id == id, session.serverSessionID == nil else { return true }
+        orphanRetry?.cancel()   // This start ends whatever that one was trying to close.
+        orphanRetry = nil
+        let task = enqueueSessionStart { [weak self] in
+            guard let self else { return true }
+            let finished = await self.sendSessionStart(id)
+            if self.sessionLink?.id == id { self.sessionLink = nil }
+            return finished
+        }
+        sessionLink = (id, task)
+        return await task.value
+    }
+
+    private func enqueueSessionStart(_ work: @escaping @MainActor () async -> Bool) -> Task<Bool, Never> {
+        let previous = sessionStartQueue
+        let task = Task {
+            _ = await previous?.value
+            return await work()
+        }
+        sessionStartQueue = task
+        return task
+    }
+
+    private func sendSessionStart(_ id: UUID) async -> Bool {
+        guard let session = currentSession, session.id == id, session.serverSessionID == nil else { return true }
+        // Saved first: a request that gets no answer, or a process that dies with it on the way,
+        // can leave a session open that the phone has no id for.
+        let earlierMayHaveLanded = store.sessionStartMayHaveLanded
+        store.sessionStartMayHaveLanded = true
         do {
             let response = try await services.backend.startSession(SessionStartRequest(
                 mode: session.mode.rawValue, checkInIntervalS: session.serverCheckInInterval,
@@ -311,8 +349,10 @@ final class AppModel {
                 // watchdog every time. The longest wait the server allows avoids that false alert.
                 graceS: staysRunningWhenLocked ? Int(session.graceSeconds) : SessionStartWire.maximumHeartbeatGrace,
                 sealedDetails: session.sealedDetailsString))
-            guard var current = currentSession, current.id == id else {
-                // Ended while this was in flight. Left open, the watchdog would raise an alert.
+            store.sessionStartMayHaveLanded = false   // This start ended any session before it.
+            guard var current = currentSession, current.id == id, current.serverSessionID == nil else {
+                // Ended while this was in flight, or a second answer the phone has no use for.
+                // Left open, the watchdog would raise an alert.
                 _ = try? await services.backend.endSession(SessionEndRequest(sessionId: response.sessionId))
                 return true
             }
@@ -323,9 +363,77 @@ final class AppModel {
             banner = nil
             return true
         } catch {
+            if !Self.mayHaveOpenedSession(error) { store.sessionStartMayHaveLanded = earlierMayHaveLanded }
+            guard currentSession?.id == id else {
+                closeOrphanedStart()
+                return true
+            }
             banner = "Guarding on your phone. The server link will retry."
             return false
         }
+    }
+
+    /// Only a request the server never saw, or one it refused, can't have opened a session.
+    private static func mayHaveOpenedSession(_ error: any Error) -> Bool {
+        guard let error = error as? BackendError else { return true }
+        if case .http(let status, _) = error, (400..<500).contains(status) { return false }
+        return !error.neverReachedServer
+    }
+
+    /// A session ended with a `session/start` unanswered. That start may have landed, and then the
+    /// server holds an open session with no heartbeats and the phone has no id to end it with: the
+    /// watchdog would alert for someone who ended safely, and the phone could never see or stop it.
+    /// The server only closes such a session at the next `session/start`, so one goes out, and
+    /// `session/end` closes it in turn. Never during a session, whose own link would be the one ended.
+    private func closeOrphanedStart() {
+        guard orphanRetry == nil, store.sessionStartMayHaveLanded, currentSession == nil else { return }
+        orphanRetry = Task { [weak self] in
+            var attempt = 0
+            while !Task.isCancelled {
+                guard let self else { return }
+                if await self.enqueueSessionStart({ await self.sendOrphanClose() }).value { break }
+                HeartbeatScheduler.scheduleAppRefresh()   // The next chance may be in the background.
+                let delays = self.sessionLinkDelays
+                try? await Task.sleep(for: .seconds(delays[min(attempt, delays.count - 1)]))
+                attempt += 1
+            }
+            if !Task.isCancelled { self?.orphanRetry = nil }
+        }
+    }
+
+    /// The longest grace the server allows, in case `session/end` can't follow: it stays in the
+    /// client's outbox until it lands. Returns true when nothing is left to close.
+    private func sendOrphanClose() async -> Bool {
+        guard store.sessionStartMayHaveLanded, currentSession == nil else { return true }
+        do {
+            let response = try await services.backend.startSession(SessionStartRequest(
+                mode: GuardMode.everyday.rawValue, checkInIntervalS: 3600,
+                graceS: SessionStartWire.maximumHeartbeatGrace, sealedDetails: nil))
+            _ = try? await services.backend.endSession(SessionEndRequest(sessionId: response.sessionId))
+            store.sessionStartMayHaveLanded = false
+            return true
+        } catch {
+            // The server doesn't know this device any more, so nothing of its is open there.
+            guard let refused = error as? BackendError, refused.isPermanentRejection || Optional(refused).isUnauthorized else { return false }
+            store.sessionStartMayHaveLanded = false
+            return true
+        }
+    }
+
+    /// One try from a background refresh, which can't wait out the retry delays.
+    func closeOrphanedStartInBackground() async {
+        guard store.sessionStartMayHaveLanded, currentSession == nil else { return }
+        _ = await enqueueSessionStart { [weak self] in await self?.sendOrphanClose() ?? true }.value
+    }
+
+    /// The server has no open session under the id this one is using. Beating into it would look
+    /// fine here while the watchdog sees nothing, so the session links up again.
+    private func sessionClosedOnServer(_ serverSessionID: String) {
+        guard var session = currentSession, session.serverSessionID == serverSessionID else { return }
+        session.serverSessionID = nil
+        currentSession = session
+        (services.escalation as? EscalationController)?.updateSession(session)
+        retrySessionLink(session.id)   // After a wait, so a server that keeps refusing isn't hammered.
     }
 
     private func retrySessionLink(_ id: UUID, immediately: Bool = false) {
@@ -381,15 +489,19 @@ final class AppModel {
     }
 
     func endGuard() async {
+        await endGuard(underDuress: false)
+    }
+
+    private func endGuard(underDuress: Bool) async {
         let serverSessionID = stopSession()
-        await closeSessionRemotely(serverSessionID)
+        await closeSessionRemotely(serverSessionID, underDuress: underDuress)
     }
 
     /// A duress PIN at End Guard: someone may be forcing the person to stop SafetySense. It looks
     /// like a normal end. The hidden alert starts first so `stopSession` keeps the mic and location.
     func endGuardUnderDuress() async {
         (services.escalation as? EscalationController)?.startHiddenDuressAlert(reason: "Duress PIN entered to end a session")
-        await endGuard()
+        await endGuard(underDuress: true)
     }
 
     /// A duress PIN at "Delete everything": someone may be forcing the wipe. The app goes back to
@@ -398,7 +510,7 @@ final class AppModel {
     func eraseUnderDuress() async {
         (services.escalation as? EscalationController)?.startHiddenDuressAlert(
             reason: "Duress PIN entered to delete everything", hidingAllClips: true)
-        await endGuard()
+        await endGuard(underDuress: true)
         registrationRetry?.cancel()
         registrationRetry = nil
         store.eraseKeepingEvidence()
@@ -434,10 +546,17 @@ final class AppModel {
         if session.mode == .nightOut, settings.drinkCheckPrompts { services.notifications.scheduleDrinkChecks() }
     }
 
-    /// An end that can't get through stays queued in the client until it does.
-    private func closeSessionRemotely(_ serverSessionID: String?) async {
+    /// An end that can't get through stays queued in the client until it does. Under duress it
+    /// waits for the cancel, so it can't call off the alert that cancel is keeping alive.
+    private func closeSessionRemotely(_ serverSessionID: String?, underDuress: Bool = false) async {
         await services.liveActivity.end()
-        if let serverSessionID {
+        guard let serverSessionID else {
+            closeOrphanedStart()
+            return
+        }
+        if underDuress, let escalation = services.escalation as? EscalationController {
+            escalation.endSessionAfterDuressCancel(serverSessionID)
+        } else {
             _ = try? await services.backend.endSession(SessionEndRequest(sessionId: serverSessionID))
         }
     }
@@ -480,7 +599,7 @@ final class AppModel {
         // A wrong PIN changes nothing, even if an earlier alert's Marked safe is still up.
         guard result != .invalid, markedSafe != nil else { return }
         let serverSessionID = stopSession()
-        Task { await closeSessionRemotely(serverSessionID) }
+        Task { await closeSessionRemotely(serverSessionID, underDuress: result == .duress) }
     }
 
     private func markedSafeSummary(for alert: AlertRecord) -> MarkedSafeSummary {
@@ -719,6 +838,9 @@ final class AppModel {
     func retryWaitingWork() {
         services.escalation.retryServerWork()
         if let id = currentSession?.id, currentSession?.serverSessionID == nil { retrySessionLink(id, immediately: true) }
+        orphanRetry?.cancel()   // Waiting out a delay: the network may be back, so try now.
+        orphanRetry = nil
+        closeOrphanedStart()
         if registrationRetry != nil { Task { await syncRegistration() } }
         Task { [services] in
             await services.backend.flushOutbox()
@@ -792,20 +914,29 @@ final class AppModel {
     }
 
     /// A session persisted from before a relaunch (iOS killed the app, or a crash): restart the
-    /// ladder and sensors for it instead of showing a Guard screen with nothing behind it.
+    /// ladder and sensors for it instead of showing a Guard screen with nothing behind it. An
+    /// intent can get an alert or a check-in going first. The ladder then keeps its place, and
+    /// everything else still comes back for when that step ends.
     private func resumeGuardIfNeeded() async {
-        guard var session = currentSession, let escalation = services.escalation as? EscalationController,
-              escalation.level == .guarding, escalation.activeAlert == nil else { return }
+        guard var session = currentSession, let escalation = services.escalation as? EscalationController else { return }
         session.nextCheckInAt = session.resumedCheckIn(now: .now)
         currentSession = session
         services.risk.reset()
         services.risk.configure(mode: session.mode, sensitivity: settings.sensitivity)
-        escalation.begin(session: session, policies: settings.dispatchPolicies)
+        let ladderIsQuiet = escalation.level == .guarding && escalation.activeAlert == nil
+        if ladderIsQuiet {
+            escalation.begin(session: session, policies: settings.dispatchPolicies)
+        } else {
+            escalation.updateSession(session)
+        }
         await startListening(session)
         if session.mode.usesMotion { try? services.motion.start(mode: session.mode) }
         try? services.location.start(mode: session.mode, destination: session.destinationFix)
-        if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
-        startDrinkChecks(session)
+        if escalation.activeAlert != nil { services.location.startAlertTracking() }   // `start` just cleared it.
+        if ladderIsQuiet {
+            if let next = session.nextCheckInAt { services.notifications.scheduleCheckIn(at: next, sessionID: session.id) }
+            startDrinkChecks(session)
+        }
         if !services.liveActivity.isActive { await services.liveActivity.start(session: session) }
         if let id = session.serverSessionID {
             services.heartbeat.start(serverSessionID: id, interval: 60)
@@ -843,6 +974,10 @@ final class AppModel {
             }
         }
         services.escalation.updatePolicies(settings.dispatchPolicies)
+        // Before the first await anywhere: an SOS from a cold start has to know the session's mode.
+        if let currentSession, let escalation = services.escalation as? EscalationController {
+            escalation.restore(session: currentSession, policies: settings.dispatchPolicies)
+        }
         if let risk = services.risk as? RiskEngine {
             risk.isSecondOpinionEnabled = { [weak self] in self?.settings.useSecondOpinion ?? false }
         }
@@ -871,6 +1006,14 @@ final class AppModel {
             notifications.onOpenLink = { [weak self] link in self?.open(link) }
         }
         (services.heartbeat as? HeartbeatScheduler)?.onBecameFailing = { [weak self] in self?.heartbeatBecameFailing() }
+        (services.heartbeat as? HeartbeatScheduler)?.onSessionClosed = { [weak self] id in self?.sessionClosedOnServer(id) }
+        if services.flavor == .live {
+            let refresh = HeartbeatScheduler.onBackgroundRefresh
+            HeartbeatScheduler.onBackgroundRefresh = { [weak self] in
+                await refresh?()
+                await self?.closeOrphanedStartInBackground()
+            }
+        }
         services.escalation.onChange = { [weak self] level, alert in
             guard let self else { return }
             if let alert, alert.isDrill { self.lastDrill = alert; return }

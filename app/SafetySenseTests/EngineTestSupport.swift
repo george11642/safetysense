@@ -18,6 +18,13 @@ actor EngineFakeBackend: BackendClientProtocol {
     /// `alert/create` answers 400 while the request carries a location or battery value.
     var rejectOptionalFields = false
     var sessionStartFailures = 0
+    /// Thrown by `session/start` this many times instead of the offline error.
+    var sessionStartError: BackendError?
+    var sessionStartErrorCount = 0
+    /// Sessions the server has ended: a beat for one is refused.
+    var endedSessions: Set<String> = []
+    private var sessionsStarted = 0
+    private(set) var heartbeats: [HeartbeatRequest] = []
     var heartbeatAlert: LiveAlertDTO?
     var registerError: BackendError?
     var contactsError: BackendError?
@@ -40,6 +47,11 @@ actor EngineFakeBackend: BackendClientProtocol {
     func setCancelError(_ value: BackendError?) { cancelError = value }
     func setRejectOptionalFields(_ value: Bool) { rejectOptionalFields = value }
     func setSessionStartFailures(_ value: Int) { sessionStartFailures = value }
+    func setSessionStartError(_ value: BackendError?, count: Int) {
+        sessionStartError = value
+        sessionStartErrorCount = count
+    }
+    func setEndedSessions(_ value: Set<String>) { endedSessions = value }
     func setHeartbeatAlert(_ value: LiveAlertDTO?) { heartbeatAlert = value }
     func setRegisterError(_ value: BackendError?) { registerError = value }
     func setContactsError(_ value: BackendError?) { contactsError = value }
@@ -92,7 +104,12 @@ actor EngineFakeBackend: BackendClientProtocol {
             sessionStartFailures -= 1
             throw BackendError.transport("offline")
         }
-        return SessionStartResponse(sessionId: "session-1")
+        if let sessionStartError, sessionStartErrorCount > 0 {
+            sessionStartErrorCount -= 1
+            throw sessionStartError
+        }
+        sessionsStarted += 1
+        return SessionStartResponse(sessionId: "session-\(sessionsStarted)")
     }
     private var holdSessionStarts = false
     private var sessionGate: CheckedContinuation<Void, Never>?
@@ -104,7 +121,9 @@ actor EngineFakeBackend: BackendClientProtocol {
         sessionGate = nil
     }
     func heartbeat(_ request: HeartbeatRequest) async throws -> HeartbeatResponse {
-        HeartbeatResponse(ok: true, serverTime: "2026-11-04T23:00:00Z", alert: heartbeatAlert)
+        heartbeats.append(request)
+        if endedSessions.contains(request.sessionId) { throw BackendError.http(status: 409, message: "session has ended") }
+        return HeartbeatResponse(ok: true, serverTime: "2026-11-04T23:00:00Z", alert: heartbeatAlert)
     }
     func endSession(_ request: SessionEndRequest) async throws -> OKResponse {
         sessionEnds.append(request)

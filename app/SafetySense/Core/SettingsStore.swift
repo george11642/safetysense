@@ -103,6 +103,13 @@ final class SettingsStore {
         set { save(newValue, key: AppGroup.Keys.currentAlert) }
     }
 
+    /// A `session/start` may have opened a session the phone never got the id of. Saved before
+    /// the request goes out, so it outlives a killed process. See `AppModel.closeOrphanedStart`.
+    var sessionStartMayHaveLanded: Bool {
+        get { defaults.bool(forKey: AppGroup.Keys.sessionStartMayHaveLanded) }
+        set { defaults.set(newValue, forKey: AppGroup.Keys.sessionStartMayHaveLanded) }
+    }
+
     // MARK: Secrets
 
     var hasSafetyPIN: Bool { secrets.data(for: AppGroup.KeychainAccounts.safetyPINHash) != nil }
@@ -163,7 +170,7 @@ final class SettingsStore {
     /// server link, and any alert or cancel still on its way. The safety PIN moves aside: onboarding
     /// has to read as a new start, but whoever sets up a PIN next mustn't unlock those clips.
     func eraseKeepingEvidence() {
-        let kept = [AppGroup.Keys.evidenceIndex, AppGroup.Keys.backendOutbox]
+        let kept = [AppGroup.Keys.evidenceIndex, AppGroup.Keys.backendOutbox, AppGroup.Keys.sessionStartMayHaveLanded]
         AppGroup.Keys.appLocal.filter { !kept.contains($0) }.forEach { defaults.removeObject(forKey: $0) }
         shared.eraseAll()
         let safety = secrets.data(for: AppGroup.KeychainAccounts.safetyPINHash)

@@ -470,12 +470,24 @@ async function redirectRelayCalls(alert: Alert) {
 // effort so one failure can't stop the others. The flag alone stops the relay ringing her. Taking back
 // forwarded calls runs on every call, so a repeated duress cancel retries it. The note and the contact
 // warning run only the first time.
-async function applyDuress(alert: Alert, device: Device) {
+// A cancelled alert goes live again: session/end can close a watchdog alert ahead of a duress cancel
+// that was held up, and help asked for under coercion must not stay called off. Its old alarm was
+// cancelled, so the provider fields clear and escalate() opens a new one, which carries the duress note.
+export async function applyDuress(alert: Alert, device: Device) {
   const first = !alert.duress;
-  const marked = { ...alert, duress: true };
+  let marked: Alert = { ...alert, duress: true };
   if (first) {
     must(await db.from("alerts").update({ duress: true }).eq("id", alert.id));
     await addEvent(alert.id, "SafetySense", "duress", "Cancel entered with the duress PIN", true);
+  }
+  if (alert.status === "cancelled") {
+    const raised = {
+      status: "active", cancelled_at: null, escalated_at: null,
+      dispatch_provider: null, dispatch_alarm_id: null, dispatch_status: null,
+    };
+    must(await db.from("alerts").update(raised).eq("id", alert.id).eq("status", "cancelled"));
+    marked = { ...marked, ...raised };
+    await addEvent(alert.id, "SafetySense", "duress_reraised", "A cancelled alert went live again after a duress cancel", true);
   }
   await redirectRelayCalls(marked).catch(() => console.error("relay redirect failed", alert.id));
   if (first) await noteNoonlightDuress(marked).catch(() => console.error("duress note failed", alert.id));

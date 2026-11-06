@@ -244,7 +244,7 @@ private struct EmptyContactsCard: View {
                     .font(.title2).foregroundStyle(SSColor.accent)
                     .symbolEffect(.variableColor.iterative, options: .repeating)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Who should we call?").font(SSFont.headline)
+                    Text(model.alertDelivery.contactsQuestion).font(SSFont.headline)
                     Text(model.alertDelivery.contactsEditorPrompt)
                         .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                 }

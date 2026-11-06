@@ -63,7 +63,7 @@ struct PromisesStepView: View {
         Promise(id: 1, icon: "lock.shield", title: "Nothing is saved unless something's wrong.",
                 body: "Sound is checked on your iPhone in a 30-second memory loop and then forgotten. Only if an alert starts is it encrypted and kept as evidence, and only you can unlock it.",
                 tint: SSColor.accent),
-        Promise(id: 2, icon: "phone.and.waveform", title: "Help comes even if you can't tap.",
+        Promise(id: 2, icon: "phone.and.waveform", title: delivery.helpPromiseTitle,
                 body: delivery.helpPromiseBody,
                 tint: SSColor.warn),
     ] }
@@ -160,7 +160,7 @@ struct CampusStepView: View {
 
     var body: some View {
         OnboardingPage(eyebrow: OnboardingStep.campus.label, title: "About you",
-                       subtitle: "Your name goes in the alert your contacts get. Your number lets dispatch call you to check you're safe.") {
+                       subtitle: model.alertDelivery.aboutYouSubtitle) {
             VStack(alignment: .leading, spacing: SSSpacing.md) {
                 labeled("First name") {
                     TextField("Alex", text: $name)

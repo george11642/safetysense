@@ -344,7 +344,7 @@ struct ProfileSettingsView: View {
                     ForEach(Campus.allCases) { Text($0.displayName).tag($0) }
                 }
             } footer: {
-                Text("Your name goes in alerts to your contacts. Dispatch uses your number to call and check on you.")
+                Text(model.alertDelivery.profileFooter)
             }
             .listRowBackground(SSColor.surface)
 

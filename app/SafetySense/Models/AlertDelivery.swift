@@ -92,7 +92,11 @@ enum AlertDelivery: Sendable, Equatable {
                : "Arrival check at \(arrival). In this \(word.lowercased()) build, nobody is sent the plate."
     }
 
-    /// Onboarding's third promise.
+    /// Onboarding's third promise. The Terms can't guarantee a response, so neither can this.
+    var helpPromiseTitle: String {
+        isReal ? "SafetySense reaches out, even if you can't tap." : "Practice what happens if you can't tap."
+    }
+
     var helpPromiseBody: String {
         let start = "If you don't answer a check-in, say your safe word, or your phone goes dark,"
         return isReal ? "\(start) SafetySense calls your people, then professional dispatch."
@@ -105,7 +109,51 @@ enum AlertDelivery: Sendable, Equatable {
                : "Practice your safety plan. This \(word.lowercased()) build contacts nobody."
     }
 
+    // MARK: Your number and location
+
+    private var nobodyContacted: String { "This \(word.lowercased()) build contacts nobody" }
+
+    var aboutYouSubtitle: String {
+        isReal ? "Your name goes in the alert your contacts get. Your number lets dispatch call you to check you're safe."
+               : "Your name goes in the alert your contacts would get. In a real build, dispatch could call your number. \(nobodyContacted)."
+    }
+
+    var missingPhoneNotice: String {
+        isReal ? "Add your phone number so a dispatcher can call you back."
+               : "Add your phone number. A real build gives it to dispatch. \(nobodyContacted)."
+    }
+
+    var profileFooter: String {
+        isReal ? "Your name goes in alerts to your contacts. Dispatch uses your number to call and check on you."
+               : "Your name goes in alerts to your contacts. In a real build, dispatch uses your number to check on you. \(nobodyContacted)."
+    }
+
+    var locationReason: String {
+        isReal ? "So help can find you, even when your phone is locked. Shared only during a session or an alert."
+               : "So your Guard keeps working when your phone is locked. Used only during a session or an alert. \(nobodyContacted)."
+    }
+
+    /// Location at While Using, in onboarding.
+    var locationWhileUsingSetupNote: String {
+        let goal = isReal ? "For help to find you then" : "For your Guard to keep working then"
+        return "While Using stops when your phone locks. \(goal), open iOS Settings, tap Location and choose Always."
+    }
+
+    /// Location at While Using, in Settings.
+    var locationWhileUsingNote: String {
+        let goal = isReal ? "so help can find you then" : "so your Guard keeps working then"
+        return "While Using stops when your phone locks. Choose Always \(goal)."
+    }
+
     // MARK: Contacts
+
+    var contactsQuestion: String { isReal ? "Who should we call?" : "Who are your people?" }
+
+    func contactsStepSubtitle(max: Int) -> String {
+        let start = "Choose 1 to \(max) people. They don't need the app."
+        return isReal ? "\(start) Send each one the intro text so a call from SafetySense isn't a surprise."
+                      : "\(start) \(nobodyContacted), so if you need help, call 911."
+    }
 
     /// How a real build works, and that this one doesn't.
     private var testContactsNote: String {
@@ -195,6 +243,15 @@ enum AlertDelivery: Sendable, Equatable {
         isReal ? "Time until professional help is sent" : "\(word) timer. No help will be sent."
     }
 
+    /// Beside the time on the countdown. "Sent" needs a real build and an answer from the server.
+    func startedLabel(reachedServer: Bool) -> String { isReal && reachedServer ? "Sent" : "Started" }
+
+    /// Above the contact rows, which in a test build all read "not sent".
+    func notifiedHeading(reachedServer: Bool) -> String {
+        guard isReal else { return "Your people" }
+        return reachedServer ? "Notified" : "Reaching"
+    }
+
     func reaching(_ names: String) -> String {
         isReal ? "Calling and texting \(names)…" : "\(word) only: \(names) won't be called or texted."
     }
@@ -240,6 +297,10 @@ enum AlertDelivery: Sendable, Equatable {
     /// Nil when nobody can call, since waiting for that call would be the wrong thing to do.
     var dispatchCallNote: String? {
         isReal ? "Answer if they call. They'll confirm you're okay before sending police." : nil
+    }
+    /// While the Alert active card waits for a dispatch answer.
+    var connectingToDispatch: String {
+        isReal ? "Connecting to dispatch…" : "\(word) only: no dispatch is being sent."
     }
     func stillReaching(_ names: String) -> String { isReal ? "Reaching \(names)…" : reaching(names) }
     var reconnecting: String {
