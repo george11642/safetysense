@@ -10,8 +10,15 @@ final class MockAudioGuardService: AudioGuardService {
     var transcript = ""
 
     var microphonePermission: PermissionState = .granted
+    /// Set to make `start` fail, as the real one does without mic access.
+    var startError: (any Error)?
+    private(set) var startCount = 0
     func requestPermission() async -> Bool { true }
-    func start(mode: GuardMode, safeWord: String?) async throws { isRunning = true }
+    func start(mode: GuardMode, safeWord: String?) async throws {
+        startCount += 1
+        if let startError { throw startError }
+        isRunning = true
+    }
     func stop() { isRunning = false }
     func resumeIfNeeded() { resumeCount += 1 }
     func snapshotRecentAudio() -> Data? { isRunning ? Data(repeating: 0, count: 1024) : nil }

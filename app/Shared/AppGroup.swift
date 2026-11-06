@@ -71,9 +71,11 @@ public enum AppGroup {
         /// Device credentials waiting to finish `account/delete` after an offline erase.
         public static let pendingAccountDeletion = "pendingAccountDeletion"
         /// Every item "delete everything" clears, and the ones a reinstall mustn't inherit.
+        /// The safety PIN from before a forced "Delete everything", so it alone can bring clips back.
+        public static let parkedSafetyPINHash = "parkedSafetyPINHash"
         public static let erasable = [
             safetyPINHash, duressPINHash, safeWord, deviceCredentials, evidenceKey, sessionDetails, pendingAlerts,
-            duressRecords,
+            duressRecords, parkedSafetyPINHash,
         ]
         /// Separate service for the widget-readable items in `SharedStore`, so a secret lookup
         /// by account can never match one.

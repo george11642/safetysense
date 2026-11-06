@@ -13,6 +13,10 @@ actor EngineFakeBackend: BackendClientProtocol {
     /// Thrown by `createAlert` instead of `failCreates`'s offline error.
     var createError: BackendError?
     var failCancels = false
+    /// Thrown by `cancelAlert` instead of `failCancels`'s offline error.
+    var cancelError: BackendError?
+    /// `alert/create` answers 400 while the request carries a location or battery value.
+    var rejectOptionalFields = false
     var sessionStartFailures = 0
     var heartbeatAlert: LiveAlertDTO?
     var registerError: BackendError?
@@ -33,6 +37,8 @@ actor EngineFakeBackend: BackendClientProtocol {
     func setCredentials(_ credentials: DeviceCredentials?) { credentialChanges.append(credentials) }
     func setCreateError(_ value: BackendError?) { createError = value }
     func setFailCancels(_ value: Bool) { failCancels = value }
+    func setCancelError(_ value: BackendError?) { cancelError = value }
+    func setRejectOptionalFields(_ value: Bool) { rejectOptionalFields = value }
     func setSessionStartFailures(_ value: Int) { sessionStartFailures = value }
     func setHeartbeatAlert(_ value: LiveAlertDTO?) { heartbeatAlert = value }
     func setRegisterError(_ value: BackendError?) { registerError = value }
@@ -121,6 +127,9 @@ actor EngineFakeBackend: BackendClientProtocol {
         creates.append(request)
         if holdCreates { await withCheckedContinuation { gates.append($0) } }
         if let createError { throw createError }
+        if rejectOptionalFields, request.lat != nil || request.accuracy != nil || request.battery != nil {
+            throw BackendError.http(status: 400, message: "accuracy is out of range")
+        }
         if failCreates { throw BackendError.transport("offline") }
         counter += 1
         return AlertCreateResponse(alertId: "alert-\(counter)", shareUrl: "https://safetysense-live.vercel.app/a/token\(counter)",
@@ -136,6 +145,7 @@ actor EngineFakeBackend: BackendClientProtocol {
 
     func cancelAlert(_ request: AlertCancelRequest) async throws -> AlertCancelResponse {
         cancels.append(request)
+        if let cancelError { throw cancelError }
         if failCancels { throw BackendError.transport("offline") }
         return AlertCancelResponse(ok: true, status: "cancelled")
     }

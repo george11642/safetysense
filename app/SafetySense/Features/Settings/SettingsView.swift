@@ -108,7 +108,7 @@ struct SettingsView: View {
                                icon: "arrow.triangle.branch")
                 }
             } footer: {
-                Text("By default, your contacts hear first and a manual SOS goes straight to dispatch. Change it for each mode.")
+                Text(model.alertDelivery.policySummaryFooter)
             }
             .listRowBackground(SSColor.surface)
 
@@ -240,7 +240,7 @@ struct SettingsView: View {
             Text("This ends any session and permanently removes your profile, contacts, PINs, safe word and saved evidence from this iPhone, and erases this iPhone's data on the SafetySense server. It can't be undone.")
         }
         .sheet(isPresented: $erasePINPrompt) {
-            ErasePINSheet { Task { await erase() } }
+            ErasePINSheet { underDuress in Task { await erase(underDuress: underDuress) } }
         }
     }
 
@@ -308,12 +308,17 @@ struct SettingsView: View {
         drillRunning = false
     }
 
-    private func erase() async {
+    /// Both paths look the same: a forced wipe mustn't show that it was anything else.
+    private func erase(underDuress: Bool = false) async {
         erasing = true
         _ = await IconSwitcher.apply(discreet: false)
         ResponderPhotoStore.deleteAll()
         DeveloperSettings.reset()
-        await model.eraseEverything()
+        if underDuress {
+            await model.eraseUnderDuress()
+        } else {
+            await model.eraseEverything()
+        }
         erasing = false
     }
 }
@@ -322,7 +327,8 @@ struct SettingsView: View {
 private struct ErasePINSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    var onConfirmed: () -> Void
+    /// True for the duress PIN, which looks the same here.
+    var onConfirmed: (_ underDuress: Bool) -> Void
     @State private var entry = ""
     @State private var error: String?
     @State private var shake = 0
@@ -337,12 +343,13 @@ private struct ErasePINSheet: View {
                         .font(SSFont.callout).foregroundStyle(error == nil ? SSColor.inkMuted : SSColor.warn)
                 }
                 PINPad(pin: $entry, tint: SSColor.danger) { pin in
-                    if model.store.verifyPIN(pin) == .invalid {
+                    let result = model.store.verifyPIN(pin)
+                    if result == .invalid {
                         error = "That PIN didn't work. Try again."
                         shake += 1
                     } else {
                         dismiss()
-                        onConfirmed()
+                        onConfirmed(result == .duress)
                     }
                 }
                 .modifier(ShakeEffect(shakes: CGFloat(shake)))
@@ -366,7 +373,7 @@ private struct ErasePINSheet: View {
         switch await DeviceAuth.authenticateOwner(reason: "Delete everything") {
         case .success, .unavailable:
             dismiss()
-            onConfirmed()
+            onConfirmed(false)
         case .failed:
             error = "That didn't work. Try again."
             shake += 1

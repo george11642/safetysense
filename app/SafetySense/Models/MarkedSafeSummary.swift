@@ -11,9 +11,9 @@ struct MarkedSafeSummary: Sendable, Equatable {
     var endedAt: Date
     var reachedDispatch: Bool
     var contactFirstNames: [String]
-    /// "Allow real calls" was off, so the server logged the alert and contacted nobody.
+    /// This build contacts nobody, or the server logged the alert as a test.
     var wasTest = false
-    /// The server couldn't be reached during the alert, so nobody can be promised anything.
+    /// The server hasn't confirmed the alert or its cancel, so nobody can be promised anything.
     /// Comes from the connection alone, so it reads the same for both PINs.
     var couldntConfirm = false
     /// Clips saved when the PIN went in. Taken once, because a duress alert keeps recording and
@@ -27,10 +27,10 @@ struct MarkedSafeSummary: Sendable, Equatable {
     }
 
     var bodyText: String {
-        if couldntConfirm {
-            return "SafetySense couldn't reach its server, so \(NameList.join(contactFirstNames)) may not know you're okay yet. If you can, text them yourself."
-        }
         if wasTest { return "This was a test alert, so nobody was contacted. Your live link stopped sharing your location." }
+        if couldntConfirm {
+            return "SafetySense hasn't heard back from its server, so \(NameList.join(contactFirstNames)) may not know you're okay yet. If you can, text them yourself."
+        }
         if contactFirstNames.isEmpty { return "Your alert has stopped, and your live link stopped sharing your location." }
         return "We told \(NameList.join(contactFirstNames)) that you're okay, and your live link stopped sharing your location."
     }

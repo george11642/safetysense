@@ -16,7 +16,7 @@ enum ContactMessage {
         return """
         Hi \(contact.firstName), I added you as a trusted contact in SafetySense, a safety app I use when I'm out. \
         If I ever need help and can't reach my phone, SafetySense will call and text you with a link to my live location. \
-        If that happens: open the link, try calling me, and if you think I'm in danger, call 911. \
+        If that happens: open the link, please don't call or text my phone, and if you think I'm in danger, call 911. \
         You don't need to install anything. Thank you for having my back. – \(me)
         """
     }

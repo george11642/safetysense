@@ -59,6 +59,11 @@ struct LocationFix: Codable, Sendable, Equatable {
         self.speed = speed
     }
 
+    /// iOS reports a negative accuracy when it has no valid coordinates.
+    var isUsable: Bool {
+        accuracy >= 0 && abs(latitude) <= 90 && abs(longitude) <= 180
+    }
+
     /// UNM main campus, for demos.
     static let unmCampus = LocationFix(latitude: 35.0844, longitude: -106.6198, accuracy: 12)
 }

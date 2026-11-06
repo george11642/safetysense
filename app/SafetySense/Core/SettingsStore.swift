@@ -159,6 +159,30 @@ final class SettingsStore {
         savedSessionDetails = nil
     }
 
+    /// What a forced "Delete everything" removes. It keeps the evidence, its key, this device's
+    /// server link, and any alert or cancel still on its way. The safety PIN moves aside: onboarding
+    /// has to read as a new start, but whoever sets up a PIN next mustn't unlock those clips.
+    func eraseKeepingEvidence() {
+        let kept = [AppGroup.Keys.evidenceIndex, AppGroup.Keys.backendOutbox]
+        AppGroup.Keys.appLocal.filter { !kept.contains($0) }.forEach { defaults.removeObject(forKey: $0) }
+        shared.eraseAll()
+        let safety = secrets.data(for: AppGroup.KeychainAccounts.safetyPINHash)
+        for account in [AppGroup.KeychainAccounts.safetyPINHash, AppGroup.KeychainAccounts.duressPINHash,
+                        AppGroup.KeychainAccounts.safeWord, AppGroup.KeychainAccounts.sessionDetails] {
+            secrets.set(nil, for: account)
+        }
+        secrets.set(safety, for: AppGroup.KeychainAccounts.parkedSafetyPINHash)
+        savedSessionDetails = nil
+    }
+
+    var hasParkedSafetyPIN: Bool { secrets.data(for: AppGroup.KeychainAccounts.parkedSafetyPINHash) != nil }
+
+    func isParkedSafetyPIN(_ pin: String) -> Bool {
+        secrets.data(for: AppGroup.KeychainAccounts.parkedSafetyPINHash) == Self.hash(pin)
+    }
+
+    func clearParkedSafetyPIN() { secrets.set(nil, for: AppGroup.KeychainAccounts.parkedSafetyPINHash) }
+
     nonisolated static func hash(_ pin: String) -> Data {
         // Salted so identical PINs across apps don't collide; this is device-local only.
         Data(SHA256.hash(data: Data("safetysense.pin.v1:\(pin)".utf8)))

@@ -99,6 +99,47 @@ enum AlertDelivery: Sendable, Equatable {
                       : "\(start) SafetySense starts a \(word.lowercased()) alert. This build contacts nobody, so if you need help, call 911."
     }
 
+    // MARK: The duress PIN
+
+    var twoPINsSubtitle: String {
+        let start = "Your safety PIN cancels an alert. Your duress PIN looks exactly like cancelling"
+        return isReal ? "\(start), but quietly sends help anyway, in case someone makes you cancel."
+                      : "\(start), in case someone makes you cancel. This \(word.lowercased()) build contacts nobody, so if you need help, call 911."
+    }
+
+    var duressResultLabel: String { isReal ? "Help still on the way" : "Nobody is contacted" }
+
+    var duressAnimationLabel: String {
+        let start = "Animation. Entering your safety PIN cancels an alert. Entering your duress PIN looks exactly the same on screen"
+        return isReal ? "\(start), but help is still sent quietly." : "\(start). In this \(word.lowercased()) build, nobody is contacted."
+    }
+
+    var duressReadinessDetail: String {
+        isReal ? "Looks like a cancel, quietly sends help" : "Looks like a cancel. Nobody is contacted"
+    }
+
+    var duressSetDetail: String {
+        isReal ? "Set · looks like a cancel, help still comes" : "Set · looks like a cancel, nobody is contacted"
+    }
+
+    // MARK: Settings footers
+
+    var checkInSettingsFooter: String {
+        let window = isReal ? "You have 45 seconds to answer before your contacts are told."
+                            : "You have 45 seconds to answer before a \(word.lowercased()) alert starts. Nobody is contacted."
+        return "How often SafetySense asks \u{201C}You okay?\u{201D} during a session. \(window) Walk Home and Ride check once, at the time you should have arrived, and whenever you stop somewhere unexpected."
+    }
+
+    var policySummaryFooter: String {
+        isReal ? "By default, your contacts hear first and a manual SOS goes straight to dispatch. Change it for each mode."
+               : "Set who hears first in each mode. This \(word.lowercased()) build contacts nobody and sends no dispatch, so if you need help, call 911."
+    }
+
+    var policyDetailFooter: String {
+        isReal ? "Contacts first: your people hear first, and dispatch is asked to help if you don't cancel within 90 seconds or a contact taps \u{201C}Send help.\u{201D} Dispatch right away: both at once. Dispatch calls you before sending anyone."
+               : "This is how a real build would work. Contacts first: your people, then dispatch after 90 seconds. Dispatch right away: both at once. This \(word.lowercased()) build contacts nobody, so if you need help, call 911."
+    }
+
     // MARK: Alert countdown
 
     var countdownPill: String { isReal ? "Alert" : "\(word) alert" }

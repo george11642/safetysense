@@ -118,7 +118,7 @@ struct UIParityTests {
         #expect(!summary.bodyText.contains("We told"))
         #expect(summary.bodyText.contains("may not know"))
         summary.wasTest = true
-        #expect(!summary.bodyText.contains("test alert"), "An unreachable server outranks the test wording")
+        #expect(summary.bodyText.contains("nobody was contacted"), "A build that contacts nobody has nobody to tell")
     }
 
     @Test func markedSafeNamesNobodyWhenThereIsNobody() {

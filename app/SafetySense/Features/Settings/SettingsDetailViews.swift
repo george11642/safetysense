@@ -30,7 +30,7 @@ struct CheckInIntervalsView: View {
                     }
                 }
             } footer: {
-                Text("How often SafetySense asks \u{201C}You okay?\u{201D} during a session. You have 45 seconds to answer before your contacts are told. Walk Home and Ride check once, at the time you should have arrived, and whenever you stop somewhere unexpected.")
+                Text(model.alertDelivery.checkInSettingsFooter)
             }
             .listRowBackground(SSColor.surface)
 
@@ -94,7 +94,7 @@ struct DispatchPoliciesView: View {
             } header: {
                 Text("When SafetySense notices something")
             } footer: {
-                Text("Contacts first: your people hear first, and dispatch is asked to help if you don't cancel within 90 seconds or a contact taps \u{201C}Send help.\u{201D} Dispatch right away: both at once. Dispatch calls you before sending anyone.")
+                Text(model.alertDelivery.policyDetailFooter)
             }
             .listRowBackground(SSColor.surface)
 
@@ -137,7 +137,7 @@ struct PINSettingsView: View {
                         action: hasSafety ? "Change" : "Create")
                 }
                 Button { flow = .setDuress } label: {
-                    row("Duress PIN", hasDuress ? "Set · looks like a cancel, help still comes" : "Not set", icon: "lock.trianglebadge.exclamationmark",
+                    row("Duress PIN", hasDuress ? model.alertDelivery.duressSetDetail : "Not set", icon: "lock.trianglebadge.exclamationmark",
                         set: hasDuress, action: hasDuress ? "Change" : "Create")
                 }
                 .disabled(!hasSafety)
@@ -153,7 +153,7 @@ struct PINSettingsView: View {
             .listRowBackground(SSColor.surface)
 
             Section {
-                PINExplainerAnimation().padding(.vertical, SSSpacing.sm)
+                PINExplainerAnimation(delivery: model.alertDelivery).padding(.vertical, SSSpacing.sm)
             } header: {
                 Text("How they work")
             }

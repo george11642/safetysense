@@ -25,7 +25,7 @@ struct PINStepView: View {
 
     private var explainPage: some View {
         OnboardingPage(eyebrow: OnboardingStep.pins.label, title: "Two PINs",
-                       subtitle: "Your safety PIN cancels an alert. Your duress PIN looks exactly like cancelling, but quietly sends help anyway, in case someone makes you cancel.") {
+                       subtitle: model.alertDelivery.twoPINsSubtitle) {
             PINSummaryBoxes(hasSafety: model.store.hasSafetyPIN, hasDuress: model.store.hasDuressPIN,
                             onSafety: { phase = .safety }, onDuress: { phase = .duress })
             Card {

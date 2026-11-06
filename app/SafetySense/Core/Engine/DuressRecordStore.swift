@@ -8,10 +8,17 @@ struct DuressRecord: Codable, Sendable, Equatable {
     /// nil once the person has brought them back with their safety PIN.
     var hiddenFrom: Date?
     var enteredAt: Date
+    /// The server's id for this alert, so a relaunch can keep sharing location with it.
+    var serverAlertID: String?
+    /// A forced "Delete everything": every clip from before this moment stays out of the Vault
+    /// too. Nothing is destroyed.
+    var hidesClipsBefore: Date?
 
     /// A clip that started before the PIN and ended after it holds audio from after the PIN.
     func hides(_ clip: EvidenceClip) -> Bool {
-        guard clip.alertID == alertID, let hiddenFrom else { return false }
+        guard let hiddenFrom else { return false }
+        if let hidesClipsBefore, clip.startedAt < hidesClipsBefore { return true }
+        guard clip.alertID == alertID else { return false }
         return clip.startedAt.addingTimeInterval(clip.duration) > hiddenFrom
     }
 }
@@ -49,6 +56,7 @@ struct DuressRecordStore: Sendable {
         guard let index = records.firstIndex(where: { $0.alertID == record.alertID }) else { return records + [record] }
         var merged = records
         if let saved = records[index].hiddenFrom, let new = record.hiddenFrom { merged[index].hiddenFrom = min(saved, new) }
+        if let serverAlertID = record.serverAlertID { merged[index].serverAlertID = serverAlertID }
         return merged
     }
 }

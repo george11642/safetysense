@@ -97,9 +97,11 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
         guard let sessionID = serverSessionID else { return }
         var fix = location?.lastFix
         if fix == nil { fix = await location?.currentFix() }
-        let battery = device?.batteryLevel
-        let request = HeartbeatRequest(sessionId: sessionID, lat: fix?.latitude, lng: fix?.longitude,
-                                       accuracy: fix?.accuracy, battery: battery)
+        // A beat the server refuses leaves `last_heartbeat_at` alone, and the watchdog would trip.
+        let context = AlertContext(latitude: fix?.latitude, longitude: fix?.longitude, accuracy: fix?.accuracy,
+                                   battery: device?.batteryLevel).forServer
+        let request = HeartbeatRequest(sessionId: sessionID, lat: context.latitude, lng: context.longitude,
+                                       accuracy: context.accuracy, battery: context.battery)
         do {
             let response = try await backend.heartbeat(request)
             markSent()
@@ -121,10 +123,9 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
         // The heartbeat already feeds the live map for session alerts; this also covers an
         // alert raised outside a session and keeps the trail if the session row is gone.
         // `alert/location` requires a battery value, so it's skipped when the level is unknown.
-        if let alertID = liveAlertID, let fix, let battery {
+        if let alertID = liveAlertID, let lat = context.latitude, let lng = context.longitude, let battery = context.battery {
             _ = try? await backend.updateAlertLocation(AlertLocationRequest(
-                alertId: alertID, lat: fix.latitude, lng: fix.longitude,
-                accuracy: fix.accuracy, battery: min(max(battery, 0), 1)))
+                alertId: alertID, lat: lat, lng: lng, accuracy: context.accuracy ?? 0, battery: battery))
         }
     }
 

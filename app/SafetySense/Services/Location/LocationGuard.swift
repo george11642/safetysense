@@ -260,7 +260,7 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
     }
 
     private func handleAlertFix(_ fix: LocationFix) {
-        guard isTrackingAlert else { return }
+        guard isTrackingAlert, fix.isUsable else { return }
         lastFix = fix
         onFix?(fix)
     }
@@ -275,9 +275,10 @@ final class LocationGuard: NSObject, LocationService, CLLocationManagerDelegate 
 
     private func handle(_ location: CLLocation) {
         let fix = Self.fix(from: location)
+        guard fix.isUsable else { return }
         lastFix = fix
         onFix?(fix)
-        if !plannedAreaArmed, fix.accuracy >= 0, fix.accuracy <= 100 { armPlannedArea(around: fix) }
+        if !plannedAreaArmed, fix.accuracy <= 100 { armPlannedArea(around: fix) }
         let hour = calendar.component(.hour, from: fix.timestamp)
         for event in route.process(fix, hour: hour) {
             if event == .arrived {

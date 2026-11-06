@@ -383,6 +383,19 @@ final class AppModel {
         await endGuard()
     }
 
+    /// A duress PIN at "Delete everything": someone may be forcing the wipe. The app goes back to
+    /// onboarding as usual, but a hidden alert goes out, nothing is erased on the server, and the
+    /// evidence and its key stay on this iPhone, out of the Vault until the old safety PIN is used.
+    func eraseUnderDuress() async {
+        (services.escalation as? EscalationController)?.startHiddenDuressAlert(
+            reason: "Duress PIN entered to delete everything", hidingAllClips: true)
+        await endGuard()
+        registrationRetry?.cancel()
+        registrationRetry = nil
+        store.eraseKeepingEvidence()
+        clearLocalState()
+    }
+
     /// Everything that happens on the phone, at once. Returns the server's session id to close.
     private func stopSession() -> String? {
         let serverSessionID = currentSession?.serverSessionID
@@ -463,7 +476,8 @@ final class AppModel {
     private func markedSafeSummary(for alert: AlertRecord) -> MarkedSafeSummary {
         MarkedSafeSummary(alertID: alert.id, mode: currentSession?.mode, startedAt: alert.startedAt, endedAt: .now,
                           reachedDispatch: alert.level == .dispatch, contactFirstNames: contacts.map(\.firstName),
-                          wasTest: AlertPresentation.isTest(alert), couldntConfirm: alertConnectionNote != nil,
+                          wasTest: !alertDelivery.isReal || AlertPresentation.isTest(alert),
+                          couldntConfirm: alertConnectionNote != nil || alert.serverAlertID == nil,
                           clipCount: services.vault.clips.filter { $0.alertID == alert.id }.count)
     }
 
@@ -523,10 +537,14 @@ final class AppModel {
 
     /// Only the safety PIN brings clips back. The screen reads the same for both PINs and whether
     /// or not anything came back, so this can't be used to find out a duress PIN was entered.
+    /// After a forced "Delete everything" that means the PIN from before it, not one set up since.
     func checkForMoreClips(pin: String) -> PINVerification {
         let result = store.verifyPIN(pin)
-        if result == .valid { (services.escalation as? EscalationController)?.releaseVaultClips() }
-        return result
+        let release = store.hasParkedSafetyPIN ? store.isParkedSafetyPIN(pin) : result == .valid
+        guard release else { return result }
+        store.clearParkedSafetyPIN()
+        (services.escalation as? EscalationController)?.releaseVaultClips()
+        return .valid
     }
 
     /// "Delete all evidence" in the Vault. It can be forced, so it stops at what's listed.
@@ -595,11 +613,15 @@ final class AppModel {
         } catch {
             keepForDeletion = (error as? BackendError)?.isWorthQueueing == true
         }
-        try? services.vault.deleteAll()
         (services.escalation as? EscalationController)?.forgetDuressRecords()
+        try? services.vault.deleteAll()
         store.eraseAll()
         if keepForDeletion { store.pendingAccountDeletion = credentials }
         await services.backend.setCredentials(nil)
+        clearLocalState()
+    }
+
+    private func clearLocalState() {
         fakeCall.cancelScheduled()
         FakeCallPreferences.clear()
         profile = nil
@@ -706,9 +728,15 @@ final class AppModel {
         Task { await refreshPermissions() }   // They may be back from iOS Settings.
         guard forcedScreen == nil else { return }
         services.audio.resumeIfNeeded()
+        // `resumeIfNeeded` only restarts a mic that was running. One that never started (a relaunch
+        // in the background, or access turned on in iOS Settings) needs a fresh start.
+        if launchFinished, let session = currentSession, session.listening, !services.audio.isRunning {
+            Task { await startListening(session) }
+        }
         if launchFinished { retryWaitingWork() }
         enqueueActivity { [services] in await services.liveActivity.refresh() }
-        if let escalation = services.escalation as? EscalationController, escalation.activeAlert != nil {
+        if let escalation = services.escalation as? EscalationController,
+           escalation.activeAlert != nil || escalation.duressAlertID != nil {
             Task { await escalation.resumeEvidence() }
         }
     }
@@ -939,6 +967,7 @@ final class AppModel {
         case .markedSafe:
             let args = LaunchOptions.qaArguments
             markedSafe = SampleData.markedSafe(reachedDispatch: !args.contains("-ssPreDispatch"), mode: Self.launchGuardMode)
+            markedSafe?.wasTest = !alertDelivery.isReal
         case .fakeCallIncoming:
             // QA: `-ssFakeCallStyle slide` shows the lock-screen slider instead of buttons.
             var config = FakeCallConfig(callerName: "Mom")

@@ -367,9 +367,13 @@ struct DuressAndAlertSafetyTests {
                          delivery.helpPromiseBody, AlertPresentation.whoHears([contact], delivery: delivery),
                          ContactMessage.intro(to: contact, from: nil, delivery: delivery),
                          ContactMessage.test(to: contact, from: nil, delivery: delivery),
-                         ContactMessage.headsUp(destination: "", eta: .now, delivery: delivery)]
+                         ContactMessage.headsUp(destination: "", eta: .now, delivery: delivery),
+                         delivery.twoPINsSubtitle, delivery.duressResultLabel, delivery.duressAnimationLabel,
+                         delivery.duressReadinessDetail, delivery.duressSetDetail, delivery.checkInSettingsFooter,
+                         delivery.policySummaryFooter]
             for line in lines {
-                for promise in ["will be alerted", "are alerted", "is alerted", "alerts your contacts", "let your people know",
+                for promise in ["sends help", "help still", "still sent", "Help still", "contacts are told", "contacts hear first",
+                                "will be alerted", "are alerted", "is alerted", "alerts your contacts", "let your people know",
                                 "will call and text", "will let you know", "calls your people", "your people will know",
                                 "gets a call", "gets the plate", "see them on your live link"] {
                     #expect(!line.contains(promise), "\(line)")

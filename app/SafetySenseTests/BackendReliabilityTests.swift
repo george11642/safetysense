@@ -384,15 +384,124 @@ struct DurableAlertTests {
         #expect(await h.backend.cancels.isEmpty)
     }
 
-    @Test func aValidCancelStillClosesAnAlertThatMayHaveLanded() async {
-        let h = LadderHarness()
+    @Test func aValidCancelStillClosesAnAlertThatMayHaveLanded() async throws {
+        let store = sharedStore()
+        let h = LadderHarness(pendingAlerts: store)
         await h.backend.setCreateError(.transport("timed out"))
         h.controller.handle(h.assessment(.high))
         await h.controller.settle()
+        let alert = try #require(h.controller.activeAlert)
+        let attempts = await h.backend.creates.count
         await h.controller.cancel(with: .valid)
         await h.backend.setCreateError(nil)
+        await h.controller.settle()
+        await h.advance(60)
+        // No second `alert/create`: if the first never landed, it would call everyone now.
+        #expect(await h.backend.creates.count == attempts)
+        #expect(await h.backend.cancels.map(\.alertId) == [alert.id.uuidString.lowercased()])
+        #expect(store.load(now: h.clock.now).isEmpty)
+    }
+
+    @Test func aCancelTheServerHasNoAlertForEndsThere() async {
+        let store = sharedStore()
+        let h = LadderHarness(pendingAlerts: store)
+        await h.backend.setCreateError(.transport("timed out"))
+        await h.backend.setCancelError(.http(status: 404, message: "alert not found"))
+        h.controller.handle(h.assessment(.high))
+        await h.controller.settle()
+        await h.controller.cancel(with: .valid)
+        await h.controller.settle()
+        await h.advance(120)
+        #expect(await h.backend.cancels.count == 1)
+        #expect(store.load(now: h.clock.now).isEmpty)
+    }
+
+    @Test func aCancelThatCantGetThroughKeepsTrying() async {
+        let store = sharedStore()
+        let h = LadderHarness(pendingAlerts: store)
+        await h.backend.setCreateError(.transport("timed out"))
+        h.controller.handle(h.assessment(.high))
+        await h.controller.settle()
+        await h.backend.setFailCancels(true)
+        await h.controller.cancel(with: .valid)
+        await h.controller.settle()
+        #expect(store.load(now: h.clock.now).count == 1)
+        await h.backend.setFailCancels(false)
         await h.advance(30)
-        #expect(await h.backend.cancels.map(\.alertId) == ["alert-1"])
+        #expect(store.load(now: h.clock.now).isEmpty)
+    }
+
+    @Test func aPINDuringARetryWaitStopsTheNextCreate() async {
+        var timing = EscalationTiming.immediate
+        timing.retryDelays = [0.05, 0.05]
+        let backend = EngineFakeBackend()
+        let controller = EscalationController(backend: backend, clock: ManualEngineClock(), context: FixedContext(),
+                                              evidence: RecordingEvidence(), haptics: CountingHaptics(), timing: timing)
+        controller.begin(session: GuardSession(serverSessionID: "session-1", mode: .nightOut, checkInInterval: 0), policies: .default)
+        await backend.setCreateError(.transport("timed out"))
+        controller.triggerManual(.manualSOS, reason: "SOS")
+        for _ in 0..<200 where await backend.creates.isEmpty { try? await Task.sleep(for: .milliseconds(1)) }
+        await controller.cancel(with: .valid)
+        await controller.settle()
+        #expect(await backend.creates.count == 1)
+    }
+
+    @Test func aCancelledCreateThatLandedLateClosesTheEndedSession() async {
+        let h = LadderHarness()
+        await h.backend.setHoldCreates(true)
+        h.controller.triggerManual(.manualSOS, reason: "SOS")
+        while await h.backend.heldCount == 0 { await Task.yield() }
+        await h.controller.cancel(with: .valid)
+        h.controller.end()   // `session/end` goes out now, ahead of the create.
+        await h.backend.releaseCreates()
+        await h.controller.settle()
+        #expect(await h.backend.cancels.count == 1)
+        #expect(await h.backend.sessionEnds.map(\.sessionId) == ["session-1"])
+    }
+
+    @Test func badLocationValuesNeverReachTheServer() {
+        let bad = AlertContext(latitude: 35, longitude: -106, accuracy: -1, battery: -1).forServer
+        #expect(bad.latitude == nil && bad.longitude == nil && bad.accuracy == nil)
+        #expect(bad.battery == 0)
+        let far = AlertContext(latitude: 95, longitude: -106, accuracy: 12, battery: 0.5).forServer
+        #expect(far.latitude == nil && far.accuracy == nil && far.battery == 0.5)
+        let wide = AlertContext(latitude: 35, longitude: -106, accuracy: 200_000).forServer
+        #expect(wide.latitude == 35 && wide.accuracy == nil)
+        let good = AlertContext(latitude: 35, longitude: -106, accuracy: 12, battery: 0.8)
+        #expect(good.forServer == good)
+        #expect(!LocationFix(latitude: 35, longitude: -106, accuracy: -1).isUsable)
+    }
+
+    @Test func aBadFixDoesntCostTheAlert() async {
+        let store = sharedStore()
+        let h = LadderHarness(pendingAlerts: store)
+        h.context.context = AlertContext(latitude: 35, longitude: -106, accuracy: -1, battery: 0.8)
+        h.controller.triggerManual(.manualSOS, reason: "SOS")
+        await h.controller.settle()
+        #expect(await h.backend.creates.first?.accuracy == nil)
+        #expect(await h.backend.creates.first?.lat == nil)
+        #expect(h.controller.activeAlert?.serverAlertID != nil)
+    }
+
+    @Test func aRefusedLocationValueSendsTheAlertWithoutIt() async {
+        let store = sharedStore()
+        let h = LadderHarness(pendingAlerts: store)
+        await h.backend.setRejectOptionalFields(true)
+        h.controller.triggerManual(.manualSOS, reason: "SOS")
+        await h.controller.settle()
+        let creates = await h.backend.creates
+        #expect(creates.count == 2)
+        #expect(creates.last?.lat == nil && creates.last?.accuracy == nil && creates.last?.battery == nil)
+        #expect(h.controller.activeAlert?.serverAlertID != nil)
+        #expect(store.load(now: h.clock.now).isEmpty)
+    }
+
+    @Test func aHiddenAlertSurvivesARefusedLocationValue() async {
+        let h = LadderHarness()
+        await h.backend.setRejectOptionalFields(true)
+        h.controller.startHiddenDuressAlert(reason: "Duress PIN entered")
+        await h.controller.settle()
+        #expect(await h.backend.cancels.map(\.duress) == [true])
     }
 
     @Test func aRefusedCreateStopsRetryingAndKeepsTheNote() async {

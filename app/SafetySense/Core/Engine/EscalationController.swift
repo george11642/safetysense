@@ -412,7 +412,7 @@ final class EscalationController: EscalationControllerProtocol {
         if duress {
             // Evidence and location keep flowing; the server escalates silently.
             known[record.id] = record
-            beginDuressTracking(alertID: record.id, hiddenFrom: now)
+            beginDuressTracking(alertID: record.id, hiddenFrom: now, serverAlertID: record.serverAlertID)
         } else {
             record.status = .cancelled
             known[record.id] = record
@@ -423,19 +423,27 @@ final class EscalationController: EscalationControllerProtocol {
         // Never makes the screen wait for the network: retries can take a long time offline.
         if let serverID = record.serverAlertID {
             track { [weak self] in await self?.sendCancel(serverID: serverID, duress: duress) }
-        } else if var entry = pendingCreates[record.id] {
-            entry.cancel = duress
-            entry.record = record
-            trackPending(entry)
-            dropIfNobodyWasTold(record.id)
+        } else {
+            // With no answer from the server yet, contacts may be hearing about this right now.
+            onCancelUnconfirmed?()
+            if var entry = pendingCreates[record.id] {
+                entry.cancel = duress
+                entry.record = record
+                trackPending(entry)
+                finishCancelledCreate(record.id)
+            }
         }
     }
 
-    /// A valid cancel of an alert that never reached the server: there's nobody to tell.
-    private func dropIfNobodyWasTold(_ id: UUID) {
-        guard !creating.contains(id), let entry = pendingCreates[id], entry.cancel == false,
-              !entry.mayHaveLanded else { return }
-        stopTrackingPending(id)
+    /// A valid cancel of an alert the server hasn't confirmed. If nothing can have reached it,
+    /// there's nobody to tell. Otherwise the cancel goes now, not on the next retry.
+    private func finishCancelledCreate(_ id: UUID) {
+        guard !creating.contains(id), let entry = pendingCreates[id], entry.cancel == false else { return }
+        if entry.mayHaveLanded {
+            track { [weak self] in await self?.createOnServer(alertID: id) }
+        } else {
+            stopTrackingPending(id)
+        }
     }
 
     /// A duress PIN with no alert to cancel: at a check-in, or ending a session. Nothing on screen
@@ -443,7 +451,10 @@ final class EscalationController: EscalationControllerProtocol {
     /// and `cancel: true` delivers `alert/cancel {duress:true}` once it lands, which sets the server's
     /// flag and starts dispatch. Everything the caller needs is in place when this returns, so a
     /// session can end right after it without the mic and location stopping.
-    func startHiddenDuressAlert(reason: String) {
+    ///
+    /// `hidingAllClips`: a forced "Delete everything". Every clip saved so far leaves the Vault with
+    /// this alert's own, and nothing is destroyed. Only the safety PIN brings them back.
+    func startHiddenDuressAlert(reason: String, hidingAllClips: Bool = false) {
         let t = now
         let record = AlertRecord(sessionID: serverSessionID, level: .dispatch, trigger: .manualSOS, reason: reason,
                                  policy: .dispatchImmediately, status: .dispatched, startedAt: t, levelChangedAt: t,
@@ -453,18 +464,48 @@ final class EscalationController: EscalationControllerProtocol {
         dispatchReasons[record.id] = reason
         trackPending(PendingAlert(record: record, cancel: true, dispatchReason: reason, hidden: true))
         evidence?.prepare(alertID: record.id)
-        beginDuressTracking(alertID: record.id, hiddenFrom: .distantPast)
+        beginDuressTracking(alertID: record.id, hiddenFrom: .distantPast, hidesClipsBefore: hidingAllClips ? t : nil)
         track { [weak self] in await self?.createOnServer(alertID: record.id) }
     }
 
-    private func beginDuressTracking(alertID: UUID, hiddenFrom: Date) {
+    private func beginDuressTracking(alertID: UUID, hiddenFrom: Date, serverAlertID: String? = nil,
+                                     hidesClipsBefore: Date? = nil) {
         duressAlertID = alertID
-        let record = DuressRecord(alertID: alertID, hiddenFrom: hiddenFrom, enteredAt: now)
-        sessionDuressRecords = DuressRecordStore.merging(record, into: sessionDuressRecords)
-        duressStore.save(DuressRecordStore.merging(record, into: duressStore.load()))
+        saveDuressRecord(DuressRecord(alertID: alertID, hiddenFrom: hiddenFrom, enteredAt: now,
+                                      serverAlertID: serverAlertID, hidesClipsBefore: hidesClipsBefore))
         duressUntil = now.addingTimeInterval(timing.duressTrackingDuration)
         onDuressTracking?(true)
         scheduleDuressLocation()
+    }
+
+    private func saveDuressRecord(_ record: DuressRecord) {
+        sessionDuressRecords = DuressRecordStore.merging(record, into: sessionDuressRecords)
+        duressStore.save(DuressRecordStore.merging(record, into: duressStore.load()))
+    }
+
+    /// iOS can end the app during the 30 minutes a duress alert keeps sharing, and once
+    /// `alert/create` has landed nothing else remembers it. Nothing shows on screen. The window
+    /// stays the original one, so a relaunch can't stretch it.
+    private func resumeDuressTracking() {
+        guard duressAlertID == nil else { return }
+        let cutoff = now.addingTimeInterval(-timing.duressTrackingDuration)
+        guard let record = duressRecords.filter({ $0.enteredAt > cutoff }).max(by: { $0.enteredAt < $1.enteredAt }) else { return }
+        let id = record.alertID
+        // The server keeps the phone's own id unless it folded this into a live alert.
+        let serverID = record.serverAlertID ?? id.uuidString.lowercased()
+        if known[id] == nil {
+            known[id] = AlertRecord(id: id, serverAlertID: serverID, level: .dispatch, trigger: .manualSOS, reason: "",
+                                    policy: .dispatchImmediately, status: .dispatched, startedAt: record.enteredAt,
+                                    levelChangedAt: record.enteredAt)
+        }
+        closedServerAlertIDs.insert(serverID)
+        duressAlertID = id
+        duressUntil = record.enteredAt.addingTimeInterval(timing.duressTrackingDuration)
+        onDuressTracking?(true)
+        scheduleDuressLocation()
+        evidence?.prepare(alertID: id)
+        let mode = self.mode
+        track { [weak self] in await self?.evidence?.commit(alertID: id, serverAlertID: serverID, mode: mode) }
     }
 
     private func scheduleDuressLocation() {
@@ -472,14 +513,19 @@ final class EscalationController: EscalationControllerProtocol {
         duressTimer = clock.schedule(after: timing.locationInterval) { [weak self] in
             guard let self, let id = self.duressAlertID else { return }
             if let until = self.duressUntil, self.now >= until {
-                self.duressAlertID = nil
-                self.evidence?.stop(alertID: id)
-                self.onDuressTracking?(false)
+                self.stopDuressTracking(id)
                 return
             }
             self.track { [weak self] in await self?.pushLocation(alertID: id) }
             self.scheduleDuressLocation()
         }
+    }
+
+    private func stopDuressTracking(_ id: UUID) {
+        duressTimer?.cancel()
+        duressAlertID = nil
+        evidence?.stop(alertID: id)
+        onDuressTracking?(false)
     }
 
     /// The saved records, plus any from this run that the Keychain didn't take.
@@ -499,7 +545,9 @@ final class EscalationController: EscalationControllerProtocol {
 
     /// The safety PIN was entered in the Vault, which only the person's own choice can do.
     func releaseVaultClips() {
-        let released = duressRecords.map { DuressRecord(alertID: $0.alertID, hiddenFrom: nil, enteredAt: $0.enteredAt) }
+        let released = duressRecords.map {
+            DuressRecord(alertID: $0.alertID, hiddenFrom: nil, enteredAt: $0.enteredAt, serverAlertID: $0.serverAlertID)
+        }
         sessionDuressRecords = released
         let cutoff = now.addingTimeInterval(-DuressRecordStore.liveLinkLifetime)
         duressStore.save(released.filter { $0.enteredAt > cutoff })
@@ -512,8 +560,10 @@ final class EscalationController: EscalationControllerProtocol {
         return duressRecords.contains { $0.enteredAt > cutoff }
     }
 
-    /// "Delete everything" removes the clips these records point at.
+    /// "Delete everything" with the safety PIN removes the clips these records point at, and the
+    /// person's own choice to wipe the phone also ends any recording still going.
     func forgetDuressRecords() {
+        if let id = duressAlertID { stopDuressTracking(id) }
         sessionDuressRecords = []
         duressStore.save([])
     }
@@ -585,7 +635,7 @@ final class EscalationController: EscalationControllerProtocol {
                                  policy: .contactsFirst, status: .active, startedAt: t, levelChangedAt: t,
                                  events: [AlertEvent(who: "SafetySense", action: "drill_started", at: t)],
                                  isDrill: true)
-        let ctx = await context?.alertContext() ?? .unknown
+        let ctx = (await context?.alertContext() ?? .unknown).forServer
         do {
             let response = try await backend.createAlert(AlertCreateRequest(
                 sessionId: record.sessionID, level: 2, reason: "TEST: practice drill",
@@ -635,7 +685,8 @@ final class EscalationController: EscalationControllerProtocol {
     }
 
     /// At launch: picks up alerts that hadn't reached the server when iOS ended the app. The one
-    /// that was on screen comes back on screen, a hidden one goes out without a trace.
+    /// that was on screen comes back on screen, a hidden one goes out without a trace, and a duress
+    /// alert still inside its window goes back to sharing location and recording.
     func restorePendingAlerts() {
         for entry in pendingStore.load(now: now) where pendingCreates[entry.record.id] == nil {
             pendingCreates[entry.record.id] = entry
@@ -647,6 +698,7 @@ final class EscalationController: EscalationControllerProtocol {
             }
         }
         persistPending()
+        resumeDuressTracking()
         retryServerWork()
     }
 
@@ -676,40 +728,61 @@ final class EscalationController: EscalationControllerProtocol {
         creating.insert(alertID)
         defer { creating.remove(alertID) }
         guard known[alertID] != nil else { return }
-        let ctx = await context?.alertContext() ?? .unknown
+        var ctx = (await context?.alertContext() ?? .unknown).forServer
         guard let snapshot = known[alertID], let entry = pendingCreates[alertID] else { return }
-        if entry.cancel == false, !entry.mayHaveLanded {
-            // Cancelled with a valid PIN before we reached the server: nobody needs to be told.
-            stopTrackingPending(alertID)
+        if entry.cancel == false {
+            // Cancelled with a valid PIN. `alert/create` must never go again from here: if the first
+            // try didn't land, it would call everyone for someone already shown Marked safe.
+            if entry.mayHaveLanded {
+                await closeAlertThatMayHaveLanded(alertID, sessionID: snapshot.sessionID)
+            } else {
+                stopTrackingPending(alertID)   // It never reached the server: nobody needs to be told.
+            }
             return
         }
+        if entry.dropsOptionalFields == true { ctx = .unknown }
         // Dispatch hears about coercion only on a new alarm, so a duress alert must not start one
         // here. It goes in at level 2, and the cancel that follows sets the flag and escalates.
         // If that cancel never lands, the server's own countdown still reaches dispatch.
         let underDuress = entry.cancel == true
-        let request = AlertCreateRequest(
-            sessionId: entry.skipSession ? nil : snapshot.sessionID ?? serverSessionID,
-            level: underDuress ? EscalationLevel.alert.rawValue : max(2, snapshot.level.rawValue),
-            reason: snapshot.contactReason ?? snapshot.reason, trigger: snapshot.trigger.rawValue,
-            lat: ctx.latitude, lng: ctx.longitude, accuracy: ctx.accuracy, battery: ctx.battery,
-            dryRun: nil, dispatchPolicy: (underDuress ? DispatchPolicy.contactsFirst : snapshot.policy).rawValue,
-            clientAlertId: alertID.uuidString.lowercased())
+        let sessionToSend = entry.skipSession ? nil : snapshot.sessionID ?? serverSessionID
+        func request(_ ctx: AlertContext) -> AlertCreateRequest {
+            AlertCreateRequest(
+                sessionId: sessionToSend,
+                level: underDuress ? EscalationLevel.alert.rawValue : max(2, snapshot.level.rawValue),
+                reason: snapshot.contactReason ?? snapshot.reason, trigger: snapshot.trigger.rawValue,
+                lat: ctx.latitude, lng: ctx.longitude, accuracy: ctx.accuracy, battery: ctx.battery,
+                dryRun: nil, dispatchPolicy: (underDuress ? DispatchPolicy.contactsFirst : snapshot.policy).rawValue,
+                clientAlertId: alertID.uuidString.lowercased())
+        }
         var answer: AlertCreateResponse?
         var failure: BackendError?
-        for delay in [0] + timing.retryDelays {
+        var delays = [0] + timing.retryDelays
+        while !delays.isEmpty {
+            let delay = delays.removeFirst()
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+            guard pendingCreates[alertID]?.cancel != false else { break }   // A PIN landed during that wait.
             do {
-                answer = try await backend.createAlert(request)
+                answer = try await backend.createAlert(request(ctx))
                 break
             } catch {
                 let backendError = error as? BackendError ?? .transport("request failed")
                 failure = backendError
                 if !backendError.neverReachedServer { pendingCreates[alertID]?.mayHaveLanded = true }
-                if backendError.isPermanentRejection || pendingCreates[alertID]?.cancel == false { break }
+                if pendingCreates[alertID]?.cancel == false { break }
+                // A location or battery value is never worth an alert: send it again without them.
+                if case .http(400, _) = backendError, pendingCreates[alertID]?.dropsOptionalFields != true {
+                    pendingCreates[alertID]?.dropsOptionalFields = true
+                    persistPending()
+                    ctx = .unknown
+                    if delays.isEmpty { delays = [0] }
+                    continue
+                }
+                if backendError.isPermanentRejection { break }
             }
         }
         guard let response = answer else {
-            await createFailed(alertID: alertID, request: request, error: failure)
+            await createFailed(alertID: alertID, sessionID: snapshot.sessionID, sessionSent: sessionToSend != nil, error: failure)
             return
         }
         connectionNote = nil
@@ -723,12 +796,16 @@ final class EscalationController: EscalationControllerProtocol {
             AlertEvent(who: $0.name, action: "notified_by_\($0.channel.rawValue)", at: now)
         }
         store(alert)
+        if delivered?.cancel == true || duressAlertID == alertID {
+            saveDuressRecord(DuressRecord(alertID: alertID, hiddenFrom: nil, enteredAt: now, serverAlertID: response.alertId))
+        }
         // No fix was ready for `alert/create` (a cold start): fill the map in as soon as one is.
         if ctx.latitude == nil { track { [weak self] in await self?.pushLocation(alertID: alertID) } }
 
         if let duress = delivered?.cancel {
             await sendCancel(serverID: response.alertId, duress: duress)
             if !duress {
+                await closeEndedSession(snapshot.sessionID)
                 emit()
                 return
             }
@@ -746,10 +823,39 @@ final class EscalationController: EscalationControllerProtocol {
         activeAlert?.id == alertID || duressAlertID == alertID
     }
 
-    private func createFailed(alertID: UUID, request: AlertCreateRequest, error: BackendError?) async {
+    /// A valid PIN went in and an attempt may have reached the server, so all that's left is the
+    /// cancel. The server stores the alert under the phone's own id, and a 404 means it never landed.
+    private func closeAlertThatMayHaveLanded(_ alertID: UUID, sessionID: String?) async {
+        let serverID = alertID.uuidString.lowercased()
+        closedServerAlertIDs.insert(serverID)
+        do {
+            _ = try await backend.cancelAlert(AlertCancelRequest(alertId: serverID, duress: false))
+        } catch {
+            guard (error as? BackendError)?.isPermanentRejection == true else {
+                armServerRetry()
+                return
+            }
+        }
+        stopTrackingPending(alertID)
+        await closeEndedSession(sessionID)
+    }
+
+    /// A create that landed after `session/end` sets the ended session to "alerted", and its cancel
+    /// then sets it to "active". The watchdog would raise an alert on a phone that stopped sending
+    /// heartbeats, and the phone could never see or stop it. Ending it again closes that.
+    private func closeEndedSession(_ sessionID: String?) async {
+        guard let sessionID, sessionID != serverSessionID else { return }
+        _ = try? await backend.endSession(SessionEndRequest(sessionId: sessionID))
+    }
+
+    private func createFailed(alertID: UUID, sessionID: String?, sessionSent: Bool, error: BackendError?) async {
         guard let entry = pendingCreates[alertID] else { return }
-        if entry.cancel == false, !entry.mayHaveLanded {
-            stopTrackingPending(alertID)
+        if entry.cancel == false {
+            if entry.mayHaveLanded {
+                await closeAlertThatMayHaveLanded(alertID, sessionID: sessionID)
+            } else {
+                stopTrackingPending(alertID)
+            }
             return
         }
         persistPending()
@@ -761,7 +867,7 @@ final class EscalationController: EscalationControllerProtocol {
         if evidenceWanted(alertID) { await evidence?.commit(alertID: alertID, serverAlertID: nil, mode: mode) }
 
         if error == .notRegistered || error.isUnauthorized { onDeviceNotRecognized?() }
-        if case .http(404, _)? = error, request.sessionId != nil {
+        if case .http(404, _)? = error, sessionSent {
             pendingCreates[alertID]?.skipSession = true   // A session the server no longer has.
             persistPending()
             armServerRetry()
@@ -811,7 +917,7 @@ final class EscalationController: EscalationControllerProtocol {
 
     private func pushLocation(alertID: UUID) async {
         guard let serverID = known[alertID]?.serverAlertID else { return }
-        let ctx = await context?.alertContext() ?? .unknown
+        let ctx = (await context?.alertContext() ?? .unknown).forServer
         guard let lat = ctx.latitude, let lng = ctx.longitude else { return }
         let request = AlertLocationRequest(alertId: serverID, lat: lat, lng: lng, accuracy: max(0, ctx.accuracy ?? 0),
                                            battery: min(max(ctx.battery ?? 0, 0), 1))

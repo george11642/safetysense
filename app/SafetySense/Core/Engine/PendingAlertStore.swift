@@ -14,6 +14,8 @@ struct PendingAlert: Codable, Sendable, Equatable {
     var mayHaveLanded = false
     /// The server no longer knows this session (`alert/create` answered 404): send it without.
     var skipSession = false
+    /// The server refused a location or battery value (400): send it again without them.
+    var dropsOptionalFields: Bool?
 }
 
 /// Saved in the Keychain, not defaults: an entry can be a hidden duress alert, and nothing on

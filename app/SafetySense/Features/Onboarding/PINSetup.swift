@@ -102,8 +102,10 @@ enum PINRules {
 }
 
 /// ~10 second looping explainer (SPEC 8.7): the same pad, two outcomes.
-/// Left: safety PIN -> alert cancelled. Right: duress PIN -> looks cancelled, help still comes.
+/// Left: safety PIN -> alert cancelled. Right: duress PIN -> looks cancelled, and `delivery` says
+/// what really happens next.
 struct PINExplainerAnimation: View {
+    var delivery: AlertDelivery
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -115,7 +117,7 @@ struct PINExplainerAnimation: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Animation. Entering your safety PIN cancels an alert. Entering your duress PIN looks exactly the same on screen, but help is still sent quietly.")
+        .accessibilityLabel(delivery.duressAnimationLabel)
     }
 
     private func lane(title: String, tint: Color, t: Double, start: Double, duress: Bool) -> some View {
@@ -151,7 +153,7 @@ struct PINExplainerAnimation: View {
             HStack(spacing: 6) {
                 Image(systemName: duress ? "antenna.radiowaves.left.and.right" : "moon.zzz")
                     .symbolEffect(.variableColor.iterative, options: .repeating, isActive: secret)
-                Text(duress ? (secret ? "Help still on the way" : "Behind the scenes…") : "Everything stops")
+                Text(duress ? (secret ? delivery.duressResultLabel : "Behind the scenes…") : "Everything stops")
             }
             .font(SSFont.caption.weight(.semibold))
             .foregroundStyle(duress ? (secret ? SSColor.accent : SSColor.inkMuted) : SSColor.inkMuted)
@@ -171,6 +173,6 @@ struct PINExplainerAnimation: View {
 }
 
 #Preview("Explainer") {
-    PINExplainerAnimation().padding().background(SSColor.background).foregroundStyle(SSColor.ink)
+    PINExplainerAnimation(delivery: .real).padding().background(SSColor.background).foregroundStyle(SSColor.ink)
         .preferredColorScheme(.dark)
 }

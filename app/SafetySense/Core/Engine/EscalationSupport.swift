@@ -36,6 +36,22 @@ struct AlertContext: Sendable, Equatable {
     var battery: Double?
 
     static let unknown = AlertContext()
+
+    /// What the server accepts. It refuses a whole request over one out-of-range number, and an
+    /// alert must never hang on a map pin. A negative accuracy means iOS has no valid coordinates.
+    var forServer: AlertContext {
+        var clean = AlertContext()
+        if let latitude, let longitude, abs(latitude) <= 90, abs(longitude) <= 180,
+           (accuracy ?? 0) >= 0 {
+            clean.latitude = latitude
+            clean.longitude = longitude
+            clean.accuracy = accuracy.flatMap { $0 <= Self.maxAccuracy ? $0 : nil }
+        }
+        clean.battery = battery.flatMap { $0.isNaN ? nil : min(max($0, 0), 1) }
+        return clean
+    }
+
+    private static let maxAccuracy: Double = 100_000
 }
 
 @MainActor
@@ -190,7 +206,8 @@ final class EvidenceHandoff: EvidenceHandling {
         prebuffers.removeValue(forKey: alertID)
         gates.removeValue(forKey: alertID)
         (audio as? AudioGuard)?.endEvidenceStream()
-        guard capturingAlertID == alertID else { return }
+        // Capture nobody here started has no other way to end, and the next alert couldn't begin.
+        guard capturingAlertID == alertID || (capturingAlertID == nil && vault.isCapturing) else { return }
         capturingAlertID = nil
         vault.stopCapture()
     }

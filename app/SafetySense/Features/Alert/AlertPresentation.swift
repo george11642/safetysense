@@ -345,11 +345,16 @@ struct EvidenceIndicator: View {
 }
 
 extension AppModel {
-    /// Makes sure encrypted capture is running for a real (non-drill) alert. Idempotent:
-    /// if the escalation controller already started capture this does nothing.
+    /// Keeps encrypted capture going for a real (non-drill) alert. The escalation controller owns
+    /// it: evidence commits once the alert is live, so a PIN before that leaves nothing behind.
+    /// Here that can only mean reopening the mic. The demo ladder has no evidence of its own.
     func ensureEvidenceCapture(for alert: AlertRecord) async {
-        guard !alert.isDrill, alert.status == .active || alert.status == .dispatched,
-              !services.vault.isCapturing else { return }
+        guard !alert.isDrill, alert.status == .active || alert.status == .dispatched else { return }
+        if let escalation = services.escalation as? EscalationController {
+            await escalation.resumeEvidence()
+            return
+        }
+        guard !services.vault.isCapturing else { return }
         try? await services.vault.startCapture(alertID: alert.id, serverAlertID: alert.serverAlertID,
                                                prebuffer: services.audio.snapshotRecentAudio())
     }

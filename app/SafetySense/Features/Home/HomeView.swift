@@ -230,7 +230,7 @@ struct HomeView: View {
     // MARK: Trigger checklist
 
     private var checklist: some View {
-        let items = readiness.items(contactsCount: model.contacts.count, settings: model.settings)
+        let items = readiness.items(contactsCount: model.contacts.count, settings: model.settings, delivery: model.alertDelivery)
         let done = items.filter(\.isDone).count
         return VStack(alignment: .leading, spacing: SSSpacing.sm) {
             SectionHeader("Ways to get help", subtitle: "\(done) of \(items.count) set up") {
@@ -337,13 +337,13 @@ struct ReadinessSnapshot: Equatable {
     var hasDuressPIN = false
     var hasSafeWord = false
 
-    func items(contactsCount: Int, settings: AppSettings) -> [ReadinessItem] {
+    func items(contactsCount: Int, settings: AppSettings, delivery: AlertDelivery) -> [ReadinessItem] {
         [
             ReadinessItem(id: .contacts, title: "Trusted contacts", detail: "1 to 5 people who get the call",
                           cta: "Add", isDone: contactsCount > 0),
             ReadinessItem(id: .safetyPIN, title: "Safety PIN", detail: "Cancels an alert that isn't needed",
                           cta: "Set", isDone: hasSafetyPIN),
-            ReadinessItem(id: .duressPIN, title: "Duress PIN", detail: "Looks like a cancel, quietly sends help",
+            ReadinessItem(id: .duressPIN, title: "Duress PIN", detail: delivery.duressReadinessDetail,
                           cta: "Set", isDone: hasDuressPIN),
             ReadinessItem(id: .safeWord, title: "Safe word", detail: "Say it during Guard to start an alert",
                           cta: "Choose", isDone: hasSafeWord),
