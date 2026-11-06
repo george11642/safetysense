@@ -104,7 +104,7 @@ final class ServiceContainer {
                                       transcript: { [weak audio] in audio?.recentTranscript() ?? "" },
                                       backend: backend, vault: vault, device: device,
                                       clock: SystemEngineClock(), haptics: SystemEngineHaptics(),
-                                      pendingAlerts: .keychain)
+                                      pendingAlerts: .keychain, duressRecords: .keychain)
         #else
         let engine = GuardEngine.makeLive(backend: backend, vault: vault, device: device)
         #endif

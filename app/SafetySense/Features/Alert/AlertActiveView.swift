@@ -180,7 +180,7 @@ struct AlertActiveView: View {
     private var responsesCard: some View {
         VStack(alignment: .leading, spacing: SSSpacing.sm) {
             SectionHeader("Your people") {
-                if let shareURL = alert?.shareURL {
+                if let shareURL = alert?.shareURL, model.offersShareLink {
                     ShareLink(item: shareURL) { Label("Share link", systemImage: "square.and.arrow.up") }
                         .frame(minHeight: 44)
                 }

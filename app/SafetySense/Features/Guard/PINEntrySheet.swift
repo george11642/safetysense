@@ -6,6 +6,7 @@ import SwiftUI
 struct PINEntrySheet: View {
     let title: String
     let message: String
+    var forgotMessage = "Forgot it? Tell the monitoring center you're okay when they call. You can reset your PIN in Settings afterward."
     var tint: Color = SSColor.accent
     /// Called with `.valid` or `.duress`. Invalid entries are handled here (shake + retry).
     let verify: (String) async -> PINVerification
@@ -22,7 +23,7 @@ struct PINEntrySheet: View {
             VStack(spacing: SSSpacing.lg) {
                 VStack(spacing: SSSpacing.xs) {
                     Text(title).font(SSFont.title).multilineTextAlignment(.center)
-                    Text(attempts >= 3 ? "Forgot it? Tell the monitoring center you're okay when they call. You can reset your PIN in Settings afterward."
+                    Text(attempts >= 3 ? forgotMessage
                          : attempts > 0 ? "That PIN didn't match. Take a breath and try again." : message)
                         .font(SSFont.callout)
                         .foregroundStyle(attempts > 0 ? SSColor.warn : SSColor.inkMuted)

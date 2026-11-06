@@ -66,11 +66,14 @@ public enum AppGroup {
         public static let sessionDetails = "sessionDetails"
         /// Alerts the server hasn't confirmed yet (`PendingAlertStore`).
         public static let pendingAlerts = "pendingAlerts"
+        /// Duress alerts this phone ran, which keep their clips out of the Vault (`DuressRecordStore`).
+        public static let duressRecords = "duressRecords"
         /// Device credentials waiting to finish `account/delete` after an offline erase.
         public static let pendingAccountDeletion = "pendingAccountDeletion"
         /// Every item "delete everything" clears, and the ones a reinstall mustn't inherit.
         public static let erasable = [
             safetyPINHash, duressPINHash, safeWord, deviceCredentials, evidenceKey, sessionDetails, pendingAlerts,
+            duressRecords,
         ]
         /// Separate service for the widget-readable items in `SharedStore`, so a secret lookup
         /// by account can never match one.

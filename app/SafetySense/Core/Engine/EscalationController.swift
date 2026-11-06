@@ -54,6 +54,7 @@ final class EscalationController: EscalationControllerProtocol {
     @ObservationIgnored private let evidence: (any EvidenceHandling)?
     @ObservationIgnored private let haptics: any EngineHaptics
     @ObservationIgnored private let pendingStore: PendingAlertStore
+    @ObservationIgnored private let duressStore: DuressRecordStore
     @ObservationIgnored let timing: EscalationTiming
 
     @ObservationIgnored private var session: GuardSession?
@@ -74,8 +75,8 @@ final class EscalationController: EscalationControllerProtocol {
     /// A duress-cancelled alert the server is silently escalating. Never shown on screen.
     @ObservationIgnored private(set) var duressAlertID: UUID?
     @ObservationIgnored private var duressUntil: Date?
-    /// Clips of the duress alert from here on stay out of the Vault while it runs.
-    @ObservationIgnored private var duressHiddenFrom: Date?
+    /// Duress alerts started in this run, in case a Keychain write failed. See `duressRecords`.
+    @ObservationIgnored private var sessionDuressRecords: [DuressRecord] = []
     /// Alerts `alert/create` hasn't confirmed, mirrored to `pendingStore` so they survive a relaunch.
     @ObservationIgnored private var pendingCreates: [UUID: PendingAlert] = [:]
     @ObservationIgnored private var creating: Set<UUID> = []
@@ -92,8 +93,10 @@ final class EscalationController: EscalationControllerProtocol {
          evidence: (any EvidenceHandling)? = nil,
          haptics: any EngineHaptics = SystemEngineHaptics(),
          timing: EscalationTiming = .standard,
-         pendingAlerts: PendingAlertStore = .memory) {
+         pendingAlerts: PendingAlertStore = .memory,
+         duressRecords: DuressRecordStore = .memory) {
         self.pendingStore = pendingAlerts
+        self.duressStore = duressRecords
         self.backend = backend
         self.clock = clock
         self.context = context
@@ -456,7 +459,9 @@ final class EscalationController: EscalationControllerProtocol {
 
     private func beginDuressTracking(alertID: UUID, hiddenFrom: Date) {
         duressAlertID = alertID
-        duressHiddenFrom = hiddenFrom
+        let record = DuressRecord(alertID: alertID, hiddenFrom: hiddenFrom, enteredAt: now)
+        sessionDuressRecords = DuressRecordStore.merging(record, into: sessionDuressRecords)
+        duressStore.save(DuressRecordStore.merging(record, into: duressStore.load()))
         duressUntil = now.addingTimeInterval(timing.duressTrackingDuration)
         onDuressTracking?(true)
         scheduleDuressLocation()
@@ -468,7 +473,6 @@ final class EscalationController: EscalationControllerProtocol {
             guard let self, let id = self.duressAlertID else { return }
             if let until = self.duressUntil, self.now >= until {
                 self.duressAlertID = nil
-                self.duressHiddenFrom = nil
                 self.evidence?.stop(alertID: id)
                 self.onDuressTracking?(false)
                 return
@@ -478,11 +482,40 @@ final class EscalationController: EscalationControllerProtocol {
         }
     }
 
-    /// Whether the Vault may list this clip. Someone may be standing over the person when it's
-    /// unlocked, so a duress alert's own recording stays out of it until the alert has run.
-    func vaultShows(_ clip: EvidenceClip) -> Bool {
-        guard clip.alertID == duressAlertID, let from = duressHiddenFrom else { return true }
-        return clip.startedAt < from
+    /// The saved records, plus any from this run that the Keychain didn't take.
+    private var duressRecords: [DuressRecord] {
+        let saved = duressStore.load()
+        return saved + sessionDuressRecords.filter { record in !saved.contains { $0.alertID == record.alertID } }
+    }
+
+    /// What the Vault may list. Someone may be standing over the person when it's unlocked, so a
+    /// duress alert's own recording stays out of it until the person brings it back.
+    func vaultClips(_ clips: [EvidenceClip]) -> [EvidenceClip] {
+        let records = duressRecords
+        return clips.filter { clip in !records.contains { $0.hides(clip) } }
+    }
+
+    func vaultShows(_ clip: EvidenceClip) -> Bool { !vaultClips([clip]).isEmpty }
+
+    /// The safety PIN was entered in the Vault, which only the person's own choice can do.
+    func releaseVaultClips() {
+        let released = duressRecords.map { DuressRecord(alertID: $0.alertID, hiddenFrom: nil, enteredAt: $0.enteredAt) }
+        sessionDuressRecords = released
+        let cutoff = now.addingTimeInterval(-DuressRecordStore.liveLinkLifetime)
+        duressStore.save(released.filter { $0.enteredAt > cutoff })
+    }
+
+    /// True while a duress alert's live link can still open. The server folds a later alert into
+    /// that one, so the new alert's link would be the same page.
+    var hasOpenDuressLink: Bool {
+        let cutoff = now.addingTimeInterval(-DuressRecordStore.liveLinkLifetime)
+        return duressRecords.contains { $0.enteredAt > cutoff }
+    }
+
+    /// "Delete everything" removes the clips these records point at.
+    func forgetDuressRecords() {
+        sessionDuressRecords = []
+        duressStore.save([])
     }
 
     // MARK: External alerts

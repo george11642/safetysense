@@ -208,9 +208,11 @@ struct LadderHarness {
     private let recorder = ChangeRecorder()
 
     init(mode: GuardMode = .nightOut, checkInInterval: TimeInterval = 0,
-         policies: DispatchPolicySettings = .default, pendingAlerts: PendingAlertStore = .memory) {
+         policies: DispatchPolicySettings = .default, pendingAlerts: PendingAlertStore = .memory,
+         duressRecords: DuressRecordStore = .memory) {
         controller = EscalationController(backend: backend, clock: clock, context: context, evidence: evidence,
-                                          haptics: haptics, timing: .immediate, pendingAlerts: pendingAlerts)
+                                          haptics: haptics, timing: .immediate, pendingAlerts: pendingAlerts,
+                                          duressRecords: duressRecords)
         let recorder = self.recorder
         controller.onChange = { level, alert in recorder.changes.append((level, alert)) }
         let session = GuardSession(serverSessionID: "session-1", mode: mode, startedAt: clock.now,

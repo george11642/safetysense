@@ -148,7 +148,155 @@ struct DuressAndAlertSafetyTests {
         await vault.startCaptureForTest()
         #expect(!model.showsRecording)
         clock.advance(by: 30 * 60 + 20)
-        #expect(h.vaultShows(hidden))
+        #expect(h.duressAlertID == nil)
+        #expect(!h.vaultShows(hidden))            // Used to reappear when the alert stopped running.
+    }
+
+    // MARK: Duress and the Vault across relaunches
+
+    private func clip(_ alertID: UUID, at date: Date, duration: TimeInterval = 5) -> EvidenceClip {
+        EvidenceClip(id: UUID(), alertID: alertID, serverAlertID: nil, seq: 0, kind: .audio, startedAt: date,
+                     duration: duration, sha256: "", fileName: "x", byteCount: 1)
+    }
+
+    private func duressCancel(_ h: LadderHarness) async -> UUID? {
+        h.controller.triggerManual(.manualSOS, reason: "SOS")
+        await h.controller.settle()
+        let id = h.controller.activeAlert?.id
+        await h.controller.cancel(with: .duress)
+        await h.controller.settle()
+        return id
+    }
+
+    @Test func aRelaunchKeepsClipsFromAfterTheFakeCancelHidden() async throws {
+        let store = DuressRecordStore.memory
+        let first = LadderHarness(duressRecords: store)
+        let id = try #require(await duressCancel(first))
+        let cancelledAt = first.clock.now
+
+        let second = LadderHarness(duressRecords: store)
+        #expect(second.controller.duressAlertID == nil)
+        #expect(!second.controller.vaultShows(clip(id, at: cancelledAt.addingTimeInterval(1))))
+        #expect(second.controller.vaultShows(clip(id, at: cancelledAt.addingTimeInterval(-60))))   // From before the PIN.
+        #expect(second.controller.vaultShows(clip(UUID(), at: cancelledAt.addingTimeInterval(1))))
+        await second.advance(30 * 24 * 3600)
+        #expect(!second.controller.vaultShows(clip(id, at: cancelledAt.addingTimeInterval(1))))
+    }
+
+    @Test func aClipRunningOverTheCancelStaysHidden() async throws {
+        let h = LadderHarness()
+        let id = try #require(await duressCancel(h))
+        let started = h.clock.now.addingTimeInterval(-3)
+        #expect(!h.controller.vaultShows(clip(id, at: started, duration: 5)))
+        #expect(h.controller.vaultShows(clip(id, at: started, duration: 2)))
+    }
+
+    @Test func aSecondDuressAlertDoesntUncoverTheFirst() async throws {
+        let h = LadderHarness()
+        let first = try #require(await duressCancel(h))
+        let later = h.clock.now.addingTimeInterval(1)
+        h.controller.startHiddenDuressAlert(reason: "Duress")
+        await h.controller.settle()
+        #expect(h.controller.duressAlertID != first)
+        #expect(!h.controller.vaultShows(clip(first, at: later)))
+    }
+
+    @Test func aRestoredDuressAlertKeepsItsOriginalHidingTime() async throws {
+        let pending = PendingAlertStore.memory, records = DuressRecordStore.memory
+        let first = LadderHarness(pendingAlerts: pending, duressRecords: records)
+        await first.backend.setFailCreates(true)
+        let id = try #require(await duressCancel(first))
+        let cancelledAt = first.clock.now
+
+        let second = LadderHarness(pendingAlerts: pending, duressRecords: records)
+        second.clock.advance(by: 600)
+        await second.backend.setFailCreates(true)
+        second.controller.restorePendingAlerts()
+        await second.controller.settle()
+        #expect(second.controller.duressAlertID == id)
+        #expect(!second.controller.vaultShows(clip(id, at: cancelledAt.addingTimeInterval(60))))
+    }
+
+    @Test func aSavedRecordSurvivesAKeychainReload() async throws {
+        let secrets = InMemorySecretStore()
+        let h = LadderHarness(duressRecords: DuressRecordStore(secrets: secrets))
+        let id = try #require(await duressCancel(h))
+        #expect(DuressRecordStore(secrets: secrets).load().map(\.alertID) == [id])
+    }
+
+    @Test func aFailedKeychainWriteStillHidesClipsInThisRun() async throws {
+        let h = LadderHarness(duressRecords: DuressRecordStore(secrets: FailingSecretStore()))
+        let id = try #require(await duressCancel(h))
+        let late = clip(id, at: h.clock.now.addingTimeInterval(1))
+        await h.advance(31 * 60)
+        #expect(!h.controller.vaultShows(late))
+    }
+
+    @Test func onlyTheSafetyPINBringsClipsBack() async throws {
+        let clock = ManualEngineClock(now: .now)
+        let vault = MockEvidenceVault()
+        let model = makeModel(EngineFakeBackend(), clock: clock, vault: vault)
+        model.store.setSafetyPIN("1234")
+        model.store.setDuressPIN("4321")
+        let h = controller(model)
+        h.startHiddenDuressAlert(reason: "Duress")
+        await h.settle()
+        let hidden = clip(h.duressAlertID!, at: clock.now)
+        vault.clips = [hidden]
+        #expect(model.vaultClips.isEmpty)
+
+        #expect(model.checkForMoreClips(pin: "0000") == .invalid)
+        #expect(model.checkForMoreClips(pin: "4321") == .duress)
+        #expect(model.vaultClips.isEmpty)
+        #expect(model.checkForMoreClips(pin: "1234") == .valid)
+        #expect(model.vaultClips == [hidden])
+    }
+
+    @Test func aForcedDeleteAllLeavesHiddenClips() async throws {
+        let clock = ManualEngineClock(now: .now)
+        let vault = MockEvidenceVault()
+        let model = makeModel(EngineFakeBackend(), clock: clock, vault: vault)
+        let h = controller(model)
+        h.startHiddenDuressAlert(reason: "Duress")
+        await h.settle()
+        let hidden = clip(h.duressAlertID!, at: clock.now), shown = clip(UUID(), at: clock.now)
+        vault.clips = [hidden, shown]
+        model.deleteVaultClips()
+        #expect(vault.clips == [hidden])
+    }
+
+    @Test func eraseForgetsDuressRecords() async throws {
+        let store = DuressRecordStore.memory
+        let h = LadderHarness(duressRecords: store)
+        _ = try #require(await duressCancel(h))
+        h.controller.forgetDuressRecords()
+        #expect(store.load().isEmpty)
+        #expect(!h.controller.hasOpenDuressLink)
+    }
+
+    // MARK: The live link after a duress PIN
+
+    @Test func aDuressAlertsLiveLinkIsNotOfferedWhileItCanOpen() async {
+        let clock = ManualEngineClock(now: .now)
+        let model = makeModel(EngineFakeBackend(), clock: clock)
+        #expect(model.offersShareLink)
+        controller(model).startHiddenDuressAlert(reason: "Duress")
+        await controller(model).settle()
+        #expect(!model.offersShareLink)
+        clock.advance(by: 47 * 3600)              // Well past the half hour the alert runs.
+        #expect(!model.offersShareLink)
+        clock.advance(by: 2 * 3600)
+        #expect(model.offersShareLink)
+    }
+
+    @Test func bringingClipsBackDoesntOfferTheLink() async {
+        let clock = ManualEngineClock(now: .now)
+        let model = makeModel(EngineFakeBackend(), clock: clock)
+        model.store.setSafetyPIN("1234")
+        controller(model).startHiddenDuressAlert(reason: "Duress")
+        await controller(model).settle()
+        _ = model.checkForMoreClips(pin: "1234")
+        #expect(!model.offersShareLink)
     }
 
     // MARK: A Guard during an alert
@@ -234,6 +382,11 @@ struct DuressAndAlertSafetyTests {
         #expect(AlertDelivery.real.noAnswerNote("Maya") == "If you don't answer, Maya will be alerted with your live location.")
         #expect(AlertDelivery.real.walkFooter("Maya and Sam", count: 2) == "If you don't arrive, Maya and Sam are alerted.")
     }
+}
+
+private struct FailingSecretStore: SecretStore {
+    func data(for account: String) -> Data? { nil }
+    func set(_ data: Data?, for account: String) -> Bool { false }
 }
 
 extension MockEvidenceVault {

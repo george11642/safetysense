@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class MockEvidenceVault: EvidenceVaultProtocol {
-    private(set) var clips: [EvidenceClip]
+    var clips: [EvidenceClip]
     private(set) var isCapturing = false
     private(set) var isUnlocked = false
     var isRecordingEvidence: Bool { isCapturing }

@@ -59,7 +59,7 @@ struct PINStepView: View {
 
     private var duressPage: some View {
         pinPage(eyebrow: "Duress PIN", showsSkip: true) {
-            PINCreator(title: "Create a duress PIN", subtitle: "Different from your safety PIN. Use it only if someone is making you cancel.",
+            PINCreator(title: "Create a duress PIN", subtitle: "Different from your safety PIN. Use it only if someone is making you cancel. That recording stays out of the Vault until you enter your safety PIN there.",
                        tint: SSColor.accent,
                        validate: { PINRules.validateDuress($0, store: model.store) }) { pin in
                 model.store.setDuressPIN(pin)

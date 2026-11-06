@@ -515,10 +515,34 @@ final class AppModel {
         settings.hasCompletedDrill = true
     }
 
-    /// The Vault's clips, without a duress alert's own recording while that alert runs.
+    /// The Vault's clips, without a duress alert's own recording until the person brings it back.
     var vaultClips: [EvidenceClip] {
         guard let escalation = services.escalation as? EscalationController else { return services.vault.clips }
-        return services.vault.clips.filter(escalation.vaultShows)
+        return escalation.vaultClips(services.vault.clips)
+    }
+
+    /// Only the safety PIN brings clips back. The screen reads the same for both PINs and whether
+    /// or not anything came back, so this can't be used to find out a duress PIN was entered.
+    func checkForMoreClips(pin: String) -> PINVerification {
+        let result = store.verifyPIN(pin)
+        if result == .valid { (services.escalation as? EscalationController)?.releaseVaultClips() }
+        return result
+    }
+
+    /// "Delete all evidence" in the Vault. It can be forced, so it stops at what's listed.
+    /// `deleteAll` also drops the key, which would make hidden clips unplayable.
+    func deleteVaultClips() {
+        let shown = vaultClips
+        if shown.count == services.vault.clips.count {
+            try? services.vault.deleteAll()
+        } else {
+            for clip in shown { try? services.vault.delete(clip) }
+        }
+    }
+
+    /// Whether Alert Active may offer the live link. Never one that opens on a duress alert.
+    var offersShareLink: Bool {
+        (services.escalation as? EscalationController)?.hasOpenDuressLink != true
     }
 
     /// True while evidence is recording and the person may be told so. Never during a duress alert.
@@ -572,6 +596,7 @@ final class AppModel {
             keepForDeletion = (error as? BackendError)?.isWorthQueueing == true
         }
         try? services.vault.deleteAll()
+        (services.escalation as? EscalationController)?.forgetDuressRecords()
         store.eraseAll()
         if keepForDeletion { store.pendingAccountDeletion = credentials }
         await services.backend.setCredentials(nil)

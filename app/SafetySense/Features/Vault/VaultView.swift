@@ -17,6 +17,8 @@ struct VaultView: View {
     @State private var exportingID: UUID?
     @State private var errorText: String?
     @State private var copied = 0
+    @State private var checkingForClips = false
+    @State private var checkedForClips = false
 
     private var vault: any EvidenceVaultProtocol { model.services.vault }
 
@@ -41,6 +43,13 @@ struct VaultView: View {
         .sheet(item: $export) { item in
             VaultExportSheet(export: item)
         }
+        .sheet(isPresented: $checkingForClips) {
+            PINEntrySheet(title: "Check for more clips", message: "Enter your safety PIN.",
+                          forgotMessage: "That PIN didn't match. You can reset your PIN in Settings.",
+                          verify: { model.checkForMoreClips(pin: $0) },
+                          // Reads the same for both PINs and whatever came back.
+                          onResult: { _ in refresh(); checkedForClips = true })
+        }
         .confirmationDialog("Delete this clip?", isPresented: Binding(get: { pendingDelete != nil },
                                                                      set: { if !$0 { pendingDelete = nil } }),
                             titleVisibility: .visible, presenting: pendingDelete) { clip in
@@ -53,7 +62,7 @@ struct VaultView: View {
         }
         .confirmationDialog("Delete every clip?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
             Button("Delete all evidence", role: .destructive) {
-                try? vault.deleteAll()
+                model.deleteVaultClips()
                 refresh()
             }
             Button("Keep it", role: .cancel) {}
@@ -123,6 +132,7 @@ struct VaultView: View {
     private func relock() {
         vault.lock()
         unlocked = false
+        checkedForClips = false
     }
 
     private func refresh() { clips = model.vaultClips }
@@ -179,6 +189,15 @@ struct VaultView: View {
             Text("Advocates at LoboRESPECT or the Rape Crisis Center can help you decide what, if anything, to do with this. Sharing doesn't file a report.")
                 .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
             PrimaryButton("Delete all evidence", systemImage: "trash", role: .quiet) { confirmDeleteAll = true }
+        }
+        // Listed for everyone with a safety PIN, so it says nothing about what happened.
+        if model.store.hasSafetyPIN {
+            PrimaryButton("Check for more clips", systemImage: "arrow.clockwise", role: .quiet) { checkingForClips = true }
+            if checkedForClips {
+                Text("Your Vault is up to date.")
+                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 
