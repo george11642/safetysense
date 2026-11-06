@@ -16,6 +16,8 @@ struct AppSettings: Codable, Sendable, Equatable {
     var hasSetUpActionButton: Bool = false
     var hasAddedControl: Bool = false
     var hasCompletedDrill: Bool = false
+    /// The mode Home last showed. Optional so settings saved by older builds still decode.
+    var lastHomeMode: GuardMode?
 
     func checkInInterval(for mode: GuardMode) -> TimeInterval {
         checkInIntervalOverrides[mode] ?? mode.defaultCheckInInterval

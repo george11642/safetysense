@@ -16,8 +16,9 @@ final class HeartbeatScheduler: HeartbeatServiceProtocol {
 
     private(set) var isRunning = false
     private(set) var lastSentAt: Date?
-    /// Last error shown nowhere but useful for a debug row in Settings.
+    /// Why the last beat failed (nil when it got through).
     private(set) var lastError: String?
+    var isFailing: Bool { lastError != nil }
 
     private let backend: any BackendClientProtocol
     private let log = Logger(subsystem: "com.georgeteifel.SafetySense", category: "heartbeat")

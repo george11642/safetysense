@@ -1,0 +1,49 @@
+import Foundation
+
+/// What the Marked safe screen shows. Taken just before the cancel, because the ladder clears
+/// `activeAlert` as soon as a PIN is accepted. Built the same way for the safety and duress PINs,
+/// so nothing on screen can tell them apart.
+struct MarkedSafeSummary: Sendable, Equatable {
+    var alertID: UUID
+    /// The Guard the alert came from (nil for an SOS with no session running).
+    var mode: GuardMode?
+    var startedAt: Date
+    var endedAt: Date
+    var reachedDispatch: Bool
+    var contactFirstNames: [String]
+    /// "Allow real calls" was off, so the server logged the alert and contacted nobody.
+    var wasTest = false
+    /// The server couldn't be reached during the alert, so nobody can be promised anything.
+    /// Comes from the connection alone, so it reads the same for both PINs.
+    var couldntConfirm = false
+
+    /// `2:11`, the clock without AM or PM, as the prototype's summary line reads.
+    static func clock(_ date: Date) -> String {
+        let time = date.formatted(date: .omitted, time: .shortened)
+        return time.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? time
+    }
+
+    var bodyText: String {
+        if couldntConfirm {
+            return "SafetySense couldn't reach its server, so \(NameList.join(contactFirstNames)) may not know you're okay yet. If you can, text them yourself."
+        }
+        if wasTest { return "This was a test alert, so nobody was contacted. Your live link stopped sharing your location." }
+        if contactFirstNames.isEmpty { return "Your alert has stopped, and your live link stopped sharing your location." }
+        return "We told \(NameList.join(contactFirstNames)) that you're okay, and your live link stopped sharing your location."
+    }
+
+    /// `NIGHT OUT · ALERT 2:11–2:31 · 3 CLIPS IN VAULT`, or
+    /// `NIGHT OUT · ALERT 2:11 · STOPPED PRE-DISPATCH` when dispatch was never requested.
+    func summaryLine(clipCount: Int) -> String {
+        var parts: [String] = []
+        if let mode, mode != .everyday { parts.append(mode.displayName) }
+        if reachedDispatch {
+            parts.append("Alert \(Self.clock(startedAt))–\(Self.clock(endedAt))")
+            if clipCount > 0 { parts.append("\(clipCount) \(clipCount == 1 ? "clip" : "clips") in Vault") }
+        } else {
+            parts.append("Alert \(Self.clock(startedAt))")
+            parts.append("Stopped pre-dispatch")
+        }
+        return parts.joined(separator: " · ").uppercased()
+    }
+}

@@ -19,6 +19,8 @@ protocol LiveActivityControllerProtocol: AnyObject {
 @MainActor
 protocol NotificationServiceProtocol: AnyObject {
     func requestAuthorization() async -> Bool
+    /// What iOS allows right now. Never shows a prompt.
+    func authorizationState() async -> PermissionState
     func scheduleCheckIn(at date: Date, sessionID: UUID)
     func cancelCheckIns()
     func notify(title: String, body: String, timeSensitive: Bool)
@@ -30,6 +32,8 @@ protocol NotificationServiceProtocol: AnyObject {
 protocol HeartbeatServiceProtocol: AnyObject {
     var isRunning: Bool { get }
     var lastSentAt: Date? { get }
+    /// The last beat didn't reach the server. Shown on the Guard screen.
+    var isFailing: Bool { get }
     func start(serverSessionID: String, interval: TimeInterval)
     func stop()
 }

@@ -64,12 +64,17 @@ struct AlertEvent: Codable, Sendable, Equatable, Identifiable, Hashable {
         case "text_not_delivered": return "Text to \(who) not delivered"
         case "dispatch_requested": return "Professional help requested"
         case "cancelled": return "Alert cancelled"
+        case "marked_safe": return "\(who) marked safe"
+        case "no_contacts": return "No trusted contacts are set up"
         case "alert_resumed": return "Alert resumed"
         case "drill_started": return "Practice drill started"
         default: break
         }
         if who == "dispatch" {
             let simulated = action.hasPrefix("simulated_")
+            if action.contains("calling") {
+                return simulated ? "Simulated: monitoring center is calling you" : "Monitoring center is calling you"
+            }
             let words = action.replacingOccurrences(of: "simulated_", with: "")
                 .replacingOccurrences(of: "_", with: " ")
             let detail = words == "dispatch" || words.isEmpty ? "requested" : words

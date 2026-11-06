@@ -26,7 +26,10 @@ swift Tools/generate_icons.swift SafetySense/Resources/Assets.xcassets # regener
 
 | Argument | Effect |
 |---|---|
-| `-ssScreen <name>` | Opens straight to a screen with sample data, using demo services and an isolated in-memory store. Names: `onboarding home guard checkin countdown alert support vault contacts settings date ride walk fakeCall fakeCallIncoming fakeCallActive` (add `-ssFakeCallStyle slide` for the slide-to-answer variant) |
+| `-ssScreen <name>` | Opens straight to a screen with sample data, using demo services and an isolated in-memory store. Names: `onboarding home guard checkin countdown alert markedsafe contactpreview support vault contacts settings date ride walk fakeCall fakeCallIncoming fakeCallActive` (add `-ssFakeCallStyle slide` for the slide-to-answer variant) |
+| `-ssGuardMode <mode>` | The sample Guard's mode (`night_out walk date ride`) for `guard`, `checkin`, `countdown`, `alert` and `markedsafe` |
+| `-ssPreDispatch` | `markedsafe` shows the state for an alert stopped before dispatch |
+| `-ssNoPIN` | Alert screens show the no-PIN fallback (Face ID or passcode) |
 | `-ssDemo 1` | Demo services: no mic, no network, dispatch labelled "simulated" |
 | `-ssSkipOnboarding 1` | Marks onboarding done. Seeds the sample profile and contacts if they're empty |
 | `-ssReset 1` | Wipes persisted state at launch |
@@ -88,7 +91,7 @@ An intent or a BGTask can launch the app with no scene, so `AppModel.onLaunch()`
 Alert intents run in the app's process with no unlock. "I'm okay" asks for authentication on every surface (Live Activity, notification, Siri), so someone else holding the phone can't answer for you. "Need help" is never gated. Deep links only navigate, because any app can open one.
 
 - **`AppModel`** (`@Observable @MainActor`) is the single UI state object. It holds `profile`, `contacts`, `settings`, `hasCompletedOnboarding`, `currentSession`, `currentAlert`, `selectedTab`, `banner` and `forcedScreen`. Every stored property persists through `SettingsStore` in `didSet`. It is injected with `.environment(model)`, and views read it with `@Environment(AppModel.self) private var model`.
-- **`model.overlay`** (`none / guardActive / checkIn / alertCountdown / alertActive`) comes from `services.escalation.level` plus `currentSession`. `RootView` shows it in a single `fullScreenCover` (`OverlayHost`).
+- **`model.overlay`** (`none / guardActive / checkIn / alertCountdown / alertActive / markedSafe`) comes from `services.escalation.level`, `currentSession` and `markedSafe`. `RootView` shows it in a single `fullScreenCover` (`OverlayHost`).
 - **`ServiceContainer`** handles dependency injection. `.demo()` returns all mocks. `.live()` is the production wiring: each module swaps in its real class at the marked slot, and every slot falls back to a mock until then. Use `services.flavor == .demo` to show demo-only controls, such as "simulate scream".
 - **Fake call (SPEC 7.7)** lives in `Features/FakeCall/`. `AppModel.fakeCall` (`FakeCallScheduler`) runs idle → scheduled → ringing → in call. A timer and a time-sensitive local notification (`FakeCallNotifier`, synthesized ringtone in `Library/Sounds`) are both set, and `appBecameActive()` catches up if iOS suspended the app. `FakeCallPresenter` shows the call in its own `UIWindow` above every cover and sheet. `FakeCallAudio` plays the ring and vibration, and speaks the script with `AVSpeechSynthesizer`; it leaves a Guard `.playAndRecord` session alone so the mic keeps running. Answering can start a Walk Home guard. `FakeCallIntent` ("SafetySense fake call") queues a `.fakeCall` shared command. It never contacts anyone or touches the ladder.
 - **`SettingsStore`** writes JSON to App Group `UserDefaults` for non-secret data. Secrets go through the `SecretStore` protocol: the Keychain in the app and `InMemorySecretStore` in tests and QA. PINs are stored only as salted SHA-256 hashes. `verifyPIN` checks the duress PIN first and returns `.valid`, `.duress` or `.invalid`.
@@ -116,6 +119,9 @@ Ladder rules every escalation controller must keep (SPEC 6.3 and 15):
 - A check-in gives the user 45 s, then the ladder moves to Alert.
 - Alert runs 90 s with no valid cancel, then moves to Dispatch. A contact tapping "Send help" also moves it to Dispatch.
 - Manual triggers start at `DispatchPolicySettings.startingLevel(for:in:)`. By default a manual SOS goes straight to Dispatch, and Night Out alerts contacts first.
+- "I need help" at a check-in starts where a missed check-in would (the mode's policy), so the countdown, "Send help now" and the PIN all stay available. Hold-to-SOS keeps its dispatch-first default.
+- A cancel only moves the ladder back to Guarding. `AppModel.cancelAlert` then ends the session and shows Marked safe, from the countdown and from Alert Active alike, using a `MarkedSafeSummary` taken before the ladder clears the alert. Everything on that screen must read the same for both PINs.
+- On a Walk or Ride, an `unexpectedStop` signal raises a check-in whatever the score and sensitivity, because those modes have no repeating check-in. It leaves the arrival check where it was.
 - A duress PIN looks exactly like a cancel on screen, while the server escalates silently (`alert/cancel {duress:true}`).
 - The AI second opinion can never be the only reason to escalate, and it can never block a manual SOS.
 - A drill sends `dry_run: true`, contacts see TEST, and a drill never dispatches.

@@ -50,6 +50,7 @@ enum PINVerification: String, Sendable, Equatable {
 /// - Level 1 (check-in) waits 45 s, then goes to 2.
 /// - Level 2 (alert) waits 90 s with no valid cancel, then goes to 3 (contacts-first policy).
 /// - Manual triggers start at the level from `DispatchPolicySettings.startingLevel`.
+/// - "I need help" at a check-in starts at the mode's policy, not the manual SOS one.
 /// - A duress PIN looks like a cancel in the UI but silently escalates to 3.
 /// - The AI second opinion never blocks a manual SOS.
 @MainActor
@@ -60,6 +61,10 @@ protocol EscalationControllerProtocol: AnyObject, Observable {
     var stepDeadline: Date? { get }
     /// When the next scheduled check-in fires (nil when the mode has none or a step is active).
     var nextCheckInAt: Date? { get }
+    /// Why the current check-in was raised (nil when no check-in is up).
+    var checkInCause: CheckInCause? { get }
+    /// Calm note when the server can't be reached during an alert (nil when all is well).
+    var connectionNote: String? { get }
     /// Called whenever the level or alert changes (AppModel persists + updates the Live Activity).
     var onChange: (@MainActor (EscalationLevel, AlertRecord?) -> Void)? { get set }
 

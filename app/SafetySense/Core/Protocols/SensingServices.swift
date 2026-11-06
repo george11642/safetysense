@@ -23,6 +23,8 @@ protocol AudioGuardService: AnyObject {
     /// The app came to the foreground: restart listening if it stopped.
     func resumeIfNeeded()
     /// Microphone + speech permission. Ask only when the user starts a listening session.
+    /// Whether iOS lets SafetySense use the microphone right now.
+    var microphonePermission: PermissionState { get }
     func requestPermission() async -> Bool
     func start(mode: GuardMode, safeWord: String?) async throws
     func stop()

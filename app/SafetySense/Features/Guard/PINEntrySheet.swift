@@ -22,7 +22,8 @@ struct PINEntrySheet: View {
             VStack(spacing: SSSpacing.lg) {
                 VStack(spacing: SSSpacing.xs) {
                     Text(title).font(SSFont.title).multilineTextAlignment(.center)
-                    Text(attempts > 0 ? "That PIN didn't match. Take a breath and try again." : message)
+                    Text(attempts >= 3 ? "Forgot it? Tell the monitoring center you're okay when they call. You can reset your PIN in Settings afterward."
+                         : attempts > 0 ? "That PIN didn't match. Take a breath and try again." : message)
                         .font(SSFont.callout)
                         .foregroundStyle(attempts > 0 ? SSColor.warn : SSColor.inkMuted)
                         .multilineTextAlignment(.center)

@@ -6,6 +6,7 @@ struct SealedDateDetails: Codable, Sendable, Equatable {
     var matchName: String
     var profileLink: String?
     var datingApp: String?
+    /// Empty when the person didn't say where.
     var venueName: String
     var venueAddress: String?
     var notes: String?
@@ -32,7 +33,8 @@ struct SealedDateDetails: Codable, Sendable, Equatable {
         var lines = ["Date with: \(matchName)"]
         if let datingApp, !datingApp.isEmpty { lines.append("Met on: \(datingApp)") }
         if let profileLink, !profileLink.isEmpty { lines.append("Profile: \(profileLink)") }
-        lines.append("Place: \(venueName)\(venueAddress.map { ", \($0)" } ?? "")")
+        let place = [venueName, venueAddress ?? ""].filter { !$0.isEmpty }.joined(separator: ", ")
+        if !place.isEmpty { lines.append("Place: \(place)") }
         if let notes, !notes.isEmpty { lines.append("Notes: \(notes)") }
         return lines.joined(separator: "\n")
     }

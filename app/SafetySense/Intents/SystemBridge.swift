@@ -24,22 +24,23 @@ enum SystemBridge {
 
         let notifications = services.notifications as? NotificationService
         notifications?.onCheckInDue = { [weak escalation] in escalation?.scheduledCheckInDue() }
+        notifications?.nextCheckInDate = { [weak escalation] in escalation?.nextCheckInAt }
 
         let heartbeat = services.heartbeat as? HeartbeatScheduler
         heartbeat?.attach(location: services.location, device: services.device, escalation: escalation)
 
-        levelObserver = LevelObserver(escalation: escalation) { [weak notifications, weak heartbeat] old, new in
+        levelObserver = LevelObserver(escalation: escalation) { [weak notifications, weak heartbeat, weak escalation] old, new in
             switch (old, new) {
             case (.checkIn, .guarding):
                 // Answered (in the app, on the Lock Screen or by notification): clear the nudge
                 // and line up the next one.
                 notifications?.checkInAnswered()
-                notifications?.scheduleNextCheckIn()
+                notifications?.scheduleNextCheckIn(at: escalation?.nextCheckInAt)
             case (_, .alert), (_, .dispatch):
                 notifications?.alertStarted()
                 heartbeat?.beatNow()
             case (.alert, .guarding), (.dispatch, .guarding):
-                notifications?.scheduleNextCheckIn()
+                notifications?.scheduleNextCheckIn(at: escalation?.nextCheckInAt)
             default:
                 break
             }

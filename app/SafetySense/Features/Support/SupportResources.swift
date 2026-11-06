@@ -3,7 +3,8 @@ import Foundation
 /// A phone resource shown on Support and Home quick-dial.
 ///
 /// Every number here was checked against the organization's own page (or its listing on
-/// sharenm.org / campus police pages) on 2026-11-04. Re-check before each release, per
+/// sharenm.org / campus police pages) on 2026-11-04, and CNM Title IX against CNM's Title IX
+/// policy page (Dean of Students, x51240) on 2026-11-05. Re-check before each release, per
 /// AGENTS.md: a wrong number in a crisis is worse than no number.
 struct SupportResource: Identifiable, Hashable, Sendable {
     enum Kind: String, Sendable { case advocate, medical, report, crisis }
@@ -67,7 +68,7 @@ enum SupportDirectory {
 
     static let cnmTitleIX = SupportResource(
         id: "cnm-titleix", name: "CNM Title IX",
-        detail: "Ask the CNM operator for the Title IX Coordinator. Weekdays.",
+        detail: "Ask for extension 51240, the Dean of Students, CNM's Title IX Coordinator for students. Weekdays.",
         phone: "505-224-4000", isAllHours: false, kind: .report, campuses: [.cnm])
 
     static let apd = SupportResource(

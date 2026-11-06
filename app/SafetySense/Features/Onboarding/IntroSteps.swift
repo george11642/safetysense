@@ -67,7 +67,7 @@ struct PromisesStepView: View {
     ]
 
     var body: some View {
-        OnboardingPage(eyebrow: "Before we start", title: "Three promises") {
+        OnboardingPage(eyebrow: OnboardingStep.promises.label, title: "Three promises") {
             TabView(selection: $page) {
                 ForEach(Self.promises) { p in
                     PromiseCard(promise: p, isCurrent: page == p.id).tag(p.id).padding(.horizontal, 2)
@@ -155,7 +155,7 @@ struct CampusStepView: View {
     private enum Field { case name, phone }
 
     var body: some View {
-        OnboardingPage(eyebrow: "Step 3", title: "About you",
+        OnboardingPage(eyebrow: OnboardingStep.campus.label, title: "About you",
                        subtitle: "Your name goes in the alert your contacts get. Your number lets dispatch call you to check you're safe.") {
             VStack(alignment: .leading, spacing: SSSpacing.md) {
                 labeled("First name") {

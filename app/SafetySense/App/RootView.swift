@@ -8,7 +8,7 @@ struct RootView: View {
         ZStack {
             SSColor.background.ignoresSafeArea()
             if let forced = model.forcedScreen {
-                ScreenRouter.view(for: forced)
+                ScreenRouter.view(for: forced).topToastHost()
             } else if !model.hasCompletedOnboarding {
                 OnboardingFlowView()
             } else {
@@ -38,13 +38,31 @@ struct OverlayHost: View {
         ZStack {
             SSColor.background.ignoresSafeArea()
             switch model.overlay {
-            case .none, .guardActive: GuardActiveView()
+            case .none: EmptyView()   // The cover is on its way out.
+            case .guardActive: GuardActiveView()
             case .checkIn: CheckInView()
             case .alertCountdown: AlertCountdownView()
             case .alertActive: AlertActiveView()
+            case .markedSafe: MarkedSafeView()
             }
         }
+        .topToastHost()
         .animation(.smooth, value: model.overlay)
+        .onChange(of: model.overlay) { _, overlay in Self.announce(overlay) }
+    }
+
+    /// VoiceOver users hear the change, and focus moves to the new screen. A cancel by either
+    /// PIN reads the same, so this says nothing a Marked safe screen wouldn't.
+    private static func announce(_ overlay: GuardOverlay) {
+        let text: String? = switch overlay {
+        case .none, .guardActive: nil
+        case .checkIn: "Check-in. You okay?"
+        case .alertCountdown: "Alert. Your people are being told."
+        case .alertActive: "Help is on the way."
+        case .markedSafe: "You're marked safe."
+        }
+        guard let text else { return }
+        AccessibilityNotification.ScreenChanged(text).post()
     }
 }
 

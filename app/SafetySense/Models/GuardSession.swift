@@ -18,6 +18,11 @@ struct GuardSession: Codable, Sendable, Equatable, Identifiable {
     var destinationName: String?
     var destinationLatitude: Double?
     var destinationLongitude: Double?
+    /// Walk Home: who was asked to follow along.
+    var followerID: UUID?
+    var followerName: String?
+    /// The heads-up text really went out, so "following along" is true.
+    var followerNotified: Bool?
 
     init(id: UUID = UUID(), serverSessionID: String? = nil, mode: GuardMode, startedAt: Date = .now,
          checkInInterval: TimeInterval? = nil, graceSeconds: TimeInterval = 45, listening: Bool? = nil,
@@ -31,7 +36,16 @@ struct GuardSession: Codable, Sendable, Equatable, Identifiable {
         self.listening = listening ?? mode.listensByDefault
         self.sealedDate = sealedDate
         self.ride = ride
-        self.nextCheckInAt = self.checkInInterval > 0 ? startedAt.addingTimeInterval(self.checkInInterval) : nil
+        self.nextCheckInAt = self.checkInInterval > 0 ? nextCheckIn(after: startedAt, arrival: nil) : nil
+    }
+
+    /// The next check-in after `now`. Walk and Ride keep their arrival time while it's ahead.
+    /// A date's expected end is one more check inside the normal rhythm, not a replacement for it.
+    func nextCheckIn(after now: Date, arrival: Date?) -> Date {
+        if let arrival, arrival > now { return arrival }
+        let next = now.addingTimeInterval(checkInInterval)
+        if let end = sealedDate?.expectedEnd, end > now, end < next { return end }
+        return next
     }
 
     /// Walk and Ride check at the time you should have arrived, not on a repeating schedule.

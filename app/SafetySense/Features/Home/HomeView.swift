@@ -4,7 +4,6 @@ import SwiftUI
 /// the trigger checklist and campus quick-dial.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
-    @State private var mode: GuardMode = HomeView.initialMode
     @State private var sheet: SetupSheet?
     @State private var isStarting = false
     @State private var startTap = 0
@@ -13,10 +12,14 @@ struct HomeView: View {
 
     enum SetupSheet: String, Identifiable { case walk, date, ride, fakeCall; var id: String { rawValue } }
 
+    /// Lives on the model: it survives a relaunch, and Marked safe can send you back to it.
+    private var mode: GuardMode { model.homeMode }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SSSpacing.lg) {
                 greeting
+                notices
                 modePicker
                 startRing
                 FakeCallEntryRow { sheet = .fakeCall }
@@ -74,6 +77,24 @@ struct HomeView: View {
         }
     }
 
+    // MARK: Notices
+
+    /// What would make a Guard in this mode weaker than it looks, said before it starts.
+    @ViewBuilder
+    private var notices: some View {
+        let issues = model.permissions.issues(listening: model.listens(in: mode))
+        if model.banner != nil || !issues.isEmpty || !readiness.hasSafetyPIN {
+            VStack(spacing: SSSpacing.xs) {
+                if let banner = model.banner { NoticeCard(text: banner, systemImage: "wifi.exclamationmark") }
+                PermissionNotices(issues: issues)
+                if !readiness.hasSafetyPIN {
+                    NoticeCard(text: "Set a safety PIN so you can cancel an alert quickly.", systemImage: "lock.open",
+                               actionTitle: "Set") { model.selectedTab = .settings }
+                }
+            }
+        }
+    }
+
     // MARK: Modes
 
     private var modePicker: some View {
@@ -81,7 +102,7 @@ struct HomeView: View {
             HStack(spacing: SSSpacing.xs) {
                 ForEach(GuardMode.guardModes) { m in
                     ModeTile(mode: m, isSelected: m == mode) {
-                        withAnimation(.snappy) { mode = m }
+                        withAnimation(.snappy) { model.homeMode = m }
                     }
                     .accessibilityHint(m.tagline)
                 }
@@ -96,11 +117,10 @@ struct HomeView: View {
     }
 
     /// QA: `-ssHomeMode walk|night_out|date|ride` preselects a mode for screenshots.
-    static var initialMode: GuardMode {
+    static var launchMode: GuardMode? {
         let args = LaunchOptions.qaArguments
-        if let i = args.firstIndex(of: "-ssHomeMode"), i + 1 < args.count,
-           let m = GuardMode(rawValue: args[i + 1].lowercased()) { return m }
-        return .nightOut
+        guard let i = args.firstIndex(of: "-ssHomeMode"), i + 1 < args.count else { return nil }
+        return GuardMode(rawValue: args[i + 1].lowercased())
     }
 
     // MARK: Start ring
@@ -159,8 +179,8 @@ struct HomeView: View {
                 Button("Edit") { model.selectedTab = .contacts }
                     .frame(minWidth: 44, minHeight: 44)
             }
-            Card {
-                if model.contacts.isEmpty {
+            if model.contacts.isEmpty {
+                Card {
                     VStack(alignment: .leading, spacing: SSSpacing.sm) {
                         Label("No one yet", systemImage: "person.crop.circle.badge.plus")
                             .font(SSFont.headline).foregroundStyle(SSColor.warn)
@@ -168,26 +188,35 @@ struct HomeView: View {
                             .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                         PrimaryButton("Add a contact", systemImage: "plus", role: .secondary) { model.selectedTab = .contacts }
                     }
-                } else {
-                    VStack(spacing: SSSpacing.sm) {
-                        HStack {
-                            HStack(spacing: -6) {
-                                ForEach(model.contacts.prefix(5)) { c in
-                                    ContactAvatar(name: c.name, tint: c.isPrimary ? SSColor.accent : SSColor.calm)
-                                        .overlay(Circle().stroke(SSColor.surface, lineWidth: 2))
-                                }
-                            }
-                            Spacer()
-                            Text("\(model.contacts.count) ready")
-                                .font(SSFont.headline).foregroundStyle(SSColor.calm)
-                        }
-                        ForEach(model.contacts) { c in
-                            InfoRow(title: c.name) {
-                                Text(c.isPrimary ? "Called first" : (c.relationship ?? "Contact"))
-                                    .foregroundStyle(c.isPrimary ? SSColor.accent : SSColor.inkMuted)
-                            }
-                        }
+                }
+            } else {
+                Button { model.selectedTab = .contacts } label: {
+                    Card { contactSummary }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(SSColor.ink)
+                .accessibilityHint("Opens Trusted contacts")
+            }
+        }
+    }
+
+    private var contactSummary: some View {
+        VStack(spacing: SSSpacing.sm) {
+            HStack {
+                HStack(spacing: -6) {
+                    ForEach(model.contacts.prefix(5)) { c in
+                        ContactAvatar(name: c.name, tint: c.isPrimary ? SSColor.accent : SSColor.calm)
+                            .overlay(Circle().stroke(SSColor.surface, lineWidth: 2))
                     }
+                }
+                Spacer()
+                Text("\(model.contacts.count) added")
+                    .font(SSFont.headline).foregroundStyle(SSColor.calm)
+            }
+            ForEach(model.contacts) { c in
+                InfoRow(title: c.name) {
+                    Text(c.isPrimary ? "Called first" : (c.relationship ?? "Contact"))
+                        .foregroundStyle(c.isPrimary ? SSColor.accent : SSColor.inkMuted)
                 }
             }
         }

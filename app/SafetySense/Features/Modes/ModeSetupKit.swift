@@ -90,7 +90,7 @@ struct MinuteChips: View {
                     Text("\(m) min")
                         .font(SSFont.callout.weight(.semibold))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .foregroundStyle(selected ? SSColor.onFill : SSColor.ink)
                         .background(selected ? SSColor.accent : SSColor.surface, in: Capsule())

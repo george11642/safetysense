@@ -11,7 +11,7 @@ struct ContactsStepView: View {
     var next: () -> Void
 
     var body: some View {
-        OnboardingPage(eyebrow: "Step 4 · Required", title: "Who should we call?",
+        OnboardingPage(eyebrow: "\(OnboardingStep.contacts.label) · Required", title: "Who should we call?",
                        subtitle: "Choose 1 to \(TrustedContact.maxCount) people. They don't need the app. Send each one the intro text so a call from SafetySense isn't a surprise.") {
             TrustedContactsEditor(context: .onboarding)
         } footer: {
@@ -39,7 +39,7 @@ struct TriggersStepView: View {
     }
 
     var body: some View {
-        OnboardingPage(eyebrow: "Step 5", title: "Ways to start an alert",
+        OnboardingPage(eyebrow: OnboardingStep.triggers.label, title: "Ways to start an alert",
                        subtitle: "Set up the ones that fit you. Each one works without opening the app.") {
             VStack(spacing: SSSpacing.sm) {
                 trigger(.actionButton, icon: "button.vertical.left.press", title: "Action Button",
@@ -159,7 +159,7 @@ struct PermissionsStepView: View {
     @State private var status: [Permission: Status] = [:]
 
     var body: some View {
-        OnboardingPage(eyebrow: "Step 6", title: "What SafetySense needs, and why",
+        OnboardingPage(eyebrow: OnboardingStep.permissions.label, title: "What SafetySense needs, and why",
                        subtitle: "iOS will ask you for each one. Say no to anything; you can change it later in Settings.") {
             VStack(spacing: SSSpacing.sm) {
                 ForEach(Permission.allCases) { p in row(p) }

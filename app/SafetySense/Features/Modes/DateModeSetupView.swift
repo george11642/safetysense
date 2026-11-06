@@ -19,7 +19,6 @@ struct DateModeSetupView: View {
 
     private var canStart: Bool {
         !details.matchName.trimmingCharacters(in: .whitespaces).isEmpty
-            && !details.venueName.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
@@ -45,7 +44,7 @@ struct DateModeSetupView: View {
                 }
 
                 VStack(alignment: .leading, spacing: SSSpacing.md) {
-                    SetupField(label: "Venue", text: $details.venueName, prompt: "Coffee shop on Central",
+                    SetupField(label: "Venue (optional)", text: $details.venueName, prompt: "Coffee shop on Central",
                                systemImage: "mappin.and.ellipse")
                     SetupField(label: "Address (optional)", text: $venueAddress, prompt: "Street or cross streets",
                                systemImage: "map", contentType: .fullStreetAddress)
@@ -64,7 +63,7 @@ struct DateModeSetupView: View {
                         if hasEndTime {
                             DatePicker("Expected end", selection: $endTime, in: Date.now..., displayedComponents: [.hourAndMinute])
                                 .font(SSFont.body)
-                            Text("SafetySense asks \"You okay?\" then. No answer in 45 seconds alerts your contacts.")
+                            Text("One more check at that time, on top of your regular check-ins. No answer in 45 seconds alerts your contacts.")
                                 .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                         }
                     }
@@ -78,10 +77,8 @@ struct DateModeSetupView: View {
         .pinnedFooter {
             PrimaryButton("Start Date guard", systemImage: "heart.fill", isLoading: isStarting) { start() }
                 .disabled(!canStart)
-            if !canStart {
-                Text("Add their name and the venue to start.")
-                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
-            }
+            Text("Their details stay sealed unless an alert fires.")
+                .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
         }
         .ssScreen()
         .navigationBarTitleDisplayMode(.inline)
@@ -139,6 +136,7 @@ struct DateModeSetupView: View {
         isStarting = true
         var sealed = details
         sealed.matchName = sealed.matchName.trimmingCharacters(in: .whitespaces)
+        sealed.venueName = sealed.venueName.trimmingCharacters(in: .whitespaces)
         sealed.profileLink = profileLink.isEmpty ? nil : profileLink
         sealed.datingApp = datingApp.isEmpty ? nil : datingApp
         sealed.venueAddress = venueAddress.isEmpty ? nil : venueAddress
@@ -149,10 +147,6 @@ struct DateModeSetupView: View {
         }
         Task {
             await model.startGuard(mode: .date, sealedDate: sealed)
-            if let end = sealed.expectedEnd, model.currentSession != nil {
-                model.currentSession?.nextCheckInAt = end
-                if let id = model.currentSession?.id { model.services.notifications.scheduleCheckIn(at: end, sessionID: id) }
-            }
             isStarting = false
             started += 1
             dismiss()

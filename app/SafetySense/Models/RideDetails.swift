@@ -39,9 +39,11 @@ struct RideDetails: Codable, Sendable, Equatable {
     }
 
     var sealedSummary: String {
-        var lines = ["Ride: \(service.displayName)", "Driver: \(driverName)", "Plate: \(plate)"]
+        var lines = ["Ride: \(service.displayName)"]
+        if !driverName.isEmpty { lines.append("Driver: \(driverName)") }
+        lines.append("Plate: \(plate)")
         if let carDescription, !carDescription.isEmpty { lines.append("Car: \(carDescription)") }
-        lines.append("Going to: \(destinationName)")
+        if !destinationName.isEmpty { lines.append("Going to: \(destinationName)") }
         return lines.joined(separator: "\n")
     }
 }

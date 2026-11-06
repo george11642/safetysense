@@ -33,6 +33,11 @@ enum DeviceAuth {
     /// pad (which also accepts the duress PIN) instead of the iPhone passcode sheet.
     nonisolated static func authenticate(reason: String) async -> Outcome {
         guard hasBiometrics else { return .unavailable }
+        return await authenticateOwner(reason: reason)
+    }
+
+    /// Face ID or the iPhone passcode, for when there's no safety PIN to fall back on.
+    nonisolated static func authenticateOwner(reason: String) async -> Outcome {
         let context = LAContext()
         context.localizedCancelTitle = "Not now"
         var error: NSError?

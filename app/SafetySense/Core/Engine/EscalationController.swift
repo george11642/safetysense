@@ -8,7 +8,11 @@ import Observation
 /// 0/1 --risk high, heartbeat lost--> start level from the mode's dispatch policy
 /// manual (SOS, Action Button, safe word, "Need help") --> start level from the manual policy
 /// 2 Alert --90 s, no valid cancel / a contact taps "Send help"--> 3 Dispatch
+/// "I need help" at a check-in --> start level from the mode's policy, so the PIN can still stop it
 /// valid PIN --> back to 0 (server: cancel)   duress PIN --> looks the same, server: cancel{duress:true}
+///
+/// A cancel only moves the ladder back to 0. `AppModel.cancelAlert` then shows Marked safe and
+/// ends the session, so both PINs land on the same screen.
 /// ```
 ///
 /// All timing goes through `EngineClock`, so tests drive it with `ManualEngineClock`.
@@ -23,6 +27,8 @@ final class EscalationController: EscalationControllerProtocol {
     private(set) var nextCheckInAt: Date?
     /// Why the current check-in was raised ("Scheduled check-in", or the risk explanation).
     private(set) var checkInReason: String?
+    /// The same reason, typed, so the prompt can word it for the Guard you're in.
+    private(set) var checkInCause: CheckInCause?
     private(set) var lastAssessment: RiskAssessment = .calm
     private(set) var lastDrill: AlertRecord?
     private(set) var failedPINAttempts = 0
@@ -45,6 +51,8 @@ final class EscalationController: EscalationControllerProtocol {
     @ObservationIgnored let timing: EscalationTiming
 
     @ObservationIgnored private var session: GuardSession?
+    /// When a Walk or Ride should have arrived. A check-in for a long stop leaves this alone.
+    @ObservationIgnored private var arrivalDeadline: Date?
     @ObservationIgnored private var policies = DispatchPolicySettings.default
     @ObservationIgnored private var stepTimer: EngineTimer?
     @ObservationIgnored private var scheduledCheckInTimer: EngineTimer?
@@ -111,10 +119,12 @@ final class EscalationController: EscalationControllerProtocol {
         stopAlertLoops()
         self.session = session
         self.policies = policies
+        arrivalDeadline = session.usesArrivalCheck ? session.nextCheckInAt : nil
         level = .guarding
         activeAlert = nil
         stepDeadline = nil
         checkInReason = nil
+        checkInCause = nil
         okaySuppressedUntil = nil
         failedPINAttempts = 0
         lastAssessment = .calm
@@ -134,11 +144,13 @@ final class EscalationController: EscalationControllerProtocol {
         stopAlertLoops()
         if let alert = activeAlert { evidence?.stop(alertID: alert.id) }
         session = nil
+        arrivalDeadline = nil
         level = .guarding
         activeAlert = nil
         stepDeadline = nil
         nextCheckInAt = nil
         checkInReason = nil
+        checkInCause = nil
         okaySuppressedUntil = nil
         emit()
         // A duress alert keeps sharing location until `duressUntil`, even after the session ends.
@@ -165,9 +177,16 @@ final class EscalationController: EscalationControllerProtocol {
         case .high:
             if level < .alert { raiseAlert(trigger: .riskEngine, reason: assessment.explanation) }
         case .elevated:
-            if level == .guarding, !isSuppressed { enterCheckIn(reason: assessment.explanation) }
+            if level == .guarding, !isSuppressed {
+                enterCheckIn(reason: assessment.explanation, cause: Self.cause(for: ruleSignals, explanation: assessment.explanation))
+            }
         case .calm:
-            break
+            // A long stop on a Walk or Ride is reason enough to ask, whatever the score and
+            // sensitivity say: there's no repeating check-in to catch it otherwise.
+            if level == .guarding, !isSuppressed, session?.usesArrivalCheck == true,
+               ruleSignals.contains(where: { $0.kind == .unexpectedStop }) {
+                enterCheckIn(reason: assessment.explanation, cause: .unexpectedStop)
+            }
         }
     }
 
@@ -175,7 +194,7 @@ final class EscalationController: EscalationControllerProtocol {
 
     func scheduledCheckInDue() {
         guard session != nil, level == .guarding else { return }
-        enterCheckIn(reason: "Scheduled check-in")
+        enterCheckIn(reason: "Scheduled check-in", cause: .scheduled)
     }
 
     func respondToCheckIn(okay: Bool) {
@@ -183,15 +202,24 @@ final class EscalationController: EscalationControllerProtocol {
         if okay {
             confirmOkay()
         } else {
-            triggerManual(.manualSOS, reason: "Asked for help at a check-in")
+            // Same countdown as a missed check-in: "Send help now" is there, and a PIN can stop it.
+            // Hold-to-SOS keeps its dispatch-first default (SPEC 15.2).
+            startAlert(trigger: .manualSOS, reason: "Asked for help at a check-in",
+                       at: policies.startingLevel(for: .missedCheckIn, in: mode),
+                       policy: policies.policy(for: mode))
         }
     }
 
-    private func enterCheckIn(reason: String) {
+    private static func cause(for signals: [RiskSignal], explanation: String) -> CheckInCause {
+        signals.first?.kind == .unexpectedStop ? .unexpectedStop : .noticed(explanation)
+    }
+
+    private func enterCheckIn(reason: String, cause: CheckInCause) {
         scheduledCheckInTimer?.cancel()
         nextCheckInAt = nil
         level = .checkIn
         checkInReason = reason
+        checkInCause = cause
         let window = max(10, session?.graceSeconds ?? timing.checkInWindow)
         stepDeadline = now.addingTimeInterval(window)
         stepTimer?.cancel()
@@ -208,6 +236,7 @@ final class EscalationController: EscalationControllerProtocol {
         level = .guarding
         stepDeadline = nil
         checkInReason = nil
+        checkInCause = nil
         okaySuppressedUntil = now.addingTimeInterval(timing.okayCooldown)
         onUserConfirmedOkay?()
         scheduleNextCheckIn()
@@ -220,8 +249,9 @@ final class EscalationController: EscalationControllerProtocol {
             nextCheckInAt = nil
             return
         }
-        nextCheckInAt = now.addingTimeInterval(session.checkInInterval)
-        scheduledCheckInTimer = clock.schedule(after: session.checkInInterval) { [weak self] in
+        let next = session.nextCheckIn(after: now, arrival: arrivalDeadline)
+        nextCheckInAt = next
+        scheduledCheckInTimer = clock.schedule(after: next.timeIntervalSince(now)) { [weak self] in
             self?.scheduledCheckInDue()
         }
     }
@@ -255,13 +285,15 @@ final class EscalationController: EscalationControllerProtocol {
         startAlert(trigger: trigger, reason: reason, at: start)
     }
 
-    private func startAlert(trigger: AlertTrigger, reason: String, at start: EscalationLevel) {
+    private func startAlert(trigger: AlertTrigger, reason: String, at start: EscalationLevel,
+                            policy: DispatchPolicy? = nil) {
         cancelLadderTimers()
         nextCheckInAt = nil
         checkInReason = nil
+        checkInCause = nil
         let t = now
         let record = AlertRecord(sessionID: serverSessionID, level: start, trigger: trigger, reason: reason,
-                                 policy: policies.policy(for: trigger, in: mode),
+                                 policy: policy ?? policies.policy(for: trigger, in: mode),
                                  status: start == .dispatch ? .dispatched : .active,
                                  startedAt: t, levelChangedAt: t,
                                  events: [AlertEvent(who: "SafetySense", action: "alert_started", at: t)])
@@ -335,6 +367,7 @@ final class EscalationController: EscalationControllerProtocol {
         activeAlert = nil
         stepDeadline = nil
         checkInReason = nil
+        checkInCause = nil
         okaySuppressedUntil = now.addingTimeInterval(timing.okayCooldown)
         onUserConfirmedOkay?()
         scheduleNextCheckIn()
@@ -353,8 +386,9 @@ final class EscalationController: EscalationControllerProtocol {
         }
         emit()
 
+        // Never makes the screen wait for the network: retries can take a long time offline.
         if let serverID = record.serverAlertID {
-            await sendCancel(serverID: serverID, duress: duress)
+            track { [weak self] in await self?.sendCancel(serverID: serverID, duress: duress) }
         } else {
             pendingCancels[record.id] = duress
         }

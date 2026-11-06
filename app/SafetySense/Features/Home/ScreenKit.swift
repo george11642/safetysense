@@ -205,7 +205,7 @@ extension TimeInterval {
             Card {
                 VStack(spacing: SSSpacing.xs) {
                     InfoRow(title: "Next check-in", systemImage: "clock") { Text("12:10 AM") }
-                    InfoRow(title: "Trusted contacts", systemImage: "person.2") { Text("3 ready").foregroundStyle(SSColor.calm) }
+                    InfoRow(title: "Trusted contacts", systemImage: "person.2") { Text("3 added").foregroundStyle(SSColor.calm) }
                 }
             }
             FlowRow {

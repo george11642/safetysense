@@ -5,13 +5,12 @@ import SwiftUI
 struct WalkHomeSetupView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
     @State private var destination = ""
     @State private var destinationFix: LocationFix?
     @State private var minutes = 15
     @State private var followerID: UUID?
     @State private var listen = false
-    @State private var textFollower = true
+    @State private var textFollower = false
     @State private var isStarting = false
     @State private var started = 0
 
@@ -57,7 +56,7 @@ struct WalkHomeSetupView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Label("Text \(follower?.firstName ?? "them") a heads-up", systemImage: "message")
                                         .font(SSFont.body)
-                                    Text("Opens Messages with a note you can edit and send.")
+                                    Text("Once you're guarding, opens a note you can edit and send.")
                                         .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                                 }
                             }
@@ -73,7 +72,7 @@ struct WalkHomeSetupView: View {
         .scrollDismissesKeyboard(.interactively)
         .pinnedFooter {
             PrimaryButton("Start walking", systemImage: "figure.walk", isLoading: isStarting) { start() }
-            Text("If you don't arrive, \(NameList.join(model.contacts.map(\.firstName))) get your live location.")
+            Text("If you don't arrive, \(NameList.join(model.contacts.map(\.firstName))) \(model.contacts.count == 1 ? "is" : "are") alerted.")
                 .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                 .multilineTextAlignment(.center)
         }
@@ -141,7 +140,7 @@ struct WalkHomeSetupView: View {
     private func start() {
         isStarting = true
         if model.settings.listenDuringWalk != listen { model.settings.listenDuringWalk = listen }
-        let checkAfter = Double(minutes + 2) * 60
+        let checkAfter = Double(minutes) * 60
         let place = destination.trimmingCharacters(in: .whitespaces)
         let heads = follower
         let picked = destinationFix
@@ -153,24 +152,12 @@ struct WalkHomeSetupView: View {
                 if fix == nil, canSearch { fix = await DestinationSearch.fix(forText: place) }
                 target = GuardDestination(name: place, fix: fix)
             }
-            await model.startGuard(mode: .walk, destination: target, arrivalCheckAfter: checkAfter)
+            await model.startGuard(mode: .walk, destination: target, arrivalCheckAfter: checkAfter,
+                                   follower: heads, sendHeadsUp: textFollower)
             isStarting = false
             started += 1
-            if textFollower, let heads, let url = Self.headsUpURL(to: heads, destination: place, eta: eta) {
-                openURL(url)
-            }
             dismiss()
         }
-    }
-
-    static func headsUpURL(to contact: TrustedContact, destination: String, eta: Date) -> URL? {
-        let place = destination.isEmpty ? "home" : destination
-        let body = "Walking to \(place) now, should be there by \(eta.formatted(date: .omitted, time: .shortened)). SafetySense will let you know if I don't make it."
-        var components = URLComponents()
-        components.scheme = "sms"
-        components.path = contact.phone
-        components.queryItems = [URLQueryItem(name: "body", value: body)]
-        return components.url
     }
 }
 

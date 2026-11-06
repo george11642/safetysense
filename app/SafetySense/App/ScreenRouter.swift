@@ -11,6 +11,8 @@ enum ScreenRouter {
         case .checkIn: CheckInView()
         case .alertCountdown: AlertCountdownView()
         case .alertActive: AlertActiveView()
+        case .markedSafe: MarkedSafeView()
+        case .contactPreview: NavigationStack { ContactPreviewView() }
         case .dateSetup: NavigationStack { DateModeSetupView() }
         case .rideSetup: NavigationStack { RideModeSetupView() }
         case .walkSetup: NavigationStack { WalkHomeSetupView() }

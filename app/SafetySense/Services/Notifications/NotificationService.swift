@@ -30,6 +30,8 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
     /// Called when a check-in notification arrives while the app is open, so the in-app
     /// "You okay?" screen appears at the same moment. Set by `SystemBridge`.
     var onCheckInDue: (@MainActor () -> Void)?
+    /// The ladder's next check-in, which on a Walk or Ride can be the arrival time. Set by `SystemBridge`.
+    var nextCheckInDate: (@MainActor () -> Date?)?
     /// Tapping a notification opens this screen. Set by `AppModel`.
     var onOpenLink: (@MainActor (DeepLink) -> Void)?
 
@@ -84,6 +86,14 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         }
     }
 
+    func authorizationState() async -> PermissionState {
+        switch await center.notificationSettings().authorizationStatus {
+        case .notDetermined: .notAsked
+        case .denied: .denied
+        default: .granted
+        }
+    }
+
     func scheduleCheckIn(at date: Date, sessionID: UUID) {
         let interval: TimeInterval
         if let rhythm, rhythm.sessionID == sessionID {
@@ -101,10 +111,11 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
         Task { await removeCheckIns() }
     }
 
-    /// Lines up the next check-in one interval from now (after any answer).
-    func scheduleNextCheckIn() {
+    /// Lines up the next check-in after any answer: at the ladder's time when it has one
+    /// (a Walk or Ride keeps its arrival time), otherwise one interval from now.
+    func scheduleNextCheckIn(at date: Date? = nil) {
         guard let rhythm else { return }
-        schedule(checkInAt: .now.addingTimeInterval(rhythm.interval), sessionID: rhythm.sessionID,
+        schedule(checkInAt: date ?? .now.addingTimeInterval(rhythm.interval), sessionID: rhythm.sessionID,
                  repeatInterval: rhythm.interval)
     }
 
@@ -210,7 +221,7 @@ final class NotificationService: NSObject, NotificationServiceProtocol {
             await removeCheckIns(sessionID: sessionID)
             // Line up the next check-in at the same rhythm.
             if let sessionID, let uuid = UUID(uuidString: sessionID), let interval, interval > 0 {
-                schedule(checkInAt: .now.addingTimeInterval(interval), sessionID: uuid, repeatInterval: interval)
+                schedule(checkInAt: nextCheckInDate?() ?? .now.addingTimeInterval(interval), sessionID: uuid, repeatInterval: interval)
             }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         case Identifier.needHelpAction:

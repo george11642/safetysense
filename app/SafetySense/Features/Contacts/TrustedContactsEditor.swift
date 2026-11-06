@@ -151,20 +151,28 @@ struct ContactCard: View {
 
     private var row: some View {
         HStack(spacing: SSSpacing.sm) {
-            Initials(name: contact.name, highlighted: contact.isPrimary)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: SSSpacing.xs) {
-                    Text(contact.name).font(SSFont.headline).lineLimit(1)
-                    if contact.isPrimary { StatusPill(text: "First", tint: SSColor.accent).fixedSize().accessibilityLabel("Called first") }
+            Button(action: onEdit) {
+                HStack(spacing: SSSpacing.sm) {
+                    Initials(name: contact.name, highlighted: contact.isPrimary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: SSSpacing.xs) {
+                            Text(contact.name).font(SSFont.headline).lineLimit(1)
+                            if contact.isPrimary { StatusPill(text: "First", tint: SSColor.accent).fixedSize().accessibilityLabel("Called first") }
+                        }
+                        Text(PhoneNumber.display(contact.phone))
+                            .font(SSFont.mono(14)).foregroundStyle(SSColor.inkMuted)
+                            .accessibilityLabel(PhoneNumber.spokenLabel(contact.phone))
+                        if let detail {
+                            Text(detail).font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                        }
+                    }
+                    Spacer(minLength: 0)
                 }
-                Text(PhoneNumber.display(contact.phone))
-                    .font(SSFont.mono(14)).foregroundStyle(SSColor.inkMuted)
-                    .accessibilityLabel(PhoneNumber.spokenLabel(contact.phone))
-                if let detail {
-                    Text(detail).font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
-                }
+                .contentShape(Rectangle())
             }
-            Spacer(minLength: 0)
+            .buttonStyle(.plain)
+            .foregroundStyle(SSColor.ink)
+            .accessibilityHint("Edit \(contact.firstName)")
             Menu {
                 Button(action: onIntro) { Label("Send intro text", systemImage: "text.bubble") }
                 Button(action: onTest) { Label("Send a test message", systemImage: "checkmark.message") }

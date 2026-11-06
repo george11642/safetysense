@@ -9,7 +9,6 @@ struct CheckInView: View {
     @State private var urgentNudge = 0
     @State private var answered = 0
     @State private var appeared = false
-    @State private var reason: String?
 
     private var total: TimeInterval { EscalationLevel.checkIn.autoEscalateAfter ?? 45 }
     private var deadline: Date { model.services.escalation.stepDeadline ?? fallbackDeadline }
@@ -63,14 +62,13 @@ struct CheckInView: View {
         .sensoryFeedback(.success, trigger: answered)
         .task { await haptics() }
         .onAppear {
-            reason = model.services.risk.current.contributors.first.map { _ in model.services.risk.current.explanation }
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { appeared = true }
         }
     }
 
     private var reasonLine: String {
-        guard let reason, !reason.isEmpty, reason != "All quiet" else { return "Just checking on you." }
-        return "SafetySense noticed: \(reason.lowercased())"
+        let cause = model.services.escalation.checkInCause ?? .scheduled
+        return cause.line(mode: model.currentSession?.mode)
     }
 
     private func haptics() async {

@@ -30,7 +30,9 @@ struct RingTimer: View {
         case .deadline(let deadline, let total):
             TimelineView(.periodic(from: .now, by: 0.25)) { context in
                 let remaining = max(0, deadline.timeIntervalSince(context.date))
-                ring(progress: total > 0 ? remaining / total : 0, label: "\(Int(remaining.rounded(.up)))")
+                let seconds = Int(remaining.rounded(.up))
+                ring(progress: total > 0 ? remaining / total : 0, label: "\(seconds)")
+                    .accessibilityValue("\(seconds) \(seconds == 1 ? "second" : "seconds")")
             }
         }
     }
@@ -45,10 +47,13 @@ struct RingTimer: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.25), value: progress)
             VStack(spacing: 2) {
-                if let label { Text(label).font(SSFont.timer).foregroundStyle(SSColor.ink).contentTransition(.numericText()) }
+                if let label {
+                    Text(label).font(SSFont.timer).foregroundStyle(SSColor.ink).contentTransition(.numericText())
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                }
                 if let caption { Text(caption).ssEyebrow().lineLimit(1).minimumScaleFactor(0.7) }
             }
-            .padding(.horizontal, lineWidth + 14)
+            .padding(.horizontal, lineWidth + 10)
         }
         .accessibilityElement(children: .combine)
     }

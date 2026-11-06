@@ -10,6 +10,9 @@ struct PINPad: View {
     var compact = false
     var onComplete: (String) -> Void = { _ in }
 
+    /// Digits grow with text size, inside keys that stay the same size.
+    @ScaledMetric(relativeTo: .title) private var digitSize: CGFloat = 28
+
     private let keys: [[String]] = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["", "0", "⌫"]]
 
     var body: some View {
@@ -45,7 +48,7 @@ struct PINPad: View {
                 Group {
                     if key == "⌫" { Image(systemName: "delete.left") } else { Text(key) }
                 }
-                .font(.system(size: 28, weight: .medium, design: .rounded))
+                .font(.system(size: min(digitSize, keySize * 0.6), weight: .medium, design: .rounded))
                 .foregroundStyle(SSColor.ink)
                 .frame(width: keySize, height: keySize)
                 .background(key == "⌫" ? .clear : SSColor.surface, in: Circle())
@@ -55,7 +58,7 @@ struct PINPad: View {
         }
     }
 
-    private var keySize: CGFloat { compact ? 62 : 72 }
+    private var keySize: CGFloat { compact ? 60 : 72 }
 
     private func tap(_ key: String) {
         if key == "⌫" {

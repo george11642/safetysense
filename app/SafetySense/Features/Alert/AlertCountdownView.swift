@@ -1,10 +1,12 @@
 import SwiftUI
 
 /// Alert countdown (SPEC 9.5, level 2 -> 3): who's been told, how long until professional
-/// help is sent, and the PIN pad. A duress PIN produces exactly the same screen change as the
-/// safety PIN; the server escalates silently.
+/// help is sent, and the PIN pad. Everything fits without scrolling on an iPhone 17e, with the
+/// keys and the footer in reach: in a panic the 0 key can't depend on a scroll. A duress PIN
+/// produces exactly the same screen change as the safety PIN; the server escalates silently.
 struct AlertCountdownView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openURL) private var openURL
     @State private var pin = ""
     @State private var wrongPIN = 0
     @State private var attempts = 0
@@ -12,7 +14,8 @@ struct AlertCountdownView: View {
     @State private var fallbackDeadline = Date.now.addingTimeInterval(90)
     @State private var arrived = 0
     @State private var confirmSendNow = false
-    @State private var cancelled = false
+    @State private var confirmNoPINCancel = false
+    @State private var authFailed = 0
 
     private var alert: AlertRecord? { model.services.escalation.activeAlert ?? model.currentAlert }
     private var total: TimeInterval { EscalationLevel.alert.autoEscalateAfter ?? 90 }
@@ -24,23 +27,24 @@ struct AlertCountdownView: View {
         ScrollView {
             VStack(spacing: SSSpacing.sm) {
                 header
-                notifiedCard
+                if let note = model.alertConnectionNote {
+                    ServerFallbackCard(note: note)
+                } else {
+                    notifiedCard
+                }
                 pinSection
-                Text("SafetySense supplements 911. If you can, call 911 yourself.")
-                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
-                    .multilineTextAlignment(.center)
             }
-            .padding(.top, SSSpacing.sm)
-            .padding(.bottom, SSSpacing.md)
+            .padding(.top, SSSpacing.xs)
+            .padding(.bottom, SSSpacing.xs)
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
-        // Pinned so it's always one tap away, whatever the screen size.
-        .safeAreaInset(edge: .bottom, spacing: 0) { sendNowBar }
+        // Pinned so both are always one tap away, whatever the screen size.
+        .safeAreaInset(edge: .bottom, spacing: 0) { footerBar }
         .ssScreen()
-        .overlay { if cancelled { cancelledToast } }
         .sensoryFeedback(.warning, trigger: arrived)
         .sensoryFeedback(.error, trigger: wrongPIN)
+        .sensoryFeedback(.error, trigger: authFailed)
         .onAppear { arrived += 1 }
         .task(id: alert?.id) { if let alert { await model.ensureEvidenceCapture(for: alert) } }
         .confirmationDialog("Send professional help now?", isPresented: $confirmSendNow, titleVisibility: .visible) {
@@ -51,23 +55,40 @@ struct AlertCountdownView: View {
         } message: {
             Text("The monitoring center will call you, then send police to your location.")
         }
+        .confirmationDialog("Cancel this alert?", isPresented: $confirmNoPINCancel, titleVisibility: .visible) {
+            Button("Cancel the alert", role: .destructive) { Task { await model.cancelAlertWithoutPIN() } }
+            Button("Keep the alert", role: .cancel) {}
+        } message: {
+            Text("This iPhone has no safety PIN, Face ID or passcode set.")
+        }
     }
 
-    private var sendNowBar: some View {
-        PrimaryButton("Send help now", systemImage: "light.beacon.max", role: .danger) { confirmSendNow = true }
-            .padding(.top, SSSpacing.sm)
-            .padding(.bottom, SSSpacing.xs)
-            .background(alignment: .top) {
-                LinearGradient(colors: [SSColor.background.opacity(0), SSColor.background],
-                               startPoint: .top, endPoint: .init(x: 0.5, y: 0.35))
-                    .padding(.top, -SSSpacing.lg)
-                    .ignoresSafeArea(edges: .bottom)
-                    .allowsHitTesting(false)
+    private var footerBar: some View {
+        HStack(spacing: SSSpacing.xs) {
+            PrimaryButton("Send help now", systemImage: "light.beacon.max", role: .danger) { confirmSendNow = true }
+            Button { if let url = PhoneLink.url("911") { openURL(url) } } label: {
+                Label("911", systemImage: "phone.fill")
+                    .font(SSFont.headline)
+                    .frame(minWidth: 96, minHeight: 56)
+                    .foregroundStyle(SSColor.danger)
+                    .background(SSColor.dangerSoft, in: RoundedRectangle(cornerRadius: SSRadius.button, style: .continuous))
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Call 911")
+        }
+        .padding(.top, SSSpacing.xs)
+        .padding(.bottom, SSSpacing.xs)
+        .background(alignment: .top) {
+            LinearGradient(colors: [SSColor.background.opacity(0), SSColor.background],
+                           startPoint: .top, endPoint: .init(x: 0.5, y: 0.35))
+                .padding(.top, -SSSpacing.lg)
+                .ignoresSafeArea(edges: .bottom)
+                .allowsHitTesting(false)
+        }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: SSSpacing.sm) {
+        VStack(alignment: .leading, spacing: SSSpacing.xs) {
             HStack {
                 StatusPill(text: alert?.isDrill == true ? "Drill · test only" : "Alert", tint: SSColor.danger, pulsing: true)
                 Spacer()
@@ -77,14 +98,14 @@ struct AlertCountdownView: View {
             }
             HStack(alignment: .center, spacing: SSSpacing.md) {
                 RingTimer(deadline: deadline, total: total, tint: SSColor.danger, lineWidth: 8, caption: "to dispatch")
-                    .frame(width: 128, height: 128)
+                    .frame(width: 120, height: 120)
                     .accessibilityLabel("Time until professional help is sent")
                 VStack(alignment: .leading, spacing: SSSpacing.xxs) {
                     Text("Your people are being told")
                         .font(SSFont.title)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let reason = alert?.reason, !reason.isEmpty {
-                        Text("Why: \(reason)")
+                    if let why = alert.flatMap(AlertPresentation.why) {
+                        Text("Why: \(why)")
                             .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -95,11 +116,11 @@ struct AlertCountdownView: View {
     }
 
     private var notifiedCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: SSSpacing.xs) {
+        Card(padding: SSSpacing.sm) {
+            VStack(alignment: .leading, spacing: SSSpacing.xxs) {
                 Text("Notified").ssEyebrow()
-                let notified = alert?.notified ?? []
-                if notified.isEmpty {
+                let people = AlertPresentation.people(alert?.notified ?? [])
+                if people.isEmpty {
                     HStack(spacing: SSSpacing.sm) {
                         ProgressView().tint(SSColor.accent)
                         Text("Calling and texting \(NameList.join(model.contacts.map(\.firstName)))…")
@@ -107,62 +128,98 @@ struct AlertCountdownView: View {
                     }
                     .frame(minHeight: 44)
                 } else {
-                    ForEach(notified, id: \.self) { c in
-                        NotifiedContactRow(contact: c, events: alert?.events ?? [])
-                    }
+                    let rows = AlertPresentation.countdownRows(people, events: alert?.events ?? [])
+                    ForEach(rows) { row in NotifiedGroupRow(row: row) }
                 }
             }
             .animation(.smooth, value: alert?.notified)
         }
     }
 
+    @ViewBuilder
     private var pinSection: some View {
-        VStack(spacing: SSSpacing.xs) {
-            Text(attempts > 0 ? "That PIN didn't match. Try again." : "Safe? Enter your PIN to cancel")
-                .font(SSFont.headline)
-                .foregroundStyle(attempts > 0 ? SSColor.warn : SSColor.ink)
-                .contentTransition(.opacity)
-            if model.services.flavor == .demo, !model.store.hasSafetyPIN {
-                Text("Demo build: set a safety PIN in Settings to try cancelling.")
-                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+        if model.store.hasSafetyPIN {
+            VStack(spacing: SSSpacing.xs) {
+                Text(attempts >= 3 ? "Forgot it? Tell the monitoring center you're okay when they call."
+                     : attempts > 0 ? "That PIN didn't match. Try again." : "Safe? Enter your PIN to cancel")
+                    .font(SSFont.headline)
+                    .foregroundStyle(attempts > 0 ? SSColor.warn : SSColor.ink)
                     .multilineTextAlignment(.center)
+                    .contentTransition(.opacity)
+                PINPad(pin: $pin, tint: SSColor.danger, compact: true) { entered in submit(entered) }
+                    .modifier(PINShake(shakes: CGFloat(wrongPIN)))
+                    .animation(.default, value: wrongPIN)
+                    .disabled(isChecking)
             }
-            PINPad(pin: $pin, tint: SSColor.danger, compact: true) { entered in submit(entered) }
-                .modifier(PINShake(shakes: CGFloat(wrongPIN)))
-                .animation(.default, value: wrongPIN)
-                .disabled(isChecking || cancelled)
+        } else {
+            VStack(spacing: SSSpacing.sm) {
+                Text("Safe? You haven't set a safety PIN, so confirm it's you to cancel.")
+                    .font(SSFont.headline).multilineTextAlignment(.center)
+                PrimaryButton("Cancel with \(DeviceAuth.biometryName == "PIN" ? "passcode" : DeviceAuth.biometryName)",
+                              systemImage: "faceid", role: .calm) { cancelWithoutPIN() }
+            }
+            .padding(.top, SSSpacing.sm)
         }
     }
 
     private func submit(_ entered: String) {
         isChecking = true
         Task {
+            // Valid and duress both go straight to Marked safe, identically.
             let result = await model.cancelAlert(pin: entered)
             isChecking = false
-            switch result {
-            case .invalid:
+            if result == .invalid {
                 attempts += 1
                 wrongPIN += 1
-            case .valid, .duress:
-                // Identical on purpose.
-                withAnimation(.smooth) { cancelled = true }
             }
         }
     }
 
-    private var cancelledToast: some View {
-        VStack(spacing: SSSpacing.sm) {
-            Image(systemName: "checkmark.circle.fill").font(.system(size: 56)).foregroundStyle(SSColor.calm)
-            Text("Alert cancelled").font(SSFont.title)
-            Text("Glad you're okay. SafetySense is still guarding.")
-                .font(SSFont.callout).foregroundStyle(SSColor.inkMuted).multilineTextAlignment(.center)
+    private func cancelWithoutPIN() {
+        Task {
+            switch await DeviceAuth.authenticateOwner(reason: "Cancel this alert") {
+            case .success: await model.cancelAlertWithoutPIN()
+            case .failed: authFailed += 1
+            case .unavailable: confirmNoPINCancel = true
+            }
         }
-        .padding(SSSpacing.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(SSColor.background.opacity(0.96).ignoresSafeArea())
-        .transition(.opacity)
-        .sensoryFeedback(.success, trigger: cancelled)
-        .accessibilityAddTraits(.isModal)
+    }
+}
+
+/// SafetySense's server can't be reached, so the phone's own Messages and Phone apps take over.
+/// Nothing is sent without a tap in those apps.
+struct ServerFallbackCard: View {
+    let note: String
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Card(padding: SSSpacing.sm, tint: SSColor.warn) {
+            VStack(alignment: .leading, spacing: SSSpacing.xs) {
+                Label(note, systemImage: "wifi.exclamationmark")
+                    .font(SSFont.callout).foregroundStyle(SSColor.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: SSSpacing.xs) {
+                    if let url = ContactFallback.textURL(to: model.contacts, from: model.profile, location: model.services.location.lastFix) {
+                        fallbackLink("Text your people", systemImage: "message.fill", url: url)
+                    }
+                    if let primary = model.contacts.first(where: \.isPrimary) ?? model.contacts.first,
+                       let url = PhoneLink.url(primary.phone) {
+                        fallbackLink("Call \(primary.firstName)", systemImage: "phone.fill", url: url)
+                    }
+                }
+            }
+        }
+    }
+
+    private func fallbackLink(_ title: String, systemImage: String, url: URL) -> some View {
+        Link(destination: url) {
+            Label(title, systemImage: systemImage)
+                .font(SSFont.callout.weight(.semibold))
+                .lineLimit(1).minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .foregroundStyle(SSColor.onFill)
+                .background(SSColor.warn, in: RoundedRectangle(cornerRadius: SSRadius.small, style: .continuous))
+        }
     }
 }
 

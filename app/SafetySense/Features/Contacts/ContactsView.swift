@@ -3,7 +3,6 @@ import SwiftUI
 /// Contacts tab (SPEC 9.10): add, remove and test the people SafetySense calls.
 struct ContactsView: View {
     @Environment(AppModel.self) private var model
-    @State private var showHowItWorks = false
 
     var body: some View {
         ScrollView {
@@ -26,21 +25,22 @@ struct ContactsView: View {
 
                 TrustedContactsEditor(context: .tab)
 
-                DisclosureGroup(isExpanded: $showHowItWorks) {
-                    VStack(alignment: .leading, spacing: SSSpacing.sm) {
-                        step("1", "Your first contact gets a phone call. Everyone gets a text with your live location.")
-                        step("2", "On the link they can tap \u{201C}I'm on my way\u{201D}, \u{201C}I called 911\u{201D} or \u{201C}Send help\u{201D}.")
-                        step("3", "With contacts first (the default), dispatch is asked to help if you don't cancel within 90 seconds or a contact taps \u{201C}Send help\u{201D}.")
-                        Text("A test message is one you send yourself from Messages, so they know what to expect. No alert is created.")
-                            .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                NavigationLink { ContactPreviewView() } label: {
+                    Card {
+                        HStack(spacing: SSSpacing.sm) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("What your contacts see").font(SSFont.headline)
+                                Text("See an example of the live link. Nothing is sent.")
+                                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold))
+                                .foregroundStyle(SSColor.inkMuted).accessibilityHidden(true)
+                        }
                     }
-                    .padding(.top, SSSpacing.sm)
-                } label: {
-                    Text("What your contacts see").font(SSFont.headline)
                 }
-                .tint(SSColor.inkMuted)
-                .padding(SSSpacing.md)
-                .background(SSColor.surface, in: RoundedRectangle(cornerRadius: SSRadius.card, style: .continuous))
+                .buttonStyle(.plain)
+                .foregroundStyle(SSColor.ink)
 
                 Text("SafetySense supplements 911. If you're in danger right now, call 911.")
                     .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
@@ -49,14 +49,6 @@ struct ContactsView: View {
         }
         .ssScreen()
         .toolbar(.hidden, for: .navigationBar)
-    }
-
-    private func step(_ n: String, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: SSSpacing.sm) {
-            Text(n).font(SSFont.mono(13, weight: .semibold)).foregroundStyle(SSColor.accent)
-                .frame(width: 22, height: 22).background(SSColor.accentSoft, in: Circle())
-            Text(text).font(SSFont.callout)
-        }
     }
 }
 

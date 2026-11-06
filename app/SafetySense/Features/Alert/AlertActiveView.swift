@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Alert active (SPEC 9.6, level 3): live map, contacts' responses polled from `alert/status`,
 /// dispatch status (always labelled "simulated" when it is), the evidence indicator and
-/// "I'm safe now".
+/// a fixed dock with "I'm safe now" and "Call 911".
 struct AlertActiveView: View {
     @Environment(AppModel.self) private var model
     @State private var camera: MapCameraPosition = .automatic
@@ -15,6 +15,8 @@ struct AlertActiveView: View {
     @State private var capturing = false
     @State private var showPIN = false
     @State private var newResponse = 0
+    @State private var confirmNoPINCancel = false
+    @State private var authFailed = 0
 
     private var alert: AlertRecord? { model.services.escalation.activeAlert ?? model.currentAlert }
     private var events: [AlertEvent] { AlertPresentation.merge(alert?.events ?? [], remoteEvents) }
@@ -24,29 +26,38 @@ struct AlertActiveView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: SSSpacing.md) {
                 header
+                if let note = model.alertConnectionNote { ServerFallbackCard(note: note) }
+                if let banner = model.banner { NoticeCard(text: banner, systemImage: "wifi.exclamationmark") }
                 map
-                EvidenceIndicator(isCapturing: capturing, since: alert?.startedAt ?? .now)
+                EvidenceIndicator(isCapturing: capturing)
                 dispatchCard
                 responsesCard
                 timelineCard
-                actions
+                if model.services.flavor == .demo { demoControls }
             }
             .padding(.top, SSSpacing.sm)
-            .padding(.bottom, SSSpacing.xl)
+            .padding(.bottom, SSSpacing.md)
         }
         .scrollIndicators(.hidden)
+        // Fixed, side by side, so neither needs a scroll in an emergency.
+        .safeAreaInset(edge: .bottom, spacing: 0) { safeDock }
         .ssScreen()
         .sensoryFeedback(.success, trigger: newResponse)
+        .sensoryFeedback(.error, trigger: authFailed)
         .task(id: alert?.id) { await run() }
         .sheet(isPresented: $showPIN) {
             PINEntrySheet(title: "I'm safe now",
                           message: "Enter your safety PIN. The monitoring center may still call to confirm you're okay.",
                           tint: SSColor.calm,
+                          // Safety and duress both land on Marked safe; the model handles it.
                           verify: { await model.cancelAlert(pin: $0) },
-                          onResult: { _ in
-                              // Same path for the safety and duress PINs.
-                              Task { await model.finishAfterAlert() }
-                          })
+                          onResult: { _ in })
+        }
+        .confirmationDialog("Cancel this alert?", isPresented: $confirmNoPINCancel, titleVisibility: .visible) {
+            Button("Cancel the alert", role: .destructive) { Task { await model.cancelAlertWithoutPIN() } }
+            Button("Keep the alert", role: .cancel) {}
+        } message: {
+            Text("This iPhone has no safety PIN, Face ID or passcode set.")
         }
     }
 
@@ -56,10 +67,13 @@ struct AlertActiveView: View {
         VStack(alignment: .leading, spacing: SSSpacing.xs) {
             HStack {
                 StatusPill(text: "Dispatch active", tint: SSColor.danger, pulsing: true)
-                Spacer()
-                if let started = alert?.startedAt {
-                    Text(started, style: .timer).font(SSFont.mono(13, weight: .semibold)).foregroundStyle(SSColor.inkMuted)
-                        .accessibilityLabel("Alert running")
+                if let mode = model.currentSession?.mode, mode != .everyday {
+                    TagChip(text: mode.displayName, isOn: false)
+                }
+                Spacer(minLength: SSSpacing.xs)
+                TimelineView(.everyMinute) { context in
+                    Text(MarkedSafeSummary.clock(context.date))
+                        .font(SSFont.mono(13, weight: .semibold)).foregroundStyle(SSColor.inkMuted)
                 }
             }
             Text("Help is on the way").font(SSFont.display)
@@ -140,41 +154,41 @@ struct AlertActiveView: View {
             }
             Card {
                 VStack(spacing: SSSpacing.xs) {
-                    let notified = alert?.notified ?? []
-                    if notified.isEmpty {
+                    let people = AlertPresentation.people(alert?.notified ?? [])
+                    if people.isEmpty {
                         Text("Reaching \(NameList.join(model.contacts.map(\.firstName)))…")
                             .font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    ForEach(notified, id: \.self) { c in NotifiedContactRow(contact: c, events: events) }
+                    ForEach(people) { person in NotifiedContactRow(person: person, events: events) }
                 }
             }
         }
     }
 
     private var timelineCard: some View {
-        VStack(alignment: .leading, spacing: SSSpacing.sm) {
+        let rows = Array(AlertPresentation.timeline(events, isTest: AlertPresentation.isTest(alert)).reversed())
+        return VStack(alignment: .leading, spacing: SSSpacing.sm) {
             SectionHeader("What's happening", subtitle: pollSubtitle)
             Card {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(events.reversed().enumerated()), id: \.element.id) { index, event in
-                        let (icon, tint) = AlertPresentation.icon(for: event)
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                         HStack(alignment: .top, spacing: SSSpacing.sm) {
                             VStack(spacing: 0) {
-                                Image(systemName: icon)
+                                Image(systemName: row.systemImage)
                                     .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(tint)
+                                    .foregroundStyle(row.tint)
                                     .frame(width: 28, height: 28)
-                                    .background(tint.opacity(0.16), in: Circle())
-                                if index < events.count - 1 {
+                                    .background(row.tint.opacity(0.16), in: Circle())
+                                if index < rows.count - 1 {
                                     Rectangle().fill(SSColor.line).frame(width: 2).frame(minHeight: 14)
                                 }
                             }
                             .accessibilityHidden(true)
-                            Text(eventText(event)).font(SSFont.body)
+                            Text(row.text).font(SSFont.body)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.top, 4)
-                            Text(event.at, format: .dateTime.hour().minute().second())
+                            Text(row.at, format: .dateTime.hour().minute().second())
                                 .font(SSFont.mono(12)).foregroundStyle(SSColor.inkMuted)
                                 .padding(.top, 6)
                         }
@@ -182,7 +196,7 @@ struct AlertActiveView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
-                .animation(.smooth, value: events.count)
+                .animation(.smooth, value: rows.count)
             }
         }
     }
@@ -193,37 +207,61 @@ struct AlertActiveView: View {
         return "Updated \(lastPoll.formatted(.dateTime.hour().minute().second()))"
     }
 
-    /// Every contact came back "dry_run": the server logged the alert but called and texted nobody.
-    private var isTestAlert: Bool {
-        let notified = alert?.notified ?? []
-        return !notified.isEmpty && notified.allSatisfy { $0.status == "dry_run" || $0.status == "test" }
-    }
-
-    private func eventText(_ event: AlertEvent) -> String {
-        switch event.action {
-        case "notified": isTestAlert ? "Test alert: your contacts were not contacted" : "Your contacts were called and texted"
-        case "call_placed": isTestAlert ? "Test call logged, nobody was called" : "Automated calls placed to your contacts"
-        case "text_sent": isTestAlert ? "Test text logged, nothing was sent" : "Texts sent with your live link"
-        case "alert_started": "Alert started"
-        case "dispatched", "escalated": "Professional dispatch started"
-        default: event.displayText
-        }
-    }
-
-    private var actions: some View {
-        VStack(spacing: SSSpacing.sm) {
-            PrimaryButton("I'm safe now", systemImage: "checkmark.shield", role: .calm) { showPIN = true }
+    private var safeDock: some View {
+        HStack(spacing: SSSpacing.xs) {
+            PrimaryButton("I'm safe now", systemImage: "checkmark", role: .calm) {
+                if model.store.hasSafetyPIN { showPIN = true } else { cancelWithoutPIN() }
+            }
             if let url = PhoneLink.url("911") {
                 Link(destination: url) {
-                    Label("Call 911", systemImage: "phone.fill")
+                    Text("Call 911")
                         .font(SSFont.headline)
                         .frame(maxWidth: .infinity, minHeight: 56)
-                        .foregroundStyle(SSColor.danger)
-                        .background(SSColor.dangerSoft, in: RoundedRectangle(cornerRadius: SSRadius.button, style: .continuous))
+                        .foregroundStyle(SSColor.onFill)
+                        .background(SSColor.danger, in: RoundedRectangle(cornerRadius: SSRadius.button, style: .continuous))
                 }
             }
         }
-        .padding(.top, SSSpacing.xs)
+        .padding(.top, SSSpacing.sm)
+        .padding(.bottom, SSSpacing.xs)
+        .background(alignment: .top) {
+            LinearGradient(stops: [.init(color: SSColor.background.opacity(0), location: 0),
+                                   .init(color: SSColor.background, location: 0.3)],
+                           startPoint: .top, endPoint: .bottom)
+                .padding(.top, -SSSpacing.lg)
+                .padding(.horizontal, -SSSpacing.gutter)
+                .ignoresSafeArea(edges: .bottom)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private func cancelWithoutPIN() {
+        Task {
+            switch await DeviceAuth.authenticateOwner(reason: "Cancel this alert") {
+            case .success: await model.cancelAlertWithoutPIN()
+            case .failed: authFailed += 1
+            case .unavailable: confirmNoPINCancel = true
+            }
+        }
+    }
+
+    private var demoControls: some View {
+        Card(tint: SSColor.warn) {
+            VStack(alignment: .leading, spacing: SSSpacing.sm) {
+                Text("Demo build · simulate a contact").ssEyebrow(SSColor.warn)
+                FlowRow(spacing: SSSpacing.xs) {
+                    Chip(title: "On the way", systemImage: "figure.walk", tint: SSColor.warn) { simulateResponse("on_my_way") }
+                    Chip(title: "Called 911", systemImage: "phone", tint: SSColor.warn) { simulateResponse("called_911") }
+                }
+            }
+        }
+    }
+
+    private func simulateResponse(_ action: String) {
+        guard let alert, let name = model.contacts.first?.firstName else { return }
+        withAnimation(.smooth) { remoteEvents.append(AlertEvent(who: name, action: action, at: .now)) }
+        newResponse += 1
+        model.noteResponses(alertID: alert.id, events: events)
     }
 
     // MARK: Live updates
@@ -259,6 +297,7 @@ struct AlertActiveView: View {
                after.contains(where: { ["on_my_way", "called_911"].contains($0.action) && !before.contains($0) }) {
                 newResponse += 1
             }
+            if let alert { model.noteResponses(alertID: alert.id, events: after) }
             withAnimation(.smooth) {
                 remoteEvents = AlertPresentation.merge(remoteEvents, incoming)
                 if let d = status.dispatch { remoteDispatch = d.model }

@@ -8,6 +8,8 @@ enum AppScreen: String, CaseIterable, Sendable {
     case checkIn = "checkin"
     case alertCountdown = "countdown"
     case alertActive = "alert"
+    case markedSafe = "markedsafe"
+    case contactPreview = "contactpreview"
     case support
     case vault
     case contacts
@@ -54,6 +56,9 @@ enum BuildFlags {
 
 /// Launch arguments (Debug builds only):
 /// - `-ssScreen <name>`: open straight to a screen with sample data (implies an isolated store).
+/// - `-ssGuardMode walk|night_out|date|ride`: the sample Guard's mode for `guard`, `checkin`,
+///   `countdown`, `alert` and `markedsafe`. `-ssPreDispatch` shows the pre-dispatch Marked safe.
+/// - `-ssNoPIN`: alert screens show the no-PIN fallback.
 /// - `-ssDemo 1`: use demo/mock services (no mic, no network, simulated dispatch).
 /// - `-ssSkipOnboarding 1`: mark onboarding done, seeding sample profile/contacts if empty and
 ///   safety PIN 2580 if none is set (QA only).

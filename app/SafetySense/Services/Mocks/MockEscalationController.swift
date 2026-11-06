@@ -10,6 +10,8 @@ final class MockEscalationController: EscalationControllerProtocol {
     private(set) var activeAlert: AlertRecord?
     private(set) var stepDeadline: Date?
     var nextCheckInAt: Date? { level == .guarding ? session?.nextCheckInAt : nil }
+    private(set) var checkInCause: CheckInCause?
+    var connectionNote: String? { nil }
 
     @ObservationIgnored var onChange: (@MainActor (EscalationLevel, AlertRecord?) -> Void)?
     /// Multiplies every timer (0.1 = 10x faster). Useful for demos and tests.
@@ -39,22 +41,31 @@ final class MockEscalationController: EscalationControllerProtocol {
         case .high:
             if level < .alert { raise(trigger: .riskEngine, reason: assessment.explanation) }
         case .elevated:
-            if level == .guarding { enterCheckIn() }
+            if level == .guarding {
+                let stopped = assessment.contributors.first?.kind == .unexpectedStop
+                enterCheckIn(cause: stopped ? .unexpectedStop : .noticed(assessment.explanation))
+            }
         case .calm:
-            break
+            if level == .guarding, session?.usesArrivalCheck == true,
+               assessment.contributors.contains(where: { $0.kind == .unexpectedStop }) {
+                enterCheckIn(cause: .unexpectedStop)
+            }
         }
     }
 
     func scheduledCheckInDue() {
-        if level == .guarding { enterCheckIn() }
+        if level == .guarding { enterCheckIn(cause: .scheduled) }
     }
 
     func respondToCheckIn(okay: Bool) {
         guard level == .checkIn else { return }
         if okay {
+            lineUpNextCheckIn()
             transition(to: .guarding, alert: nil)
         } else {
-            triggerManual(.manualSOS, reason: "Asked for help at a check-in")
+            let mode = session?.mode ?? .everyday
+            raise(trigger: .manualSOS, reason: "Asked for help at a check-in",
+                  startLevel: policies.startingLevel(for: .missedCheckIn, in: mode), policy: policies.policy(for: mode))
         }
     }
 
@@ -73,7 +84,10 @@ final class MockEscalationController: EscalationControllerProtocol {
 
     func cancel(with verification: PINVerification) async {
         guard let alert = activeAlert else {
-            if level == .checkIn, verification != .invalid { transition(to: .guarding, alert: nil) }
+            if level == .checkIn, verification != .invalid {
+                lineUpNextCheckIn()
+                transition(to: .guarding, alert: nil)
+            }
             return
         }
         switch verification {
@@ -111,7 +125,13 @@ final class MockEscalationController: EscalationControllerProtocol {
 
     // MARK: - Internals
 
-    private func enterCheckIn() {
+    private func lineUpNextCheckIn() {
+        guard let current = session, current.checkInInterval > 0 else { return }
+        session?.nextCheckInAt = current.nextCheckIn(after: .now, arrival: current.usesArrivalCheck ? current.nextCheckInAt : nil)
+    }
+
+    private func enterCheckIn(cause: CheckInCause) {
+        checkInCause = cause
         transition(to: .checkIn, alert: activeAlert)
         schedule(after: EscalationLevel.checkIn.autoEscalateAfter ?? 45) { [weak self] in
             guard let self, self.level == .checkIn else { return }
@@ -119,9 +139,10 @@ final class MockEscalationController: EscalationControllerProtocol {
         }
     }
 
-    private func raise(trigger: AlertTrigger, reason: String, startLevel: EscalationLevel = .alert) {
+    private func raise(trigger: AlertTrigger, reason: String, startLevel: EscalationLevel = .alert,
+                       policy: DispatchPolicy? = nil) {
         let mode = session?.mode ?? .everyday
-        let policy = policies.policy(for: trigger, in: mode)
+        let policy = policy ?? policies.policy(for: trigger, in: mode)
         let record = AlertRecord(sessionID: session?.serverSessionID, level: startLevel, trigger: trigger,
                                  reason: reason, policy: policy,
                                  status: startLevel == .dispatch ? .dispatched : .active,

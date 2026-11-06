@@ -65,9 +65,10 @@ struct IntegrationTests {
         let result = await rig.model.cancelAlert(pin: "2580")
         #expect(result == .valid)
         await rig.escalation.settle()
-        #expect(rig.model.overlay == .guardActive)
+        #expect(rig.model.overlay == .markedSafe)
+        #expect(rig.model.currentSession == nil)
         #expect(await rig.backend.cancels.first?.duress == false)
-        await rig.model.endGuard()
+        rig.model.leaveMarkedSafe(toSupport: false)
         #expect(rig.model.overlay == .none)
     }
 

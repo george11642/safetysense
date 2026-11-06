@@ -82,6 +82,14 @@ final class AudioGuard: AudioGuardService {
 
     // MARK: AudioGuardService
 
+    var microphonePermission: PermissionState {
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted: .granted
+        case .denied: .denied
+        default: .notAsked
+        }
+    }
+
     func requestPermission() async -> Bool {
         let mic = await AVAudioApplication.requestRecordPermission()
         _ = await SpeechKeywordListener.requestAuthorization()

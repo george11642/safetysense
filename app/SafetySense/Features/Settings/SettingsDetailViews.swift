@@ -143,6 +143,9 @@ struct PINSettingsView: View {
                 if hasDuress {
                     Button("Remove duress PIN", role: .destructive) { flow = .removeDuress }
                 }
+                if hasSafety {
+                    Button("Forgot your PIN?") { Task { await resetForgottenPINs() } }
+                }
             } footer: {
                 Text("PINs are saved only as salted hashes in your iPhone's Keychain. SafetySense can't show them to you, so pick ones you'll remember.")
             }
@@ -166,6 +169,30 @@ struct PINSettingsView: View {
     private func refresh() {
         hasSafety = model.store.hasSafetyPIN
         hasDuress = model.store.hasDuressPIN
+    }
+
+    /// Settings' row value: On, Not set, Safety only or Duress only.
+    static func summary(safety: Bool, duress: Bool) -> String {
+        switch (safety, duress) {
+        case (true, true): "On"
+        case (true, false): "Safety only"
+        case (false, true): "Duress only"
+        case (false, false): "Not set"
+        }
+    }
+
+    /// Face ID or the iPhone passcode clears both PINs, then asks for a new safety PIN. Settings
+    /// is out of reach during a session or alert, so this can't be used to stop one.
+    private func resetForgottenPINs() async {
+        switch await DeviceAuth.authenticateOwner(reason: "Reset your SafetySense PINs") {
+        case .success, .unavailable:
+            model.store.setSafetyPIN(nil)
+            model.store.setDuressPIN(nil)
+            refresh()
+            flow = .changeSafety
+        case .failed:
+            break
+        }
     }
 
     private func row(_ title: String, _ detail: String, icon: String, set: Bool, action: String) -> some View {

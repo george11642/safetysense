@@ -9,6 +9,7 @@ final class MockAudioGuardService: AudioGuardService {
     private(set) var resumeCount = 0
     var transcript = ""
 
+    var microphonePermission: PermissionState = .granted
     func requestPermission() async -> Bool { true }
     func start(mode: GuardMode, safeWord: String?) async throws { isRunning = true }
     func stop() { isRunning = false }
@@ -39,7 +40,7 @@ final class MockMotionGuardService: MotionGuardService {
 
 @MainActor
 final class MockLocationService: LocationService {
-    private(set) var authorization: LocationAuthorization = .always
+    var authorization: LocationAuthorization = .always
     private(set) var lastFix: LocationFix? = .unmCampus
     var onSignal: RiskSignalHandler?
     var onFix: (@MainActor (LocationFix) -> Void)?

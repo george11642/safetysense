@@ -1,10 +1,11 @@
 import SwiftUI
 
 /// Type scale. Display/titles use SF Pro Rounded semibold (the in-app stand-in for
-/// Familjen Grotesk); utility labels use SF Mono. All sizes scale with Dynamic Type.
+/// Familjen Grotesk); utility labels use SF Mono. All sizes scale with Dynamic Type. The fixed
+/// sizes below are scaled by hand, up to a cap, so timers and labels still fit their rings and pills.
 enum SSFont {
     static let hero = Font.system(.largeTitle, design: .rounded).weight(.bold)
-    static let display = Font.system(size: 34, weight: .semibold, design: .rounded)
+    static var display: Font { .system(size: scaled(34, upTo: 1.5), weight: .semibold, design: .rounded) }
     static let title = Font.system(.title2, design: .rounded).weight(.semibold)
     static let headline = Font.system(.headline, design: .rounded).weight(.semibold)
     static let body = Font.system(.body)
@@ -13,10 +14,15 @@ enum SSFont {
     /// Uppercase eyebrow labels ("GUARD ACTIVE").
     static let eyebrow = Font.system(.caption, design: .monospaced).weight(.semibold)
     /// Big numerals for timers.
-    static let timer = Font.system(size: 44, weight: .semibold, design: .rounded).monospacedDigit()
+    static var timer: Font { .system(size: scaled(44, upTo: 1.3), weight: .semibold, design: .rounded).monospacedDigit() }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .monospaced)
+        .system(size: scaled(size, upTo: 1.6), weight: weight, design: .monospaced)
+    }
+
+    /// `size` at the person's text size, at most `cap` times larger.
+    static func scaled(_ size: CGFloat, upTo cap: CGFloat) -> CGFloat {
+        min(UIFontMetrics.default.scaledValue(for: size), size * cap)
     }
 }
 

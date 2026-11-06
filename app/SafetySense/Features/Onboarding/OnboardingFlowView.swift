@@ -51,14 +51,14 @@ struct OnboardingFlowView: View {
 
             OnboardingProgressBar(step: step)
 
-            Button("Skip") { advance() }
+            Button("Skip") { skip() }
                 .font(SSFont.callout.weight(.semibold))
                 .foregroundStyle(SSColor.inkMuted)
                 .frame(minWidth: 44, minHeight: 44)
                 .opacity(step.isSkippable ? 1 : 0)
                 .disabled(!step.isSkippable)
                 .accessibilityHidden(!step.isSkippable)
-                .accessibilityHint("Skips \(step.title). You can set it up later in Settings.")
+                .accessibilityHint(step.skipTarget == nil ? "Finishes setup. You can do the rest later in Settings." : "Skips \(step.title).")
         }
     }
 
@@ -80,6 +80,10 @@ struct OnboardingFlowView: View {
     private func advance() {
         if step == .drill { finish(); return }
         go(to: step.next, forward: true)
+    }
+
+    private func skip() {
+        if let target = step.skipTarget { go(to: target, forward: true) } else { finish() }
     }
 
     private func go(to target: OnboardingStep?, forward: Bool) {

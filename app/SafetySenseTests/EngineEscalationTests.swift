@@ -110,19 +110,6 @@ struct EngineEscalationTests {
         #expect(h.controller.level == .alert)
     }
 
-    @Test func needHelpAtACheckInGoesStraightToDispatchByDefault() async {
-        let h = LadderHarness()
-        h.controller.handle(h.assessment(.elevated))
-        h.controller.respondToCheckIn(okay: false)
-        #expect(h.controller.level == .dispatch)
-        await h.controller.settle()
-        let creates = await h.backend.creates
-        #expect(creates.first?.level == 3)
-        #expect(creates.first?.trigger == "manual_sos")
-        #expect(creates.first?.dispatchPolicy == "dispatch_immediately")
-        #expect(await h.backend.escalations.count == 1)
-    }
-
     @Test func respondingWhenNoCheckInIsOpenDoesNothing() {
         let h = LadderHarness()
         h.controller.respondToCheckIn(okay: false)
@@ -197,6 +184,7 @@ struct EngineEscalationTests {
         await h.controller.settle()
         let id = try #require(h.controller.activeAlert?.id)
         await h.controller.cancel(with: .valid)
+        await h.controller.settle()
         #expect(h.controller.level == .guarding)
         #expect(h.controller.activeAlert == nil)
         #expect(h.controller.stepDeadline == nil)
@@ -214,12 +202,14 @@ struct EngineEscalationTests {
         valid.controller.handle(valid.assessment(.high))
         await valid.controller.settle()
         await valid.controller.cancel(with: .valid)
+        await valid.controller.settle()
 
         let duress = LadderHarness()
         duress.controller.handle(duress.assessment(.high))
         await duress.controller.settle()
         let id = try #require(duress.controller.activeAlert?.id)
         await duress.controller.cancel(with: .duress)
+        await duress.controller.settle()
 
         // On screen: identical.
         #expect(duress.controller.level == valid.controller.level)
@@ -253,6 +243,7 @@ struct EngineEscalationTests {
         let h = LadderHarness()
         h.controller.handle(h.assessment(.elevated))
         await h.controller.cancel(with: .valid)
+        await h.controller.settle()
         #expect(h.controller.level == .guarding)
         #expect(await h.backend.creates.isEmpty)
     }
@@ -261,6 +252,7 @@ struct EngineEscalationTests {
         let h = LadderHarness()
         h.controller.handle(h.assessment(.elevated))
         await h.controller.cancel(with: .duress)
+        await h.controller.settle()
         #expect(h.controller.level == .guarding)
         #expect(h.controller.activeAlert == nil)
         await h.controller.settle()

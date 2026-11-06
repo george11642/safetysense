@@ -103,7 +103,9 @@ struct SettingsView: View {
 
             Section {
                 NavigationLink { PINSettingsView() } label: {
-                    settingRow("Safety & duress PINs", value: model.store.hasSafetyPIN ? "Set" : "Not set", icon: "lock")
+                    settingRow("Safety & duress PINs",
+                               value: PINSettingsView.summary(safety: model.store.hasSafetyPIN, duress: model.store.hasDuressPIN),
+                               icon: "lock")
                 }
                 Toggle(isOn: $discreetIcon) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -307,6 +309,9 @@ private struct ErasePINSheet: View {
                 }
                 .modifier(ShakeEffect(shakes: CGFloat(shake)))
                 .animation(.default, value: shake)
+                Button("Forgot your PIN?") { Task { await confirmWithDevice() } }
+                    .font(SSFont.callout.weight(.semibold))
+                    .frame(minHeight: 44)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, SSSpacing.gutter)
@@ -315,6 +320,18 @@ private struct ErasePINSheet: View {
             .foregroundStyle(SSColor.ink)
             .sensoryFeedback(.error, trigger: shake)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+
+    /// Someone who forgot their PIN can still wipe their own phone, after proving it's theirs.
+    private func confirmWithDevice() async {
+        switch await DeviceAuth.authenticateOwner(reason: "Delete everything") {
+        case .success, .unavailable:
+            dismiss()
+            onConfirmed()
+        case .failed:
+            error = "That didn't work. Try again."
+            shake += 1
         }
     }
 }

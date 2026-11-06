@@ -16,14 +16,26 @@ enum SampleData {
                                                datingApp: "Hinge", venueName: "Coffee shop on Central",
                                                venueAddress: "Central Ave SE, Albuquerque", notes: "First date")
 
-    static let rideDetails = RideDetails(service: .uber, driverName: "Pat", plate: "NM ABC-123",
+    static let rideDetails = RideDetails(service: .uber, driverName: "Daniel", plate: "BXR 482",
                                          carDescription: "Silver Camry", destinationName: "Home")
 
     static func session(mode: GuardMode = .nightOut, startedMinutesAgo: Double = 38) -> GuardSession {
-        GuardSession(serverSessionID: "demo-session", mode: mode,
-                     startedAt: .now.addingTimeInterval(-startedMinutesAgo * 60),
-                     sealedDate: mode == .date ? dateDetails : nil,
-                     ride: mode == .ride ? rideDetails : nil)
+        var session = GuardSession(serverSessionID: "demo-session", mode: mode,
+                                   startedAt: .now.addingTimeInterval(-startedMinutesAgo * 60),
+                                   sealedDate: mode == .date ? dateDetails : nil,
+                                   ride: mode == .ride ? rideDetails : nil)
+        if mode == .walk {
+            session.followerID = contacts[0].id
+            session.followerName = contacts[0].firstName
+            session.followerNotified = true
+        }
+        return session
+    }
+
+    static func markedSafe(reachedDispatch: Bool, mode: GuardMode = .nightOut) -> MarkedSafeSummary {
+        MarkedSafeSummary(alertID: evidence[0].alertID, mode: mode, startedAt: .now.addingTimeInterval(-1200),
+                          endedAt: .now, reachedDispatch: reachedDispatch,
+                          contactFirstNames: contacts.map(\.firstName))
     }
 
     static func alert(level: EscalationLevel = .alert, secondsAgo: Double = 20) -> AlertRecord {

@@ -14,6 +14,12 @@ enum ContactMessage {
         """
     }
 
+    /// Walk Home: lets the person following along know what's happening.
+    static func headsUp(destination: String, eta: Date) -> String {
+        let place = destination.isEmpty ? "home" : "to \(destination)"
+        return "Heading \(place), should be there by \(eta.formatted(date: .omitted, time: .shortened)). SafetySense will let you know if I don't make it."
+    }
+
     /// A practice message so the contact knows what an alert looks like. Clearly marked TEST.
     static func test(to contact: TrustedContact, from profile: Profile?) -> String {
         let me = profile.map(\.firstName).flatMap { $0.isEmpty ? nil : $0 } ?? "your friend"
@@ -63,7 +69,7 @@ struct MessageComposer: UIViewControllerRepresentable {
 
 /// What to send and to whom; drives `.contactMessageSheet`.
 struct ContactMessageDraft: Identifiable {
-    enum Kind { case intro, test }
+    enum Kind { case intro, test, headsUp }
     let id = UUID()
     let contact: TrustedContact
     let kind: Kind
@@ -95,11 +101,19 @@ private struct MessageFallbackSheet: View {
     var onShared: () -> Void
     @Environment(\.dismiss) private var dismiss
 
+    private var title: String {
+        switch draft.kind {
+        case .intro: "Intro text"
+        case .test: "Test message"
+        case .headsUp: "Heads-up"
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: SSSpacing.md) {
-                    Text(draft.kind == .test ? "Test message" : "Intro text").ssEyebrow(SSColor.accent)
+                    Text(title).ssEyebrow(SSColor.accent)
                     Text("To \(draft.contact.name) · \(PhoneNumber.display(draft.contact.phone))")
                         .font(SSFont.headline)
                     Card {

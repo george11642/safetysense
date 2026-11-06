@@ -11,9 +11,10 @@ struct RideModeSetupView: View {
     @State private var isStarting = false
     @State private var started = 0
 
-    private var canStart: Bool {
-        !ride.plate.trimmingCharacters(in: .whitespaces).isEmpty
-            && !ride.destinationName.trimmingCharacters(in: .whitespaces).isEmpty
+    private var canStart: Bool { !ride.plate.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    private var arrivalTime: String {
+        Date.now.addingTimeInterval(Double(minutes) * 60).formatted(date: .omitted, time: .shortened)
     }
 
     var body: some View {
@@ -40,15 +41,13 @@ struct RideModeSetupView: View {
                                prompt: "ABC-1234", systemImage: "car.rear", capitalization: .characters, monospaced: true)
                     SetupField(label: "Driver", text: $ride.driverName, prompt: "Name in the app", systemImage: "person")
                     SetupField(label: "Car (optional)", text: $car, prompt: "Silver Camry", systemImage: "car")
-                    DestinationField(label: "Going to", text: $ride.destinationName, fix: $destinationFix, prompt: "Home, a friend's place…",
+                    DestinationField(label: "Going to (optional)", text: $ride.destinationName, fix: $destinationFix, prompt: "Home, a friend's place…",
                                      isSearchEnabled: model.services.flavor == .live)
                 }
 
                 VStack(alignment: .leading, spacing: SSSpacing.sm) {
                     Text("Trip length").ssEyebrow()
-                    MinuteChips(minutes: $minutes, options: [15, 20, 30, 45, 60])
-                    Text("Arrival check at \((Date.now.addingTimeInterval(Double(minutes) * 60)).formatted(date: .omitted, time: .shortened)).")
-                        .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                    MinuteChips(minutes: $minutes, options: [15, 20, 30, 35, 45, 60])
                 }
 
                 SealedExplainer(title: "Shared only if you need help", points: [
@@ -64,10 +63,10 @@ struct RideModeSetupView: View {
         .pinnedFooter {
             PrimaryButton("Start Ride guard", systemImage: "car.fill", isLoading: isStarting) { start() }
                 .disabled(!canStart)
-            if !canStart {
-                Text("Add the plate and where you're going to start.")
-                    .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
-            }
+            Text(canStart ? "Arrival check at \(arrivalTime). \(NameList.join(model.contacts.map(\.firstName))) \(model.contacts.count == 1 ? "gets" : "get") the plate only if an alert fires."
+                 : "Add the plate to start.")
+                .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                .multilineTextAlignment(.center)
         }
         .ssScreen()
         .navigationBarTitleDisplayMode(.inline)
@@ -107,8 +106,7 @@ struct RideModeSetupView: View {
         details.plate = details.plate.trimmingCharacters(in: .whitespaces)
         details.carDescription = car.isEmpty ? nil : car
         details.expectedArrival = Date.now.addingTimeInterval(Double(minutes) * 60)
-        // Arrival check: give a few minutes' grace past the expected arrival.
-        let checkAfter = Double(minutes + 3) * 60
+        let checkAfter = Double(minutes) * 60
         let picked = destinationFix
         let place = details.destinationName.trimmingCharacters(in: .whitespaces)
         let canSearch = model.services.flavor == .live

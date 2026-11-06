@@ -225,8 +225,14 @@ struct VaultView: View {
     }
 
     private func alertTitle(_ clips: [EvidenceClip]) -> String {
-        guard let first = clips.first?.startedAt else { return "Alert" }
-        return "Alert · " + first.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        clips.first.map { Self.alertTitle(startedAt: $0.startedAt) } ?? "Alert"
+    }
+
+    /// `Alert · Nov 4 at 2:11 PM`, or `Alert · today at 2:11 PM` the same day.
+    static func alertTitle(startedAt: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+        let time = startedAt.formatted(date: .omitted, time: .shortened)
+        if calendar.isDate(startedAt, inSameDayAs: now) { return "Alert · today at \(time)" }
+        return "Alert · \(startedAt.formatted(.dateTime.month(.abbreviated).day())) at \(time)"
     }
 
     private func summary(_ clips: [EvidenceClip]) -> String {

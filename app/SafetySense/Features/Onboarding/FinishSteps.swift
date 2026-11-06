@@ -24,9 +24,10 @@ struct PINStepView: View {
     }
 
     private var explainPage: some View {
-        OnboardingPage(eyebrow: "Step 7", title: "Two PINs",
+        OnboardingPage(eyebrow: OnboardingStep.pins.label, title: "Two PINs",
                        subtitle: "Your safety PIN cancels an alert. Your duress PIN looks exactly like cancelling, but quietly sends help anyway, in case someone makes you cancel.") {
-            PINExplainerAnimation()
+            PINSummaryBoxes(hasSafety: model.store.hasSafetyPIN, hasDuress: model.store.hasDuressPIN,
+                            onSafety: { phase = .safety }, onDuress: { phase = .duress })
             Card {
                 VStack(alignment: .leading, spacing: SSSpacing.xs) {
                     Label("Keep them different and easy for you to remember.", systemImage: "brain.head.profile")
@@ -69,7 +70,7 @@ struct PINStepView: View {
 
     private var donePage: some View {
         let hasDuress = model.store.hasDuressPIN
-        return OnboardingPage(eyebrow: "Step 7", title: "PINs set") {
+        return OnboardingPage(eyebrow: OnboardingStep.pins.label, title: "PINs set") {
             SetupRow(systemImage: "lock.fill", title: "Safety PIN", detail: "Cancels an alert.", done: true) { EmptyView() }
             SetupRow(systemImage: "lock.trianglebadge.exclamationmark", title: "Duress PIN",
                      detail: hasDuress ? "Looks like a cancel. Help still comes." : "Not set. You can add one in Settings.",
@@ -106,7 +107,7 @@ struct ResponderStepView: View {
     var next: () -> Void
 
     var body: some View {
-        OnboardingPage(eyebrow: "Step 8 · Optional", title: "Help responders find you",
+        OnboardingPage(eyebrow: "\(OnboardingStep.responder.label) · Optional", title: "Help responders find you",
                        subtitle: "If an alert reaches professional dispatch, this helps them recognize you and care for you. Fill in as much or as little as you like.") {
             ResponderProfileForm()
         } footer: {
@@ -121,7 +122,7 @@ struct DrillStepView: View {
     @Environment(AppModel.self) private var model
     var finish: () -> Void
 
-    enum Phase: Equatable { case ready, running, result, finished }
+    enum Phase: Equatable { case ready, running, result }
     @State private var phase: Phase = .ready
     @State private var record: AlertRecord?
     @State private var events: [AlertEvent] = []
@@ -130,7 +131,7 @@ struct DrillStepView: View {
     var body: some View {
         switch phase {
         case .ready, .running:
-            OnboardingPage(eyebrow: "Step 9", title: "Try a practice drill",
+            OnboardingPage(eyebrow: OnboardingStep.drill.label, title: "Try a practice drill",
                            subtitle: "We'll send a TEST alert through SafetySense's server, exactly like a real one, except nobody is called and dispatch is never involved.") {
                 DrillDiagram(running: phase == .running)
                 Card {
@@ -147,27 +148,25 @@ struct DrillStepView: View {
                               isLoading: phase == .running) {
                     Task { await runDrill() }
                 }
-                PrimaryButton("Skip for now", role: .quiet) { phase = .finished }
+                PrimaryButton("Skip for now", role: .quiet, action: finish)
                     .disabled(phase == .running)
             }
             .transition(.opacity)
         case .result:
-            OnboardingPage(eyebrow: "Drill complete", title: failed ? "We couldn't reach the server" : "It works",
-                           subtitle: failed ? "Your setup is saved on your phone. You can run the drill again from Settings once you're online."
-                                            : "Here's what happened on the server. In a real alert, these people would be called and texted.") {
+            OnboardingPage(eyebrow: "Practice drill · Test only", title: failed ? "We couldn't reach the server" : "Test alert went through",
+                           subtitle: failed ? "Your setup is saved on your phone. You can run the drill again from Home once you're online."
+                                            : "Your phone reached SafetySense's server and came back, the same path a real alert takes.") {
                 if let record, !failed { DrillResultCard(record: record, events: events) }
             } footer: {
-                PrimaryButton("Finish", systemImage: "arrow.right") {
+                PrimaryButton("Go to Home", systemImage: "house") {
                     endDrillOnServer()
-                    phase = .finished
+                    finish()
                 }
                 if failed {
                     PrimaryButton("Try again", role: .secondary) { Task { await runDrill() } }
                 }
             }
             .transition(.opacity)
-        case .finished:
-            YoureSetView(finish: finish).transition(.scale(scale: 0.96).combined(with: .opacity))
         }
     }
 
@@ -274,13 +273,13 @@ private struct DrillResultCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: SSSpacing.md) {
             Card(tint: SSColor.calm) {
-                HStack(spacing: SSSpacing.sm) {
-                    Image(systemName: "checkmark.circle.fill").font(.title).foregroundStyle(SSColor.calm)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("TEST alert received").font(SSFont.headline)
-                        Text("Server reference \(record.serverAlertID?.prefix(8) ?? "")").font(SSFont.mono(12)).foregroundStyle(SSColor.inkMuted)
-                    }
+                VStack(alignment: .leading, spacing: SSSpacing.xs) {
+                    Label("Phone to server: delivered", systemImage: "checkmark")
+                    Label("Marked TEST from start to finish", systemImage: "checkmark")
+                    Label("No calls, texts or dispatch", systemImage: "checkmark")
                 }
+                .font(SSFont.callout)
+                .labelStyle(TipLabelStyle(tint: SSColor.calm))
             }
             if !record.notified.isEmpty {
                 SectionHeader("Would be notified")
@@ -324,44 +323,48 @@ private struct DrillResultCard: View {
     }
 }
 
-/// "You're set." finale.
-private struct YoureSetView: View {
-    @Environment(AppModel.self) private var model
-    var finish: () -> Void
-    @State private var appeared = false
+/// Side-by-side boxes: what each PIN does, and whether it's set. Tapping one opens its pad.
+private struct PINSummaryBoxes: View {
+    let hasSafety: Bool
+    let hasDuress: Bool
+    var onSafety: () -> Void
+    var onDuress: () -> Void
 
     var body: some View {
-        VStack(spacing: SSSpacing.lg) {
-            Spacer()
-            ShieldHero(size: 200, celebrating: appeared)
-            VStack(spacing: SSSpacing.sm) {
-                Text("You're set.").font(SSFont.hero).accessibilityAddTraits(.isHeader)
-                Text(summary)
-                    .font(SSFont.callout).foregroundStyle(SSColor.inkMuted).multilineTextAlignment(.center)
-            }
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 12)
-            Spacer()
-            PrimaryButton("Go to SafetySense", systemImage: "shield.lefthalf.filled", action: finish)
-            Text("SafetySense supplements 911. If you're in danger right now, call 911.")
-                .font(SSFont.caption).foregroundStyle(SSColor.inkMuted).multilineTextAlignment(.center)
-                .padding(.bottom, SSSpacing.sm)
+        HStack(alignment: .top, spacing: SSSpacing.sm) {
+            box("Safety PIN", isSet: hasSafety, tint: SSColor.calm, outcome: "Everything stops", icon: "moon.zzz", action: onSafety)
+            box("Duress PIN", isSet: hasDuress, tint: SSColor.accent, outcome: "Help still comes", icon: "antenna.radiowaves.left.and.right", action: onDuress)
+                .disabled(!hasSafety)
         }
-        .padding(.horizontal, SSSpacing.gutter)
-        .frame(maxWidth: .infinity)
-        .sensoryFeedback(.success, trigger: appeared)
-        .onAppear { withAnimation(.smooth(duration: 0.8).delay(0.2)) { appeared = true } }
     }
 
-    private var summary: String {
-        let names = model.contacts.map(\.firstName)
-        let who = switch names.count {
-        case 0: "your contacts"
-        case 1: names[0]
-        case 2: "\(names[0]) and \(names[1])"
-        default: "\(names.dropLast().joined(separator: ", ")) and \(names.last!)"
+    private func box(_ title: String, isSet: Bool, tint: Color, outcome: String, icon: String,
+                     action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: SSSpacing.xs) {
+                Text(title).ssEyebrow(tint)
+                VStack(spacing: SSSpacing.xs) {
+                    HStack(spacing: 8) {
+                        ForEach(0..<4, id: \.self) { _ in
+                            Circle().fill(isSet ? tint : .clear)
+                                .overlay(Circle().stroke(isSet ? tint : SSColor.inkMuted, lineWidth: 1.2))
+                                .frame(width: 11, height: 11)
+                        }
+                    }
+                    Text(isSet ? "PIN set" : "Enter PIN").font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
+                }
+                .frame(maxWidth: .infinity, minHeight: 104)
+                .background(SSColor.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(tint.opacity(0.5)))
+                Label(outcome, systemImage: icon)
+                    .font(SSFont.caption.weight(.semibold))
+                    .foregroundStyle(SSColor.inkMuted)
+            }
         }
-        return "Start a Guard session when you head out. If something's wrong and you can't reach your phone, \(who) will hear from SafetySense."
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(isSet ? "set" : "not set"). \(outcome).")
+        .accessibilityAddTraits(.isButton)
     }
 }
 

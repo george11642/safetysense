@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Guard active (SPEC 9.3): calm status with elapsed time, next check-in, what's on,
-/// a live explainable risk meter and an End session control behind Face ID / PIN.
+/// a live explainable risk meter (or the sealed card on Date and Ride) and an End control
+/// behind Face ID / PIN, all worded for the mode.
 struct GuardActiveView: View {
     @Environment(AppModel.self) private var model
     @State private var assessment: RiskAssessment = .calm
@@ -9,21 +10,30 @@ struct GuardActiveView: View {
     @State private var confirmEnd = false
     @State private var isEnding = false
     @State private var authFailed = 0
-    @State private var biometry = "Face ID"
     @State private var showFakeCall = false
+    @State private var showSealed = false
+    @State private var headsUp: ContactMessageDraft?
+    @State private var heartbeatFailing = false
 
     private var session: GuardSession? { model.currentSession }
+    /// Night Out shows the sensor cells; Date, Walk and Ride use the smaller chips.
+    private var usesSensorCells: Bool { session?.mode == .nightOut || session?.mode == .everyday }
+    /// Date and Ride show their sealed card where the Risk card goes.
+    private var hasSealedCard: Bool { session?.sealedDate != nil || session?.ride != nil }
 
     var body: some View {
         ScrollView {
             VStack(spacing: SSSpacing.lg) {
                 topBar
+                if let banner = model.banner { NoticeCard(text: banner, systemImage: "wifi.exclamationmark") }
+                PermissionNotices(issues: model.sessionPermissionIssues)
+                if !model.store.hasSafetyPIN { noPINNotice }
                 elapsedRing
                 if model.hasArrived { arrivalCard }
                 nextCheckInCard
-                sensors
-                Card { RiskMeterView(assessment: assessment) }
-                if let sealed = sealedSummary { sealedCard(sealed) }
+                if usesSensorCells { sensors } else { sensorChips }
+                if hasSealedCard { sealedCard } else { Card { RiskMeterView(assessment: assessment) } }
+                if session?.followerName != nil { followerCard }
                 contactsCard
                 FakeCallEntryRow { showFakeCall = true }
                 if model.services.flavor == .demo { demoControls }
@@ -36,21 +46,31 @@ struct GuardActiveView: View {
         .ssScreen()
         .sensoryFeedback(.error, trigger: authFailed)
         .task { await pollRisk() }
-        .onAppear { biometry = DeviceAuth.biometryName }
+        .onAppear(perform: presentHeadsUpIfAsked)
+        .onChange(of: model.wantsHeadsUp) { _, _ in presentHeadsUpIfAsked() }
         .sheet(isPresented: $showPIN) {
-            PINEntrySheet(title: "End session", message: "Enter your safety PIN to stop guarding.",
+            PINEntrySheet(title: "End Guard", message: "Enter your safety PIN to stop guarding.",
                           verify: { model.store.verifyPIN($0) },
                           onResult: { result in finishEnd(duress: result == .duress) })
         }
         .sheet(isPresented: $showFakeCall) {
             NavigationStack { FakeCallSetupView() }.presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showSealed) {
+            if let session { SealedDetailsSheet(session: session, contactNames: model.contacts.map(\.firstName)) }
+        }
+        .contactMessageSheet($headsUp) { _ in model.currentSession?.followerNotified = true }
         .confirmationDialog("End this Guard session?", isPresented: $confirmEnd, titleVisibility: .visible) {
-            Button("End session", role: .destructive) { finishEnd(duress: false) }
+            Button("End Guard", role: .destructive) { finishEnd(duress: false) }
             Button("Keep guarding", role: .cancel) {}
         } message: {
             Text("Set a safety PIN in Settings so only you can end a session.")
         }
+    }
+
+    private var noPINNotice: some View {
+        NoticeCard(text: "No safety PIN yet. Face ID or your passcode will cancel an alert instead.",
+                   systemImage: "lock.open")
     }
 
     // MARK: Header
@@ -95,13 +115,14 @@ struct GuardActiveView: View {
     }
 
     private var nextCheckInCard: some View {
-        Card {
+        let labels = GuardCopy.nextCheckInLabels(session?.mode)
+        return Card {
             VStack(spacing: SSSpacing.xs) {
                 if let next = session?.nextCheckInAt {
-                    InfoRow(title: session?.usesArrivalCheck == true ? "Arrival check" : "Next check-in", systemImage: "clock") {
+                    InfoRow(title: labels.title, systemImage: "clock") {
                         Text(next, format: .dateTime.hour().minute())
                     }
-                    InfoRow(title: session?.usesArrivalCheck == true ? "In" : "Time left", systemImage: "hourglass") {
+                    InfoRow(title: labels.remaining, systemImage: "hourglass") {
                         Text(next, style: .relative).foregroundStyle(SSColor.inkMuted)
                     }
                 } else {
@@ -109,7 +130,7 @@ struct GuardActiveView: View {
                         Text("Only if something seems wrong").foregroundStyle(SSColor.inkMuted)
                     }
                 }
-                Text(EscalationLevel.guarding.statusLine)
+                Text(GuardCopy.quietLine(session?.mode))
                     .font(SSFont.caption).foregroundStyle(SSColor.inkMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -126,53 +147,123 @@ struct GuardActiveView: View {
         }
     }
 
-    /// What the Mic cell says, from what the microphone is really doing.
-    private var micState: String {
+    /// What the microphone is really doing, from the audio guard and iOS.
+    private var micState: (text: String, isOn: Bool, tint: Color) {
+        guard session?.listening == true else { return ("Off", false, SSColor.accent) }
+        if model.permissions.microphone == .denied { return ("No access", false, SSColor.warn) }
         switch model.listening {
-        case .interrupted: "Paused"
-        case .paused: "Stopped"
-        default: "On-device"
+        case .interrupted: return ("Paused", true, SSColor.warn)
+        case .paused: return ("Stopped", true, SSColor.warn)
+        case .listening, nil: return ("On-device", true, SSColor.accent)
         }
+    }
+
+    private var locationOn: Bool { model.permissions.location != .denied }
+    private var motionOn: Bool { session?.mode.usesMotion == true }
+    private var linked: Bool { session?.serverSessionID != nil && !heartbeatFailing }
+    private var heartbeatState: String {
+        guard session?.serverSessionID != nil else { return "Offline" }
+        return heartbeatFailing ? "Retrying" : "Linked"
     }
 
     private var sensors: some View {
-        let listening = session?.listening == true
-        let micWorking = model.listening == nil || model.listening == .listening
-        let motion = session?.mode.usesMotion == true
-        let linked = session?.serverSessionID != nil
+        let mic = micState
         return Card(padding: SSSpacing.sm) {
             HStack(spacing: 0) {
-                SensorCell(title: "Mic", state: listening ? micState : "Off",
-                           systemImage: listening && micWorking ? "mic.fill" : "mic.slash", isOn: listening,
-                           tint: micWorking ? SSColor.accent : SSColor.warn)
-                SensorCell(title: "Location", state: "On", systemImage: "location.fill", isOn: true)
-                SensorCell(title: "Motion", state: motion ? "On" : "Off", systemImage: "figure.walk.motion", isOn: motion)
-                SensorCell(title: "Server", state: linked ? "Linked" : "Offline", systemImage: "waveform.path.ecg", isOn: linked)
+                SensorCell(title: "Mic", state: mic.text,
+                           systemImage: mic.isOn && mic.tint == SSColor.accent ? "mic.fill" : "mic.slash",
+                           isOn: mic.isOn, tint: mic.tint)
+                SensorCell(title: "Location", state: locationOn ? "On" : "No access",
+                           systemImage: locationOn ? "location.fill" : "location.slash", isOn: locationOn,
+                           tint: locationOn ? SSColor.calm : SSColor.warn)
+                SensorCell(title: "Motion", state: motionOn ? "On" : "Off", systemImage: "figure.walk.motion", isOn: motionOn)
+                SensorCell(title: "Server", state: heartbeatState, systemImage: "waveform.path.ecg", isOn: linked)
             }
         }
     }
 
-    private var sealedSummary: (icon: String, title: String, detail: String)? {
-        if let d = session?.sealedDate {
-            return ("lock.fill", "Date details sealed", "\(d.matchName) at \(d.venueName). Opened for your contacts only if an alert fires.")
+    private var sensorChips: some View {
+        let mic = micState
+        return FlowRow(spacing: SSSpacing.xs) {
+            TagChip(text: "Mic · \(mic.text)", systemImage: mic.isOn ? "mic.fill" : "mic.slash", isOn: mic.isOn, tint: mic.tint)
+            TagChip(text: locationOn ? "Location" : "Location · no access",
+                    systemImage: locationOn ? "location.fill" : "location.slash", isOn: true,
+                    tint: locationOn ? SSColor.calm : SSColor.warn)
+            TagChip(text: "Motion", systemImage: "figure.walk.motion", isOn: motionOn)
+            TagChip(text: linked ? "Heartbeat" : "Heartbeat · \(heartbeatState)", systemImage: "waveform.path.ecg", isOn: linked)
         }
-        if let r = session?.ride {
-            return ("lock.fill", "Ride logged", "\(r.service.displayName) · \(r.plate). Shared only if an alert fires.")
-        }
-        return nil
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func sealedCard(_ s: (icon: String, title: String, detail: String)) -> some View {
-        Card(tint: SSColor.accent) {
-            HStack(alignment: .top, spacing: SSSpacing.sm) {
-                Image(systemName: s.icon).foregroundStyle(SSColor.accent).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(s.title).font(SSFont.headline)
-                    Text(s.detail).font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
+    @ViewBuilder
+    private var sealedCard: some View {
+        Button { showSealed = true } label: {
+            if let ride = session?.ride {
+                Card {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Ride · \(ride.service.displayName)").ssEyebrow()
+                        Text(GuardCopy.rideTitle(ride)).font(SSFont.headline)
+                        Text(GuardCopy.rideDetail(ride)).font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.leading)
+                }
+            } else if let date = session?.sealedDate {
+                Card(tint: SSColor.accent) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Date details sealed", systemImage: "lock.fill").font(SSFont.headline)
+                        Text(GuardCopy.dateDetail(date)).font(SSFont.callout).foregroundStyle(SSColor.inkMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.leading)
                 }
             }
-            .accessibilityElement(children: .combine)
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(SSColor.ink)
+        .accessibilityHint("Shows who can read these details")
+    }
+
+    /// Only says someone's following once the heads-up text went out: nobody gets a live view
+    /// before an alert, so the screen mustn't suggest more than that.
+    @ViewBuilder
+    private var followerCard: some View {
+        if let name = session?.followerName {
+            if session?.followerNotified == true {
+                Card {
+                    Label("\(name) is following along", systemImage: "figure.walk")
+                        .font(SSFont.headline).foregroundStyle(SSColor.calm)
+                }
+            } else {
+                Button(action: draftHeadsUp) {
+                    Card {
+                        HStack(spacing: SSSpacing.sm) {
+                            Label("Text \(name) a heads-up", systemImage: "message").font(SSFont.headline)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(SSColor.inkMuted)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(SSColor.ink)
+            }
+        }
+    }
+
+    private func presentHeadsUpIfAsked() {
+        guard model.wantsHeadsUp else { return }
+        model.wantsHeadsUp = false
+        draftHeadsUp()
+    }
+
+    private func draftHeadsUp() {
+        guard let session, let contact = model.contacts.first(where: { $0.id == session.followerID }) else { return }
+        headsUp = ContactMessageDraft(contact: contact, kind: .headsUp,
+                                      body: ContactMessage.headsUp(destination: session.destinationName ?? "",
+                                                                   eta: session.nextCheckInAt ?? .now))
     }
 
     private var contactsCard: some View {
@@ -231,19 +322,10 @@ struct GuardActiveView: View {
             HoldToSOSButton(title: "Hold if you need help") {
                 model.triggerSOS(.manualSOS, reason: "SOS held during \(session?.mode.displayName ?? "Guard")")
             }
-            switch session?.mode {
-            case .walk:
-                PrimaryButton("I made it · End Guard", systemImage: "checkmark", role: .calm, isLoading: isEnding) {
-                    Task { await requestEnd() }
-                }
-            case .ride:
-                PrimaryButton("I've arrived · End Guard", systemImage: "checkmark", role: .calm, isLoading: isEnding) {
-                    Task { await requestEnd() }
-                }
-            default:
-                PrimaryButton("End session · \(biometry)", systemImage: biometry == "PIN" ? "lock" : "faceid", role: .secondary, isLoading: isEnding) {
-                    Task { await requestEnd() }
-                }
+            let arrives = session?.usesArrivalCheck == true
+            PrimaryButton(GuardCopy.endTitle(session?.mode), systemImage: arrives ? "checkmark" : nil,
+                          role: arrives ? .calm : .secondary, isLoading: isEnding) {
+                Task { await requestEnd() }
             }
         }
     }
@@ -280,6 +362,8 @@ struct GuardActiveView: View {
                 || next.contributors.map(\.id) != assessment.contributors.map(\.id) {
                 withAnimation(.smooth) { assessment = next }
             }
+            let failing = model.services.heartbeat.isFailing
+            if failing != heartbeatFailing { heartbeatFailing = failing }
             try? await Task.sleep(for: .seconds(2))
         }
     }
@@ -289,6 +373,11 @@ struct GuardActiveView: View {
 #Preview("Guard · date") {
     let model = AppModel.preview(screen: .guardActive)
     model.currentSession = SampleData.session(mode: .date, startedMinutesAgo: 12)
+    return GuardActiveView().environment(model)
+}
+#Preview("Guard · ride") {
+    let model = AppModel.preview(screen: .guardActive)
+    model.currentSession = SampleData.session(mode: .ride, startedMinutesAgo: 12)
     return GuardActiveView().environment(model)
 }
 

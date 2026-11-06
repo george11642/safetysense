@@ -22,6 +22,13 @@ enum OnboardingStep: Int, CaseIterable, Identifiable, Sendable {
 
     var isSkippable: Bool { self != .contacts && self != .welcome }
 
+    /// `Step 4 of 9`, matching the progress bar.
+    var label: String { "Step \(rawValue + 1) of \(Self.allCases.count)" }
+
+    /// Skip before Trusted contacts goes to that step (choosing who to call is the one required
+    /// step); Skip after it goes to Home. Home warns about whatever was left out.
+    var skipTarget: OnboardingStep? { rawValue < OnboardingStep.contacts.rawValue ? .contacts : nil }
+
     var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
     var previous: OnboardingStep? { OnboardingStep(rawValue: rawValue - 1) }
 
@@ -98,7 +105,7 @@ struct OnboardingProgressBar: View {
         }
         .animation(.smooth(duration: 0.4), value: step)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Step \(step.rawValue) of \(OnboardingStep.allCases.count - 1), \(step.title)")
+        .accessibilityLabel("\(step.label), \(step.title)")
     }
 }
 

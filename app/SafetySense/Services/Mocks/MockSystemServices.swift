@@ -43,7 +43,9 @@ final class NoopLiveActivityController: LiveActivityControllerProtocol {
 @MainActor
 final class NoopNotificationService: NotificationServiceProtocol {
     private(set) var scheduled: [Date] = []
+    var authorization: PermissionState = .granted
     func requestAuthorization() async -> Bool { true }
+    func authorizationState() async -> PermissionState { authorization }
     func scheduleCheckIn(at date: Date, sessionID: UUID) { scheduled.append(date) }
     func cancelCheckIns() { scheduled.removeAll() }
     private(set) var notes: [String] = []
@@ -54,6 +56,7 @@ final class NoopNotificationService: NotificationServiceProtocol {
 final class NoopHeartbeatService: HeartbeatServiceProtocol {
     private(set) var isRunning = false
     private(set) var lastSentAt: Date?
+    var isFailing = false
     func start(serverSessionID: String, interval: TimeInterval) { isRunning = true; lastSentAt = .now }
     func stop() { isRunning = false }
 }
