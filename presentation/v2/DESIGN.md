@@ -614,3 +614,18 @@ Checks after this pass:
 - All 18 PDF pages were rendered and looked at; slides 4, 5, 6, 8, 9, 12 and 13 at full size.
 - Slide 6's still is a later frame of the party shot than clip B's poster (same scene, not the same frame).
 - Still not checked: playback in real PowerPoint on Mac and Windows, and a timed read-through.
+
+## 12. Polish pass (Nov 10, 2026, after the third review round)
+
+Round 3: story fit, timing and honesty approved; the visual reviewer asked for changes. All of its findings and the other reviewers' minor ones are now done. This pass was checked by hand (stills, 5 fps sheets, slide renders), not by another review round.
+
+- **Slide 8:** the SIMULATED tile now shows the "Help is on the way" dispatch screen (clip frame 885) instead of repeating the contacts screen. The texts caption reads "Texts are sent but don't arrive yet", which agrees with the "Text sent" ticks in the picture.
+- **Clip B:** the check-in phone is 412 px wide and ends above the caption band, and its banner mask is taller so no second line peeks out. The contacts phone sits at 0.94 scale and the PIN close-ups are 1.05, so every phone keeps about 35 px or more above it. The "simulated" box no longer pulses.
+- **Clip A:** the small "+45 S · NO CHECK-IN" pill is replaced by "DISPATCH IS SIMULATED" at 34 px, so the countdown to dispatch is labelled.
+- **Slide 6:** the picture is the clip's first frame, so slide 7 starts from the same pose.
+- **Guard screenshot (slides 5, 14, A4):** the caption line is redrawn as "No audio is saved unless something seems wrong." (`prepFrames` in `build_deck_v2.js`).
+- **Wording:** slide 3 no longer speaks the tagline (saved for slide 14); slide 5 and slide 12 no longer both list the frameworks; slide 6 item 2 covers who is called if no one answers; slide 9's bSafe column says "Voice phrase" and "Not listed"; slide 12 leaves "sandbox" to the slide text. Slide 7 has a 56 s slot and slide 4 has 47 s. Total 7:23.
+- **Encode:** clip A 9.94 s, clip B 52.42 s (no extra hold; audio fades from 50.4 s). Both about -16.5 LUFS.
+- **Full film:** `HybridV3` stills at frames 195, 1700, 1950, 2500 and 2750 are byte-identical with and without this pass.
+
+Still not done: playing the deck in real PowerPoint (autoplay, sound, last-frame hold), and confirming the cold-open tone at the practice session.

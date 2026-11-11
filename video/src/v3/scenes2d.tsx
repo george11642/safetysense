@@ -98,6 +98,7 @@ export const BrandSting: React.FC<{ from: number }> = ({ from }) => {
 /** Smash cut from the cold open: the real alert UI full-frame ("Your people are being told" + the dispatch countdown),
  *  big enough to read, with the time-skip chip that keeps the hook consistent with the ladder (check-in first). */
 export const HeroAlert: React.FC<{ from: number }> = ({ from }) => {
+  const heroDeck = React.useContext(DeckModeCtx);
   const A = useA(from);
   const t = A - from;
   const slam = interpolate(t, [0, 5, 9], [1.18, 0.98, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
@@ -121,7 +122,9 @@ export const HeroAlert: React.FC<{ from: number }> = ({ from }) => {
           <div style={{ fontSize: 50, lineHeight: 1.05, marginTop: 8 }}>→ contacts alerted</div>
         </div>
         {/* v3 fix r3: a time cue so the hook matches the 45 s check-in the film teaches later (SPEC 6.3) */}
-        <div style={{ marginTop: 22, marginLeft: 20, opacity: interpolate(t, [8, 13], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), display: "inline-flex", padding: "10px 22px", borderRadius: 999, background: "#14131f", border: `3px solid ${C.warn}`, fontFamily: F.mono, fontWeight: 700, fontSize: 28, color: C.warn, letterSpacing: "0.05em" }}>▸▸ +45 S · NO CHECK-IN</div>
+        {/* deck clips: hidden (too small to read from a room; the sticker above carries the cue) */}
+        {heroDeck && <div style={{ marginTop: 30, marginLeft: 6, opacity: interpolate(t, [8, 13], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), fontFamily: F.mono, fontWeight: 700, fontSize: 34, lineHeight: 1.2, color: C.warn, letterSpacing: "0.06em", textShadow: "0 2px 10px rgba(0,0,0,.8)" }}>DISPATCH IS<br />SIMULATED</div>}
+        {!heroDeck && <div style={{ marginTop: 22, marginLeft: 20, opacity: interpolate(t, [8, 13], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), display: "inline-flex", padding: "10px 22px", borderRadius: 999, background: "#14131f", border: `3px solid ${C.warn}`, fontFamily: F.mono, fontWeight: 700, fontSize: 28, color: C.warn, letterSpacing: "0.05em" }}>▸▸ +45 S · NO CHECK-IN</div>}
       </div>
     </AbsoluteFill>
   );
@@ -569,7 +572,7 @@ export const CheckIn: React.FC<{ from: number; srcStart: number }> = ({ from, sr
   const REVEAL = 4;
   // deck clips: the chapter eyebrow is hidden, so the phone uses that room (10% larger)
   const deck = React.useContext(DeckModeCtx);
-  const dw = deck ? 440 : 400;
+  const dw = deck ? 412 : 400;
   return (
     <AbsoluteFill>
       <Stage tint={C.warn} tint2={C.accent} />
@@ -577,11 +580,11 @@ export const CheckIn: React.FC<{ from: number; srcStart: number }> = ({ from, sr
       {/* v3 fix r1: camera push onto the countdown ring on "You have 45 seconds", back out for "One tap" */}
       {/* v3 fix r2: a gentler push that keeps the whole phone bezel in frame (the 1.42x zoom cropped it off the top) */}
       <Cam from={from} keys={[[from, 1, 500, 520], [w("v3_08", "You", 1) - 6, 1.02, 500, 520], [w("v3_08", "You", 1) + 8, 1.14, 500, 540], [w("v3_08", "One") - 10, 1.16, 500, 540], [w("v3_08", "One") + 2, 1.03, 500, 520], [from + 240, 1.05, 520, 520]]}>
-      <div style={{ position: "absolute", left: deck ? 270 : 300, top: deck ? 52 : 118, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)`, transformOrigin: "50% 30%" }}>
+      <div style={{ position: "absolute", left: deck ? 290 : 300, top: deck ? 50 : 118, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)`, transformOrigin: "50% 30%" }}>
         <Device w={dw} rotY={6} glow={C.warn} reflect={false}>
           <SegVideo dur={400} segs={[{ at: 0, src: 184, rate: 0.6 }]} />
           {/* v3 fix r1: the build's reason line listed "distress words" twice; show the corrected string */}
-          <div style={{ position: "absolute", left: 0, right: 0, top: "13.4%", height: "4.9%", background: "linear-gradient(90deg, #26242f, #1d1b27 45%, #15131e)", display: "grid", placeItems: "center", textAlign: "center", fontFamily: F.body, fontWeight: 500, fontSize: 14.5 * dw / 400, lineHeight: 1.25, color: "#a7a4b4" }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: "13.4%", height: deck ? "5.9%" : "4.9%", background: "linear-gradient(90deg, #26242f, #1d1b27 45%, #15131e)", display: "grid", placeItems: "center", textAlign: "center", fontFamily: F.body, fontWeight: 500, fontSize: 14.5 * dw / 400, lineHeight: 1.25, color: "#a7a4b4" }}>
             <div>SafetySense noticed: distress words,<br />a thud, then a struggle</div>
           </div>
           <RingWipe at={from + Math.round((296 - 184) / 0.6)} from={from} />
@@ -647,7 +650,7 @@ export const ContactsReal: React.FC<{ from: number }> = ({ from }) => {
   // band and no caption ever crosses the phone
   const deck = React.useContext(DeckModeCtx);
   const camKeys: [number, number, number, number][] = deck
-    ? [[from, 1, 465, 520], [from + 92, 1, 465, 520]]
+    ? [[from, 0.94, 465, 520], [from + 92, 0.94, 465, 520]]
     : [[from, 1, 465, 520], [from + 10, 1.02, 465, 520], [from + 34, 1.3, 465, 560], [from + 92, 1.34, 465, 560]];
   return (
     <AbsoluteFill>
@@ -824,7 +827,7 @@ export const DispatchOverlay: React.FC<{ from: number; skip: number }> = ({ from
           Can't answer? They send <span style={{ color: C.danger }}>police</span> to your live location.
         </div>
       </div>
-      <div style={{ position: "absolute", right: 56, top: deck ? 56 : 150, opacity: ez(A, from + 6, from + 20), transform: `scale(${1 + 0.05 * interpolate(A, [tSim, tSim + 6, tSim + 20], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })})`, transformOrigin: "right top" }}>
+      <div style={{ position: "absolute", right: 56, top: deck ? 56 : 150, opacity: ez(A, from + 6, from + 20), transform: `scale(${1 + (deck ? 0 : 0.05) * interpolate(A, [tSim, tSim + 6, tSim + 20], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })})`, transformOrigin: "right top" }}>
         <div style={{ padding: "16px 26px", borderRadius: 20, background: "rgba(61,46,23,.94)", border: `2px solid ${C.warn}`, display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: deck ? 57 : 38, color: C.warn, letterSpacing: "0.06em" }}>SIMULATED IN THIS DEMO</div>
           <div style={{ fontFamily: F.body, fontWeight: 700, fontSize: deck ? 54 : 36, color: C.ink }}>Noonlight sandbox · no real police</div>
@@ -954,7 +957,7 @@ export const Pins: React.FC<{ from: number }> = ({ from }) => {
           each edge) for the whole move (the 1.55x keys cropped "SAFETY PIN" / "Forced to cancel?" at the frame edges) */}
       {/* deck clips: gentler close-ups anchored low, so each phone ends above the caption band (the film's keys below are unchanged) */}
       <Cam from={from} keys={deck
-        ? [[from, 1, 960, 540], [sType - 8, 1.0, 900, 540], [sType + 2, 1.12, 200, 760], [sDone + 8, 1.12, 200, 760], [dType - 4, 1.12, 1720, 760], [tSame - 8, 1.12, 1720, 760], [tSame + 6, 1.0, 960, 540], [tQuiet + 2, 1.0, 960, 540], [tQuiet + 22, 1.08, 1720, 800]]
+        ? [[from, 1, 960, 540], [sType - 8, 1.0, 900, 540], [sType + 2, 1.05, 200, 900], [sDone + 8, 1.05, 200, 900], [dType - 4, 1.05, 1720, 900], [tSame - 8, 1.05, 1720, 900], [tSame + 6, 1.0, 960, 540], [tQuiet + 2, 1.0, 960, 540], [tQuiet + 22, 1.04, 1720, 900]]
         : [[from, 1, 960, 540], [sType - 8, 1.0, 900, 540], [sType + 2, 1.3, 260, 620], [sDone + 8, 1.3, 260, 560], [dType - 4, 1.3, 1660, 620], [tSame - 8, 1.3, 1660, 560], [tSame + 6, 1.0, 960, 540], [tQuiet + 2, 1.0, 960, 540], [tQuiet + 22, 1.18, 1660, 520]]}>
       <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 96, gap: 36, transform: `scale(${push})` }}>
         {col(false)}

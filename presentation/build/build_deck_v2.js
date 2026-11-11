@@ -159,7 +159,18 @@ function videoSlide(pres, file, poster, label) {
 }
 
 // ---- deck -------------------------------------------------------------
+// The Guard screenshot was captured when the app still said "Nothing is saved unless something seems wrong."
+// The app now says "No audio is saved...", so the caption line is redrawn to match (location does go to the server).
+const GUARD_FRAME = "14-guard-active-noaudio";
+async function prepFrames() {
+  const svg = Buffer.from(`<svg width="676" height="1427" xmlns="http://www.w3.org/2000/svg">
+    <rect x="66" y="778" width="520" height="34" fill="#211f31"/>
+    <text x="76" y="801" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18.5" fill="#9a98ad">No audio is saved unless something seems wrong.</text></svg>`);
+  await sharp(path.join(FRAMES, "14-guard-active.png")).composite([{ input: svg }]).png().toFile(path.join(FRAMES, GUARD_FRAME + ".png"));
+}
+
 (async () => {
+  await prepFrames();
   const pres = new pptxgen();
   pres.layout = "LAYOUT_WIDE"; // 13.333 x 7.5
   pres.title = "SafetySense: Calls for help when you can't";
@@ -280,7 +291,7 @@ So we asked one question: what should a phone do when she can't?
     }
     s.addShape("line", { x: 4.43, y: 5.0, w: 5.2, h: 0, line: { color: C.line, width: 1 } });
     s.addText("It only listens while a Guard is on.", { x: 4.43, y: 5.2, w: 5.2, h: 0.5, margin: 0, fontFace: SANS, fontSize: 18, color: C.teal, valign: "middle" });
-    s.addImage({ data: await phoneClean("14-guard-active"), x: 10.3, y: 0.75, h: 5.6, w: 5.6 * FRAME_RATIO });
+    s.addImage({ data: await phoneClean(GUARD_FRAME), x: 10.3, y: 0.75, h: 5.6, w: 5.6 * FRAME_RATIO });
     // 3. built with
     // kicker and stack are separate boxes, so both stack lines share one left edge
     s.addText("BUILT WITH", { x: 0.6, y: 6.3, w: 1.6, h: 0.33, margin: 0, fontFace: MONO, fontSize: 12, bold: true, color: C.teal, charSpacing: 3, valign: "middle" });
@@ -292,8 +303,7 @@ So we asked one question: what should a phone do when she can't?
     s.addNotes(
 `${stamp(5)}
 Our answer starts before anything goes wrong. Before a walk home, a night out, a date or a ride, you turn on a Guard. One tap.
-It's a native iPhone app using Apple's on-device sound, speech and motion frameworks, on a Supabase backend.
-Then the phone watches for signs that something's wrong: a scream, breaking glass, your safe word, or a fall followed by stillness. It only listens while a Guard is on.
+Then the phone watches for signs that something's wrong: a scream, breaking glass, your safe word, or a fall followed by stillness. It only listens while a Guard is on, and all of that runs on Apple's on-device frameworks.
 (Twilio and Noonlight are on the slide. Don't read them out: slide 12 explains what each one does.)`);
   }
 
@@ -302,7 +312,7 @@ Then the phone watches for signs that something's wrong: a scream, breaking glas
     const s = newSlide(pres);
     // the heading does not repeat the clip's lower third ("Ava turns her Guard on."); the spoken line sets that up
     s.addText("Watch three things.", { x: 0.75, y: 1.45, w: 7.3, h: 0.9, margin: 0, fontFace: SANS, fontSize: 44, bold: true, color: C.ink, valign: "top" });
-    const things = ["It asks before it alerts.", "What her friend sees.", "What happens if someone makes her cancel, or breaks her phone."];
+    const things = ["It asks before it alerts.", "What her friend sees, and who's called if no one answers.", "What happens if someone makes her cancel, or breaks her phone."];
     for (let i = 0; i < 3; i++) {
       const y = 2.95 + i * 1.1;
       s.addText(String(i + 1), { x: 0.75, y, w: 0.6, h: 0.8, margin: 0, fontFace: SANS, fontSize: 34, bold: true, color: C.teal, valign: "top" });
@@ -313,7 +323,7 @@ Then the phone watches for signs that something's wrong: a scream, breaking glas
     s.addImage({ data: img.data, x: 12.73 - w, y: 0.95, w, h });
     s.addNotes(
 `${stamp(6)}
-You saw her phone already calling. Here's how it gets there, on another night out. Watch three things: it asks before it alerts, what her friend sees, and what happens if someone makes her cancel or breaks her phone.
+You saw her phone already calling. Here's how it gets there, on another night out. Watch three things: it asks before it alerts, what her friend sees and who gets called if nobody answers, and what happens if someone makes her cancel or breaks her phone.
 (Advance. The clip starts by itself.)`);
   }
 
@@ -366,9 +376,9 @@ And the smashed phone is an animation of a server check we've deployed.
     title(s, "Others have pieces. We connected the chain.");
     const cols = ["", "UNM Safe", "Noonlight", "bSafe", "Apple built-in", "SafetySense"];
     const rows = [
-      ["Notices distress on its own", "–", "Crash (paid)", "–", "Crash; fall on Watch", "✓  Sound, motion, context"],
-      ["Acts when the phone goes dark", "–", "Not documented", "–", "Check In, timing varies", "✓  Server heartbeat (deployed)"],
-      ["Duress PIN (fake cancel)", "–", "–", "–", "–", "✓  The two PINs you saw"],
+      ["Notices distress on its own", "–", "Crash (paid)", "Voice phrase", "Crash; fall on Watch", "✓  Sound, motion, context"],
+      ["Acts when the phone goes dark", "–", "Not documented", "Not listed", "Check In, timing varies", "✓  Server heartbeat (deployed)"],
+      ["Duress PIN (fake cancel)", "–", "–", "Not listed", "–", "✓  The two PINs you saw"],
       ["Professional dispatch", "Call UNMPD", "✓", "–", "911 call", "✓  Noonlight (sandbox)"],
       ["Live location to a friend", "✓", "✓", "✓", "✓  Check In", "✓"],
     ];
@@ -402,7 +412,8 @@ Other apps have pieces of this, and we'll name them. Centinela listens for a scr
 Ours notices on its own, tells your people, and reaches dispatch, in a sandbox today, including the two cases you just saw: the forced cancel and the smashed phone.
 And we link to UNM Safe.
 (Say "we found no product that documents", never "no one else does this". Their columns are shipped products; ours is a prototype.)
-(If asked: some apps also document a server-side dead-phone alert. We read documentation; we did not test them.)`);
+(If asked: some apps also document a server-side dead-phone alert. We read documentation; we did not test them.)
+(If asked about bSafe: it can trigger on a spoken phrase. Its documentation doesn't describe listening for screams or falls.)`);
   }
 
   // ===== 10. Design and wording (Mary) ====================================
@@ -508,7 +519,7 @@ There are no ad or analytics SDKs, and the live link is built to expire when the
     s.addNotes(
 `${stamp(12)}
 GEORGE: Under the hood, it's a native iOS 26 app on a live backend.
-On the phone, Apple's sound, speech and motion frameworks feed a rules-based risk engine, so it can always explain why it escalated. Apple's on-device language model gives a second opinion, but can never be the only reason to escalate.
+On the phone, those signals feed a rules-based risk engine, so it can always explain why it escalated. Apple's on-device language model gives a second opinion, but can never be the only reason to escalate.
 The server runs the alert steps and a once-a-minute heartbeat check. Twilio carries the calls, and Noonlight is the dispatch service.`);
   }
 
@@ -566,7 +577,7 @@ Next: usability tests with UNM and CNM students, a review of our wording by advo
       { text: "Mary Teifel", options: { bold: true, color: C.ink } }, { text: "  CNM", options: { color: C.muted } },
     ], { x: 0.6, y: 5.25, w: 7, h: 0.4, margin: 0, fontFace: SANS, fontSize: 18 });
     s.addText("Thank you. We'd love your questions.", { x: 0.6, y: 5.75, w: 7, h: 0.4, margin: 0, fontFace: SANS, fontSize: 16, color: C.muted });
-    s.addImage({ data: await phoneClean("14-guard-active"), x: 7.95, y: 1.05, h: 5.75, w: 5.75 * FRAME_RATIO });
+    s.addImage({ data: await phoneClean(GUARD_FRAME), x: 7.95, y: 1.05, h: 5.75, w: 5.75 * FRAME_RATIO });
     phone(s, "17-alert-active", 10.2, 0.6, 5.75);
     s.addNotes(
 `${stamp(14)}
@@ -618,7 +629,7 @@ MARY: We'd love to pilot it with students at UNM and CNM. Thank you. We're happy
     eyebrow(s, "Appendix · if the video fails", 0.6, 0.5, 8, C.amber);
     title(s, "One calm ladder, from “You okay?” to dispatch", 0.6, 0.78, 12.1, 32);
     const steps = [
-      ["14-guard-active", C.teal, "0 · Guarding", "Audio stays in a 30 s memory buffer. No audio is saved."],
+      [GUARD_FRAME, C.teal, "0 · Guarding", "Audio stays in a 30 s memory buffer. No audio is saved."],
       ["15-check-in", C.amber, "1 · Check-in", "A quiet haptic: “You okay?” You have 45 seconds to tap."],
       ["16-alert-countdown", C.pink, "2 · Alert", "Your people get a call and a live map. Evidence is encrypted."],
       ["integration-09-alert-active-dispatch", C.red, "3 · Dispatch (simulated)", "After 90 s or “Send help,” a monitoring center calls and can send police. Simulated here."],
