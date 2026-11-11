@@ -15,7 +15,7 @@ const Fa = require("react-icons/fa6");
 const ROOT = path.resolve(__dirname, "../..");
 const FRAMES = path.join(__dirname, "frames");
 const OUT = path.join(ROOT, "presentation", "SafetySense-Finalist-Deck.pptx");
-const VIDEO = path.join(ROOT, "presentation", "SafetySense-DemoClip-AppFlow.mp4"); // 38.7 s app + live-link cut of SafetySense-Demo.mp4 (36.2 s to 74.9 s)
+const VIDEO = path.join(ROOT, "presentation", "SafetySense-DemoClip-Hybrid.mp4"); // 58 s deck clip rendered from video/src/v3/deckIndex.tsx (title card, the film from 43.9 s to 96.5 s, closing card)
 const VIDEO_COVER = path.join(ROOT, "presentation", "build", "demo-cover.png");
 const ARCH_PNG = path.join(ROOT, "design", "architecture.png");
 
@@ -153,8 +153,7 @@ Hi, I'm George Teifel from UNM, and this is my sister Mary Teifel from CNM. We b
     s.addNotes(
 `[0:15 to 0:45, 30 s]
 George is a senior studying electrical engineering at UNM, and he built the app and the backend. Mary is a freshman studying mechanical engineering at CNM, and she led research, UX and the app's wording.
-Here's the whole idea: before a night out, a walk home, a date or a ride, you start a Guard session. SafetySense watches on your phone only. If you go quiet, can't answer, or your phone goes dark, it calls your people, then professional dispatch.
-(Fill in the brackets before Nov 16. The contest asks for name, institution, year and area of study.)`);
+Here's the whole idea: before a night out, a walk home, a date or a ride, you start a Guard session. SafetySense watches on your phone only. If you go quiet, can't answer, or your phone goes dark, it calls your people, then professional dispatch.`);
   }
 
   // ===== 3. Problem ======================================================
@@ -204,7 +203,7 @@ SafetySense is help for when you can't ask.
     title(s, "It watches, so you don't have to tap", 0.6, 0.78, 9.4, 32);
     const promises = [
       ["1", "It only listens when you turn it on", "Night Out, Walk Home, Date or Ride. Clear start, clear end."],
-      ["2", "Nothing is saved unless something's wrong", "Audio lives in a 30-second memory buffer that overwrites itself."],
+      ["2", "No audio is saved unless something's wrong", "Audio lives in a 30-second memory buffer that overwrites itself."],
       ["3", "Help comes even if you can't tap", "Missed check-ins, distress sounds or a dead phone start the ladder."],
     ];
     for (let i = 0; i < 3; i++) {
@@ -235,7 +234,7 @@ SafetySense is help for when you can't ask.
     footer(s, 4);
     s.addNotes(
 `[1:30 to 2:05, 35 s]
-So instead of waiting for a tap, you start a Guard session, and we make three promises. It only listens when you turn it on. Nothing is saved unless something's wrong: audio sits in a 30-second memory buffer that keeps overwriting itself. And help comes even if you can't tap.
+So instead of waiting for a tap, you start a Guard session, and we make three promises. It only listens when you turn it on. No audio is saved unless something's wrong: audio sits in a 30-second memory buffer that keeps overwriting itself. And help comes even if you can't tap.
 While guarding, the phone watches for screams, your safe word, a fall followed by stillness, and missed check-ins. If the phone goes dark completely, our server notices and acts on its own.`);
   }
 
@@ -245,7 +244,7 @@ While guarding, the phone watches for screams, your safe word, a fall followed b
     eyebrow(s, "How it escalates", 0.6, 0.5, 6);
     title(s, "One calm ladder, from “You okay?” to dispatch", 0.6, 0.78, 12.1, 32);
     const steps = [
-      ["14-guard-active", C.teal, "0 · Guarding", "Audio stays in a 30 s memory buffer. Nothing is saved."],
+      ["14-guard-active", C.teal, "0 · Guarding", "Audio stays in a 30 s memory buffer. No audio is saved."],
       ["15-check-in", C.amber, "1 · Check-in", "A quiet haptic: “You okay?” You have 45 seconds to tap."],
       ["16-alert-countdown", C.pink, "2 · Alert", "Your people get a call and a live map. Evidence is encrypted."],
       ["integration-09-alert-active-dispatch", C.red, "3 · Dispatch", "After 90 s or “Send help,” a monitoring center calls, then sends police."],
@@ -276,45 +275,23 @@ And if someone forces you to cancel, a duress PIN looks exactly like cancelling,
   // ===== 6. Demo ======================================================
   {
     const s = newSlide(pres);
-    eyebrow(s, "Live demo · recorded", 0.6, 0.5, 6);
-    title(s, "Night Out: a thud, then silence", 0.6, 0.78, 12.1, 32);
-    const vx = 0.6, vy = 1.75, vw = 8.4, vh = 4.725;
+    // Full-bleed: the clip is 16:9 like the slide and carries its own title card, captions and closing card,
+    // so the slide adds nothing around it.
     if (fs.existsSync(VIDEO)) {
-      const media = { type: "video", path: VIDEO, x: vx, y: vy, w: vw, h: vh };
+      const media = { type: "video", path: VIDEO, x: 0, y: 0, w: 13.333, h: 7.5 };
       if (fs.existsSync(VIDEO_COVER)) media.cover = "data:image/png;base64," + fs.readFileSync(VIDEO_COVER).toString("base64");
       s.addMedia(media);
       console.log("embedded demo video");
     } else {
-      card(s, vx, vy, vw, vh, C.card2);
-      phone(s, "15-check-in", vx + 0.55, vy + 0.4, 3.9);
-      phone(s, "17-alert-active", vx + 2.55, vy + 0.4, 3.9);
-      s.addShape("ellipse", { x: vx + 5.55, y: vy + 1.05, w: 1.3, h: 1.3, fill: { color: C.pink }, line: { color: C.pink } });
-      s.addImage({ data: await icon("FaPlay", C.bg), x: vx + 5.98, y: vy + 1.4, w: 0.55, h: 0.6 });
-      s.addText("Demo video goes here", { x: vx + 4.8, y: vy + 2.6, w: 3.3, h: 0.4, margin: 0, fontFace: SANS, fontSize: 16, bold: true, color: C.ink, align: "center" });
-      s.addText("Export SafetySense-Demo.mp4 into presentation/ and rerun build_deck.js to embed it.", { x: vx + 4.8, y: vy + 3.05, w: 3.3, h: 0.9, margin: 0, fontFace: SANS, fontSize: 11, color: C.amber, align: "center", valign: "top" });
-      console.warn("WARNING: presentation/SafetySense-Demo.mp4 not found; demo slide has a placeholder");
+      s.addText("Demo video missing: put SafetySense-DemoClip-Hybrid.mp4 in presentation/ and rerun build_deck.js", { x: 1, y: 3.2, w: 11.3, h: 1, margin: 0, fontFace: SANS, fontSize: 20, color: C.amber, align: "center" });
+      console.warn("WARNING: demo clip not found; demo slide has a placeholder");
     }
-    const beats = [
-      ["Night Out guard on", "Mic, motion and location are checked on the phone. Nothing saved."],
-      ["A thud, then “get off me”", "Detected on the phone. “You okay?” appears."],
-      ["No answer in 45 s", "Trusted contacts get a call, a text and a live link."],
-      ["Dispatch, then safe", "Simulated monitoring step. The safety PIN cancels it."],
-      ["The contact's live link", "Location, battery, and “I'm on my way.”"],
-    ];
-    for (let i = 0; i < beats.length; i++) {
-      const y = 1.75 + i * 0.96;
-      s.addShape("ellipse", { x: 9.35, y: y + 0.04, w: 0.42, h: 0.42, fill: { color: C.card2 }, line: { color: C.pink, width: 1 } });
-      s.addText(String(i + 1), { x: 9.35, y: y + 0.04, w: 0.42, h: 0.42, margin: 0, fontFace: MONO, fontSize: 13, bold: true, color: C.pink, align: "center", valign: "middle" });
-      s.addText(beats[i][0], { x: 9.95, y: y - 0.02, w: 2.8, h: 0.35, margin: 0, fontFace: SANS, fontSize: 14.5, bold: true, color: C.ink });
-      s.addText(beats[i][1], { x: 9.95, y: y + 0.33, w: 2.8, h: 0.55, margin: 0, fontFace: SANS, fontSize: 11.5, color: C.muted, valign: "top" });
-    }
-    footer(s, 6);
     s.addNotes(
-`[2:55 to 4:25, 90 s. Set up the clip (about 15 s), let the 39 s clip play (it has its own voiceover and captions; don't talk over it), then the follow-up below (about 30 s).]
-Before the clip: This is the real app, recorded in the iPhone simulator, running a Night Out session in demo mode. No real responders were contacted. Watch what happens when the person can't respond.
-(Play the clip.)
-After the clip: Two things to notice. First, nobody touched the phone between the thud and the dispatch step. Second, the contact needed no app: just a link, with live location and an "I'm on my way" button. In the real flow, contacts also get an automated phone call, and dispatch goes to a professional monitoring center that calls you first; in this demo that step is simulated, never live 911.
-(If the video won't play: use the PDF backup and narrate over the screenshots on the ladder slide.)`);
+`[2:55 to 4:25, 90 s. One line of setup (about 8 s), play the 58 s clip full screen (it has its own title card, voiceover and captions; don't talk over it), then the follow-up below (about 20 s).]
+Before the clip: Here's the app in action. The phone screens are the real app in demo mode, and no real responders were contacted.
+(Click to play. The clip ends on our tagline; wait for it to fade.)
+After the clip: Two things to notice. First, nobody had to touch the phone for help to start. Second, the contact needed no app: just a link, with live location and an "I'm on my way" button. Dispatch in that demo is simulated, never live 911.
+(If the video won't play: go back to the ladder slide and narrate the steps over it.)`);
   }
 
   // ===== 7. Originality ======================================================
@@ -508,7 +485,7 @@ Supabase runs the alerts and the heartbeat watchdog. Twilio calls your contacts,
     }
     eyebrow(s, "Rollout", 0.6, 4.45, 4, C.teal);
     const steps = [
-      ["Now", "Working iOS prototype on a live backend"],
+      ["Now", "Working iOS app on internal TestFlight and a live backend"],
       ["Next", "Usability tests with UNM and CNM students; advocates review the copy"],
       ["Pilot", "TestFlight pilot with a student organization"],
       ["Partner", "Campus partnership: orientation, Women's Resource Center, UNMPD"],

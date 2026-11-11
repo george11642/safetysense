@@ -3,7 +3,7 @@
 import React from "react";
 import { AbsoluteFill, Img, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame, Easing } from "remotion";
 import { C, F } from "../theme";
-import { Cam, Card, Chapter, Device, Headline, Icon, IconName, Kicker, RiseWords, Stage, Tag, ZoomCrop, clamp01, deviceH, deviceScreenW, ez, ezIO, useSpring } from "./ui";
+import { Cam, Card, Chapter, DeckModeCtx, Device, Headline, Icon, IconName, Kicker, RiseWords, Stage, Tag, ZoomCrop, clamp01, deviceH, deviceScreenW, ez, ezIO, useSpring } from "./ui";
 import { bEnd, w } from "./timing";
 
 const useA = (from: number) => useCurrentFrame() + from;
@@ -36,10 +36,13 @@ const SegFade: React.FC<{ xf: number; children: React.ReactNode }> = ({ xf, chil
 export const SkipChip: React.FC<{ at: number; from: number; label: string; color?: string; style?: React.CSSProperties }> = ({ at, from, label, color = C.warn, style }) => {
   const A = useA(from);
   const p = useSpring(at - from, { damping: 11, stiffness: 180 });
+  const deck = React.useContext(DeckModeCtx);
   if (A < at) return null;
   const out = 1 - ez(A, at + 40, at + 48); // v3 r5: gone before the next headline (no ghost)
+  // deck clips: 1.4x type so the time skips read from the back of a room
+  const big: React.CSSProperties = deck ? { fontSize: Math.round(Number(style?.fontSize ?? 52) * 1.4), whiteSpace: "nowrap" } : {};
   return (
-    <div style={{ position: "absolute", transform: `rotate(-4deg) scale(${0.6 + 0.4 * p})`, opacity: Math.min(1, p * 1.5) * out, padding: "12px 26px", borderRadius: 18, background: color, color: "#14131f", fontFamily: F.display, fontWeight: 800, fontSize: 52, letterSpacing: "0.02em", boxShadow: "0 16px 40px rgba(0,0,0,.5), 0 0 0 5px #14131f", ...style }}>{label}</div>
+    <div style={{ position: "absolute", transform: `rotate(-4deg) scale(${0.6 + 0.4 * p})`, opacity: Math.min(1, p * 1.5) * out, padding: "12px 26px", borderRadius: 18, background: color, color: "#14131f", fontFamily: F.display, fontWeight: 800, fontSize: 52, letterSpacing: "0.02em", boxShadow: "0 16px 40px rgba(0,0,0,.5), 0 0 0 5px #14131f", ...style, ...big }}>{label}</div>
   );
 };
 
@@ -564,6 +567,9 @@ export const CheckIn: React.FC<{ from: number; srcStart: number }> = ({ from, sr
   // src 174, so the timer never rewinds and the check-in appears exactly once, on "If something seems wrong".
   void srcStart;
   const REVEAL = 4;
+  // deck clips: the chapter eyebrow is hidden, so the phone uses that room (10% larger)
+  const deck = React.useContext(DeckModeCtx);
+  const dw = deck ? 440 : 400;
   return (
     <AbsoluteFill>
       <Stage tint={C.warn} tint2={C.accent} />
@@ -571,11 +577,11 @@ export const CheckIn: React.FC<{ from: number; srcStart: number }> = ({ from, sr
       {/* v3 fix r1: camera push onto the countdown ring on "You have 45 seconds", back out for "One tap" */}
       {/* v3 fix r2: a gentler push that keeps the whole phone bezel in frame (the 1.42x zoom cropped it off the top) */}
       <Cam from={from} keys={[[from, 1, 500, 520], [w("v3_08", "You", 1) - 6, 1.02, 500, 520], [w("v3_08", "You", 1) + 8, 1.14, 500, 540], [w("v3_08", "One") - 10, 1.16, 500, 540], [w("v3_08", "One") + 2, 1.03, 500, 520], [from + 240, 1.05, 520, 520]]}>
-      <div style={{ position: "absolute", left: 300, top: 118, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)`, transformOrigin: "50% 30%" }}>
-        <Device w={400} rotY={6} glow={C.warn} reflect={false}>
+      <div style={{ position: "absolute", left: deck ? 270 : 300, top: deck ? 52 : 118, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)`, transformOrigin: "50% 30%" }}>
+        <Device w={dw} rotY={6} glow={C.warn} reflect={false}>
           <SegVideo dur={400} segs={[{ at: 0, src: 184, rate: 0.6 }]} />
           {/* v3 fix r1: the build's reason line listed "distress words" twice; show the corrected string */}
-          <div style={{ position: "absolute", left: 0, right: 0, top: "13.4%", height: "4.9%", background: "linear-gradient(90deg, #26242f, #1d1b27 45%, #15131e)", display: "grid", placeItems: "center", textAlign: "center", fontFamily: F.body, fontWeight: 500, fontSize: 14.5, lineHeight: 1.25, color: "#a7a4b4" }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: "13.4%", height: "4.9%", background: "linear-gradient(90deg, #26242f, #1d1b27 45%, #15131e)", display: "grid", placeItems: "center", textAlign: "center", fontFamily: F.body, fontWeight: 500, fontSize: 14.5 * dw / 400, lineHeight: 1.25, color: "#a7a4b4" }}>
             <div>SafetySense noticed: distress words,<br />a thud, then a struggle</div>
           </div>
           <RingWipe at={from + Math.round((296 - 184) / 0.6)} from={from} />
@@ -583,7 +589,7 @@ export const CheckIn: React.FC<{ from: number; srcStart: number }> = ({ from, sr
       </div>
       </Cam>
       {/* v3 r5: the recording itself jumps 41 -> 35 (src frame ~297); label the time skip like the dispatch one */}
-      <SkipChip at={from + Math.round((296 - 184) / 0.6) - 3} from={from} label="▸▸ 6 s later" style={{ left: 905, top: 760, fontSize: 56 }} />
+      <SkipChip at={from + Math.round((296 - 184) / 0.6) - 3} from={from} label="▸▸ 6 s later" style={{ left: 905, top: deck ? 828 : 760, fontSize: 56 }} />
       <div style={{ position: "absolute", left: 900, top: 230, width: 920 }}>
         <Kicker color={C.warn} size={32} style={{ opacity: ez(A, from + 2, from + 14) }}>If something seems wrong</Kicker>
         <div style={{ marginTop: 22 }}>
@@ -602,14 +608,14 @@ export const CheckIn: React.FC<{ from: number; srcStart: number }> = ({ from, sr
 };
 
 /* ================================================================== TOAST (contact side) */
-export const Toast: React.FC<{ at: number; from: number; title: string; body: string; y?: number; x?: number }> = ({ at, from, title, body, y = 48, x = 96 }) => {
+export const Toast: React.FC<{ at: number; from: number; title: string; body: string; y?: number; x?: number; k?: number }> = ({ at, from, title, body, y = 48, x = 96, k: zoom = 1 }) => {
   // v3 r5: contacts don't install the app. They get a Twilio SMS (wording from backend api/index.ts) + an automated call,
   // so this is a Messages notification from "SafetySense", not an app push. Left-aligned, clear of the ladder strip.
   const k = useSpring(at - from, { damping: 15, stiffness: 160 });
   const A = useA(from);
   if (A < at) return null;
   return (
-    <div style={{ position: "absolute", left: x, top: y, width: 720, transform: `translateY(${(1 - k) * -200}px)`, background: "rgba(246,244,252,.95)", borderRadius: 30, padding: "20px 24px", display: "flex", gap: 18, alignItems: "flex-start", boxShadow: "0 24px 60px rgba(0,0,0,.5)" }}>
+    <div style={{ position: "absolute", left: x, top: y, width: 720, transform: zoom === 1 ? `translateY(${(1 - k) * -200}px)` : `translateY(${(1 - k) * -200}px) scale(${zoom})`, transformOrigin: "left top", background: "rgba(246,244,252,.95)", borderRadius: 30, padding: "20px 24px", display: "flex", gap: 18, alignItems: "flex-start", boxShadow: "0 24px 60px rgba(0,0,0,.5)" }}>
       <div style={{ width: 64, height: 64, borderRadius: 15, flexShrink: 0, background: "linear-gradient(180deg,#5ff777,#28c840)", display: "grid", placeItems: "center" }}>
         <svg width="40" height="36" viewBox="0 0 40 36"><path d="M20 2C9.5 2 2 8.6 2 16.5c0 4.6 2.6 8.6 6.6 11.2-.4 2.6-1.8 4.8-3.6 6.3 3.8-.2 7-1.7 9.1-3.6 1.9.5 3.8.7 5.9.7 10.5 0 18-6.6 18-14.6S30.5 2 20 2z" fill="#fff" /></svg>
       </div>
@@ -637,12 +643,18 @@ export const ContactsReal: React.FC<{ from: number }> = ({ from }) => {
     { icon: "phone", t: "Automated call", at: from + 4 },
     { icon: "words", t: "Text with a live link", at: tText - 4 },
   ];
+  // deck clips: no push-in, and the phone sits higher and further left, so its bottom edge ends above the caption
+  // band and no caption ever crosses the phone
+  const deck = React.useContext(DeckModeCtx);
+  const camKeys: [number, number, number, number][] = deck
+    ? [[from, 1, 465, 520], [from + 92, 1, 465, 520]]
+    : [[from, 1, 465, 520], [from + 10, 1.02, 465, 520], [from + 34, 1.3, 465, 560], [from + 92, 1.34, 465, 560]];
   return (
     <AbsoluteFill>
       <Stage tint={C.accent} tint2={C.warn} />
       <Chapter n="04" title="Step 2 · your people" from={from} />
-      <Cam from={from} keys={[[from, 1, 465, 520], [from + 10, 1.02, 465, 520], [from + 34, 1.3, 465, 560], [from + 92, 1.34, 465, 560]]}>
-      <div style={{ position: "absolute", left: 250, top: 78, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
+      <Cam from={from} keys={camKeys}>
+      <div style={{ position: "absolute", left: deck ? 170 : 250, top: deck ? 34 : 78, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
         <Device w={430} video={{ src: APP, trimBefore: 330, playbackRate: 1 }} rotY={8} glow={C.accent} reflect={false}><NightStamp /></Device>
       </div>
       </Cam>
@@ -685,10 +697,13 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
   const scroll = interpolate(A, [tTime - 14, tTime + 8, tWay - 22, tWay - 4], [yMap, yTimeline, yTimeline, yButtons], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
   const ph = useSpring(-12, { damping: 20, stiffness: 90 });
   const phase2 = ez(A, tWay - 10, tWay + 4);
+  // deck clips: the phone is not pushed in (the cards carry the detail), so it ends above the caption band, and the
+  // timeline card is cropped at a row boundary instead of through a line of text
+  const deck = React.useContext(DeckModeCtx);
   const cards: { at: number; crop: [number, number, number, number]; label: string; icon: IconName }[] = [
     { at: tLoc, crop: [64, 548, 676, 560], label: "Live location", icon: "pin" },
     { at: tBat, crop: [64, 1128, 676, 122], label: "Battery · last update", icon: "battery" },
-    { at: tTime, crop: [44, 2760, 716, 560], label: "Timeline of what happened", icon: "list" },
+    { at: tTime, crop: [44, 2760, 716, deck ? 484 : 560], label: "Timeline of what happened", icon: "list" },
   ];
   const buttons: { at: number; crop: [number, number, number, number]; color: string }[] = [
     { at: tWay, crop: [60, 1708, 684, 122], color: C.calm },
@@ -698,8 +713,8 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
   return (
     <AbsoluteFill>
       <Stage tint={C.calm} tint2={C.accent} />
-      <Cam from={from} keys={[[from, 1.06, 360, 380], [from + 12, 1.36, 360, 360], [tTime - 4, 1.36, 360, 420], [tTime + 10, 1.36, 360, 520], [tWay - 20, 1.36, 360, 520], [tWay - 4, 1.06, 360, 520], [from + 240, 1.1, 360, 560]]}>
-      <div style={{ position: "absolute", left: 170, top: 150, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
+      <Cam from={from} keys={deck ? [[from, 1, 360, 380], [from + 240, 1, 360, 380]] : [[from, 1.06, 360, 380], [from + 12, 1.36, 360, 360], [tTime - 4, 1.36, 360, 420], [tTime + 10, 1.36, 360, 520], [tWay - 20, 1.36, 360, 520], [tWay - 4, 1.06, 360, 520], [from + 240, 1.1, 360, 560]]}>
+      <div style={{ position: "absolute", left: 170, top: deck ? 84 : 150, opacity: ph, transform: `translateY(${(1 - ph) * 60}px)` }}>
         <Device w={dw} rotY={8} glow={C.calm} reflect={false} island={false}>
           <div style={{ position: "absolute", top: bar, left: 0, width: sw, transform: `translateY(${-scroll}px)` }}>
             <Img src={SHARE} style={{ width: sw, display: "block" }} />
@@ -708,7 +723,7 @@ export const LiveLink: React.FC<{ from: number }> = ({ from }) => {
             <div style={{ fontFamily: F.mono, fontSize: 16, color: C.muted }}>live link · any browser</div>
           </div>
         </Device>
-        <div style={{ position: "absolute", top: deviceH(dw) + 10, left: -40, width: dw + 80, textAlign: "center", fontFamily: F.mono, fontSize: 30, color: "#d0cde0", letterSpacing: "0.02em" }}>Real page · test alert</div>
+        <div style={{ position: "absolute", top: deviceH(dw) + 10, left: -40, width: dw + 80, textAlign: "center", fontFamily: F.mono, fontSize: deck ? 34 : 30, color: "#d0cde0", letterSpacing: "0.02em", whiteSpace: deck ? "nowrap" : undefined }}>Real page · test alert</div>
       </div>
       </Cam>
       <div style={{ position: "absolute", left: 620, top: 104, width: 1240 }}>
@@ -772,6 +787,7 @@ export const DispatchOverlay: React.FC<{ from: number; skip: number }> = ({ from
   const tIf = w("v3_11", "If");
   const tSim = w("v3_11", "In");
   const ph = useSpring(-12, { damping: 20, stiffness: 90 });
+  const deck = React.useContext(DeckModeCtx);
   const p90 = ez(A, t90 - 4, t90 + 10);
   // source: alert ring 88 at 390 (13.0 s); recording skips to "8" at 421 (14.03 s); dispatch screen at 601 (20.03 s)
   const fast = 2;
@@ -808,10 +824,10 @@ export const DispatchOverlay: React.FC<{ from: number; skip: number }> = ({ from
           Can't answer? They send <span style={{ color: C.danger }}>police</span> to your live location.
         </div>
       </div>
-      <div style={{ position: "absolute", right: 56, top: 150, opacity: ez(A, from + 6, from + 20), transform: `scale(${1 + 0.05 * interpolate(A, [tSim, tSim + 6, tSim + 20], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })})`, transformOrigin: "right top" }}>
+      <div style={{ position: "absolute", right: 56, top: deck ? 56 : 150, opacity: ez(A, from + 6, from + 20), transform: `scale(${1 + 0.05 * interpolate(A, [tSim, tSim + 6, tSim + 20], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })})`, transformOrigin: "right top" }}>
         <div style={{ padding: "16px 26px", borderRadius: 20, background: "rgba(61,46,23,.94)", border: `2px solid ${C.warn}`, display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 38, color: C.warn, letterSpacing: "0.06em" }}>SIMULATED IN THIS DEMO</div>
-          <div style={{ fontFamily: F.body, fontWeight: 700, fontSize: 36, color: C.ink }}>Noonlight sandbox · no real police</div>
+          <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: deck ? 57 : 38, color: C.warn, letterSpacing: "0.06em" }}>SIMULATED IN THIS DEMO</div>
+          <div style={{ fontFamily: F.body, fontWeight: 700, fontSize: deck ? 54 : 36, color: C.ink }}>Noonlight sandbox · no real police</div>
         </div>
       </div>
     </AbsoluteFill>
@@ -848,6 +864,7 @@ const PinPhone: React.FC<{ dw: number; typeAt: number; digits: string; color: st
 
 const MiniLadder: React.FC<{ live: boolean; A: number }> = ({ live, A }) => {
   const pulse = 0.5 + 0.5 * Math.sin(A / 3.5);
+  if (React.useContext(DeckModeCtx)) return null; // deck clips carry no CHECK-IN / CONTACTS / DISPATCH chips
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: live ? "flex-start" : "flex-end" }}>
       {[["Check-in", C.warn], ["Contacts", C.accent], ["Dispatch", C.danger]].map(([t, c], i) => {
@@ -873,6 +890,7 @@ export const Pins: React.FC<{ from: number }> = ({ from }) => {
   const dw = 395; // v3 r7: smaller + less push so captions never sit on the tab bars
   const pL = useSpring(-10, { damping: 18, stiffness: 110 });
   const pR = useSpring(-4, { damping: 18, stiffness: 110 });
+  const deck = React.useContext(DeckModeCtx);
   const focusD = ez(A, tDur - 6, tDur + 6);
   const eq = ez(A, tSame - 2, tSame + 10);
   // v3 fix r2: the "same screen" frame + badge wait until BOTH phones show the Support screen (after the duress PIN lands)
@@ -898,9 +916,11 @@ export const Pins: React.FC<{ from: number }> = ({ from }) => {
         <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 56, lineHeight: 1.02, color: C.ink, letterSpacing: "-0.02em" }}>{isD ? (eq > 0.5 ? "Looks exactly the same." : "Forced to cancel?") : "Stops the alert."}</div>
         {isD ? (
           <div style={{ opacity: hidden, transform: `translateY(${(1 - hidden) * 16}px)`, display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 30, color: C.accent, letterSpacing: "0.06em" }}>HIDDEN · STILL ESCALATING</div>
+            <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: deck ? 34 : 30, color: C.accent, letterSpacing: "0.06em" }}>HIDDEN · STILL ESCALATING</div>
             <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, color: C.ink, lineHeight: 1.05 }}>Help keeps coming.</div>
             <MiniLadder live A={A} />
+            {/* deck clips: the duress path ends at the same simulated dispatch, so it carries the same amber label */}
+            {deck && <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 34, lineHeight: 1.15, color: C.warn, letterSpacing: "0.06em" }}>DISPATCH IS SIMULATED</div>}
           </div>
         ) : (
           <div style={{ opacity: stopped, display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-end" }}>
@@ -932,7 +952,10 @@ export const Pins: React.FC<{ from: number }> = ({ from }) => {
           then a push onto the duress column as "quietly keeps help coming" lands */}
       {/* v3 fix r4: every close-up is anchored so the phone AND its text column stay inside title-safe (>= 96 px from
           each edge) for the whole move (the 1.55x keys cropped "SAFETY PIN" / "Forced to cancel?" at the frame edges) */}
-      <Cam from={from} keys={[[from, 1, 960, 540], [sType - 8, 1.0, 900, 540], [sType + 2, 1.3, 260, 620], [sDone + 8, 1.3, 260, 560], [dType - 4, 1.3, 1660, 620], [tSame - 8, 1.3, 1660, 560], [tSame + 6, 1.0, 960, 540], [tQuiet + 2, 1.0, 960, 540], [tQuiet + 22, 1.18, 1660, 520]]}>
+      {/* deck clips: gentler close-ups anchored low, so each phone ends above the caption band (the film's keys below are unchanged) */}
+      <Cam from={from} keys={deck
+        ? [[from, 1, 960, 540], [sType - 8, 1.0, 900, 540], [sType + 2, 1.12, 200, 760], [sDone + 8, 1.12, 200, 760], [dType - 4, 1.12, 1720, 760], [tSame - 8, 1.12, 1720, 760], [tSame + 6, 1.0, 960, 540], [tQuiet + 2, 1.0, 960, 540], [tQuiet + 22, 1.08, 1720, 800]]
+        : [[from, 1, 960, 540], [sType - 8, 1.0, 900, 540], [sType + 2, 1.3, 260, 620], [sDone + 8, 1.3, 260, 560], [dType - 4, 1.3, 1660, 620], [tSame - 8, 1.3, 1660, 560], [tSame + 6, 1.0, 960, 540], [tQuiet + 2, 1.0, 960, 540], [tQuiet + 22, 1.18, 1660, 520]]}>
       <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: 96, gap: 36, transform: `scale(${push})` }}>
         {col(false)}
         <div style={{ alignSelf: "center", marginTop: -60, fontFamily: F.display, fontWeight: 800, fontSize: 120, color: C.muted, opacity: eq }}>=</div>
@@ -948,12 +971,13 @@ export const Pins: React.FC<{ from: number }> = ({ from }) => {
 export const CancelSticker: React.FC<{ at: number; out: number; left?: number; top?: number; tailRight?: boolean }> = ({ at, out, left, top = 170, tailRight }) => {
   const frame = useCurrentFrame();
   const sp = useSpring(at, { damping: 11, stiffness: 170 });
+  const deck = React.useContext(DeckModeCtx);
   if (frame < at) return null;
   const o = Math.min(1, sp * 1.4) * (1 - ez(frame, out - 6, out));
   return (
     <div style={{ position: "absolute", ...(left !== undefined ? { left } : { right: 220 }), top, opacity: o, transform: `rotate(4deg) scale(${1.3 - 0.3 * sp})`, background: "#fff7e6", color: "#14131f", padding: "18px 34px", borderRadius: 24, boxShadow: "0 18px 50px rgba(0,0,0,.55), 0 0 0 6px #14131f", fontFamily: F.display }}>
       {/* v3 fix r1: attributed, with a tail pointing out of frame to the front seat (the speaker stays off-screen) */}
-      <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: 26, letterSpacing: "0.12em", color: "#6b6880", marginBottom: 6 }}>THE DRIVER</div>
+      <div style={{ fontFamily: F.mono, fontWeight: 700, fontSize: deck ? 34 : 26, letterSpacing: "0.12em", color: "#6b6880", marginBottom: 6 }}>THE DRIVER</div>
       <div style={{ fontWeight: 800, fontSize: 80, letterSpacing: "-0.02em", lineHeight: 1 }}>“Cancel it.”</div>
       {tailRight
         ? <div style={{ position: "absolute", right: -38, top: 46, width: 0, height: 0, borderTop: "22px solid transparent", borderBottom: "22px solid transparent", borderLeft: "44px solid #fff7e6", filter: "drop-shadow(4px 0 0 #14131f)" }} />
@@ -985,8 +1009,12 @@ export const Heartbeat: React.FC<{ from: number }> = ({ from }) => {
   for (let s2 = from - 40; s2 < stopAt; s2 += period) pulses.push(s2);
   const missing = A > stopAt + period;
   const elapsed = Math.max(0, A - stopAt - period);
-  const push = 1 + (A - from) * 0.0005;
+  const pushFilm = 1 + (A - from) * 0.0005;
   const contactsIn = useSpring(tRaise + 10 - from, { damping: 12, stiffness: 150 });
+  const deck = React.useContext(DeckModeCtx);
+  // deck clips rest on this scene's last frame: no push-in, and the group sits at 0.9 so the server card and the
+  // "Phone offline" pill keep a title-safe margin under the shot's slow drift
+  const push = deck ? 0.9 : pushFilm;
   const span = tRaise - 4 - (stopAt + period);
   const agoS = lastAgoS(elapsed, span);
   const missed = missing ? Math.min(3, Math.floor(agoS / 60)) : 0;
@@ -1023,7 +1051,7 @@ export const Heartbeat: React.FC<{ from: number }> = ({ from }) => {
           {!missing ? <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 48, color: C.calm }}>Heartbeat · every 60 s</div> : <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 56, color: C.danger }}>No heartbeat</div>}
         </div>
         {/* v3 fix r4: the visible time skip (same chip language as "+35 s · no answer") */}
-        <SkipChip at={Math.round(stopAt + period + span * 0.42)} from={from} label="▸▸ +3 min · 3 missed heartbeats" color={C.warn} style={{ left: x0 - 70, top: y + 90, fontSize: 34 }} />
+        <SkipChip at={Math.round(stopAt + period + span * 0.42)} from={from} label="▸▸ +3 min · 3 missed heartbeats" color={C.warn} style={deck ? { left: x0 - 30, top: y - 350, fontSize: 34 } : { left: x0 - 70, top: y + 90, fontSize: 34 }} />
         {/* server node */}
         <div style={{ position: "absolute", left: x1 + 30, top: y - 230, transform: `scale(${1 + 0.05 * interpolate(A, [tRaise, tRaise + 5, tRaise + 16], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })})` }}>
           <Card accent={fire > 0.5 ? C.danger : C.calm} style={{ width: 760, padding: 44, display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1031,7 +1059,7 @@ export const Heartbeat: React.FC<{ from: number }> = ({ from }) => {
               <Icon name="server" size={70} color={fire > 0.5 ? C.danger : C.calm} />
               <div>
                 <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 52, color: C.ink }}>SafetySense server</div>
-                <div style={{ fontFamily: F.mono, fontSize: 32, color: "#d0cde0" }}>heartbeat watchdog</div>
+                <div style={{ fontFamily: F.mono, fontSize: deck ? 36 : 32, color: "#d0cde0" }}>heartbeat watchdog</div>
               </div>
             </div>
             <div style={{ height: 2, background: C.line }} />
@@ -1048,7 +1076,7 @@ export const Heartbeat: React.FC<{ from: number }> = ({ from }) => {
               </div>
             )}
           </Card>
-          {missed > 0 && fire < 0.5 && <div style={{ marginTop: 18, fontFamily: F.mono, fontWeight: 700, fontSize: 30, color: C.warn, letterSpacing: "0.06em" }}>{"● ".repeat(missed).trim()} {missed} missed · grace 3 min</div>}
+          {missed > 0 && fire < 0.5 && <div style={{ marginTop: 18, fontFamily: F.mono, fontWeight: 700, fontSize: deck ? 34 : 30, color: C.warn, letterSpacing: "0.06em" }}>{"● ".repeat(missed).trim()} {missed} missed · grace 3 min</div>}
           {/* ends on the CONTACTS step lighting */}
           <div style={{ marginTop: 34, display: "flex", alignItems: "center", gap: 18, opacity: contactsIn, transform: `scale(${0.7 + 0.3 * contactsIn})`, transformOrigin: "left center" }}>
             <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 60, color: C.muted }}>→</div>

@@ -1,17 +1,18 @@
 # SafetySense: project status
 
-Last checked 2026-11-04 by the final verification pass (build, all tests, simulator screens, live backend end to end, docs, secret scan).
-**Technical submission due Fri Nov 6, 2026, 11:59 pm MT** to itevents@unm.edu. George sends it; no agent sends email.
+Last updated 2026-11-10.
+
+**Where we are:** the technical submission was sent on Fri Nov 6 (George reported it). On Tue Nov 10, Kim Waseta (itevents@unm.edu) emailed that **SafetySense is a finalist**.
 
 ## What George must still do
 
-**Before Fri Nov 6, 11:59 pm MT (required):**
+**This week:**
 
-1. **Mary's eligibility.** Confirm she's taking at least 3 credit hours at CNM this fall, or is in a Deep Dive cohort. If she isn't on the registration, email itevents@unm.edu **before Nov 6** to add her.
-2. **Fill in the team bio.** `submission/01-team-bio/SafetySense-TeamBio.html`: years and majors are filled in (George: senior EE; Mary: freshman ME, 3+ CNM credits confirmed). Only Mary's email is left (yellow `[FILL IN]`). Check both "why we care" lines and Mary's role. Re-render with `submission/_assets/render.sh` (needs network for Google Fonts) and open the PDF.
-3. **Finish the email draft.** `submission/EMAIL_DRAFT.md`: Mary's email, and the extra-credit line (keep it only if one of you went to the Sep 17 kickoff or an Oct 8/20 mentoring session; delete it otherwise).
-4. **Send the email** from gteifel@unm.edu with the 5 PDFs attached. Subject: `App Contest Technical Submission – SafetySense`. Record the time and message id in `docs/SUBMISSION_CHECKLIST.md`. No agent sends email.
-5. ~~Commit the work.~~ Done: everything is committed and pushed to the public repo https://github.com/george11642/safetysense. Your personal Gmail address has been removed from the docs. The secret and phone-number scan passed (2026-11-04).
+1. **Reply to Kim with 3 time options** for the 30-minute practice session. Slots: Tue 11/10 3:00 to 5:00, Wed 11/11 9:00 to 12:00, Fri 11/13 10:00 to 4:00, at the IT Building (Bldg. 153). No agent sends email.
+2. **Print an unofficial transcript** for George and one for Mary, and bring both. Don't email them.
+3. **At the session:** present the app and its functions to the Program Staff. Use the deck, and rehearse it first (about 7:25 of talk).
+4. **Email the deck by Mon Nov 16, 12:00 pm.** Subject: `App Contest Presentation Submission – SafetySense`.
+5. **Present Fri Nov 20, 1 to 5 pm** at UNM Rainforest Innovations. Stay for awards at about 4 pm.
 
 **Before Nov 20 (finalists):**
 
@@ -69,6 +70,17 @@ The app now matches the prototype's screens and flows: Marked safe (both PINs, c
 - Check-in defaults stay at Night Out 45 min and Date 30 min (SPEC: 30 to 90). The prototype's story uses 20. Changing them is one line in `GuardMode.defaultCheckInInterval`.
 - Night Out and Date Guards start with the End Guard button alone, without "Face ID/PIN" on the label; the auth gate is unchanged.
 - CNM Title IX (505-224-4000 x51240, Dean of Students) was checked on CNM's own Title IX page on 2026-11-05. It isn't in the SPEC fact-check table yet.
+
+## Finalist deck: v1 and v2 (2026-11-10)
+
+- **v2 (recommended):** `presentation/v2/SafetySense-Finalist-Deck-v2.pptx` and `.pdf`. 14 slides plus 4 appendix, about 7:23 scripted. Two clips that autoplay: a 10 s cold open on slide 2 and a 51 s proof clip on slide 7, which is the only place the ladder is told. Slide 8 says what was real and what was simulated. Design and "as built" notes: `presentation/v2/DESIGN.md`. Build: `NODE_PATH=$(npm root -g) node presentation/build/build_deck_v2.js`, then `python3 presentation/build/autoplay.py <pptx>`. Clips: `video/src/v3/deckIndexV2.tsx`.
+- **v1 (saved):** `presentation/v1/`. 15 slides with one 58 s clip full screen on slide 6. `presentation/SafetySense-Finalist-Deck.pptx` is the same deck.
+- **Not done:** neither deck has been played in real PowerPoint. Check autoplay, sound and the last-frame hold on a Windows machine before Nov 16. Small video polish from the last review is still open (a caption touching the check-in phone, phone tops near the frame edge, one small pill in the cold open).
+- **Pick one deck** before emailing it on Nov 16.
+
+## Backend deploy state (confirmed 2026-11-10)
+
+Function version 12 (deployed Nov 6, 23:46 UTC) is a two-line entry that imports `index.ts` from the public repo at commit 5672739. That file is byte-identical to the working tree, and the `relay_phone_lookups` migration is applied. So every item marked **Not live yet** or **Not deployed** below, and in `backend/README.md`, is now live: the `applyDuress` re-raise, the `session/end` change, session-location retention, the phone's neutral live link and the POST relay lookups. None of it has been exercised with a live alert since the deploy; the checks were a source comparison and status codes from the relay routes.
 
 ## Duress callback relay (added 2026-11-06)
 
@@ -132,7 +144,7 @@ Live link duress states from item 1 above are partly done: `share/get` returns `
 | Email draft | `submission/EMAIL_DRAFT.md` | Prototype link is filled in. Mary's email and the extra-credit line are still to fill. |
 | Architecture diagram | `design/architecture.svg` / `.png` | Embedded in PDF 4 and deck slide 10 |
 | App screenshots | `design/screens/` (old integration captures are in `design/screens/archive-integration/`) | Current UI, iPhone 17 Pro and 17e |
-| Demo video | `presentation/SafetySense-Demo.mp4` (submission video, 16:9, 2:40; the 3D-and-app hybrid George chose). Older and alternate cuts: `presentation/videos/`. `SafetySense-DemoClip-AppFlow.mp4` (39 s app and live-link cut), `SafetySense-AppLoop.mp4/.gif` | Remotion source is in `video/` |
+| Demo video | `presentation/SafetySense-Demo.mp4` (submission video, 16:9, 2:40; the 3D-and-app hybrid George chose). Older and alternate cuts: `presentation/videos/`. `SafetySense-DemoClip-Hybrid.mp4` (58 s deck clip with its own title and closing cards, rendered from `video/src/v3/deckIndex.tsx` and shown full screen on slide 6; the old 39 s app-only cut is in `presentation/videos/`), `SafetySense-AppLoop.mp4/.gif` | Remotion source is in `video/` |
 | Finalist deck | `presentation/SafetySense-Finalist-Deck.pptx` + `.pdf` | 15 slides. The 39 s demo clip is embedded on slide 6, with speaker notes. |
 | Q&A prep and iPhone demo script | `presentation/QA_PREP.md`, `presentation/IPHONE_DEMO_SCRIPT.md` | |
 | Spec, brief, checklist | `docs/SPEC.md`, `docs/CONTEST_BRIEF.md`, `docs/SUBMISSION_CHECKLIST.md` | |
@@ -180,7 +192,7 @@ cd video && scripts/render_all.sh
 ```
 
 ## Changes from this audit (2026-11-04)
-- The deck now embeds the demo: a 39 s app and live-link cut (`SafetySense-DemoClip-AppFlow.mp4`) with a cover frame. The slide 6 beats, title and speaker notes now match the cut. Slide 10 now uses `design/architecture.png`. The PPTX was validated and the PDF backup re-exported (15 pages).
+- Since 2026-11-10 the deck plays a 58 s clip full screen on slide 6 (`SafetySense-DemoClip-Hybrid.mp4`): a title card, then listening, check-in, contacts, live link, dispatch and the two PINs, then a closing card. Re-render with `npx remotion render src/v3/deckIndex.tsx DeckClip <out>.mp4 --gl=angle --codec h264 --crf 18` from `video/`. Talk time is about 7:25. Before that it was a 39 s app and live-link cut with a cover frame. The slide 6 beats, title and speaker notes now match the cut. Slide 10 now uses `design/architecture.png`. The PPTX was validated and the PDF backup re-exported (15 pages).
 - App: the drill's TEST alert is now cancelled on the server when you tap Finish or Try again, so the watchdog no longer escalates drills into a simulated dispatch. The drill and Alert-active timelines say "Test call logged, nobody was called" or "Test text logged, nothing was sent" instead of "call placed" on dry runs. Rebuilt; 116/116 tests pass.
 - `app/project.yml` now has the publishable key and share base URL set explicitly. Before, they were empty, and Config.swift fell back to the same values.
 - Contact live-link page: dry-run timeline rows now read "Test call" / "Test text". The landing page now lists the verified 24/7 numbers for LoboRESPECT (505-277-2911) and the Rape Crisis Center of Central NM (505-266-7711). Both are redeployed to Vercel production.

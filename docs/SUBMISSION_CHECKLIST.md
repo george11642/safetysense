@@ -16,14 +16,14 @@ Every item except #6 is a **PDF or Word file attached** to the email, never a li
   - Built and wired (34 screens, 5 overlays, 5 flows; every mode chip and tab works). **Public** ("Anyone · can view", Education Full seat accepted) and verified in a signed-out browser on 2026-11-04. The link is in `submission/EMAIL_DRAFT.md`.
 - [ ] Email body (`submission/EMAIL_DRAFT.md`, drafted; fill Mary's email + extra-credit line): app name, team members with emails and schools, a one-paragraph summary, the prototype link, and a list of the attachments
 - [x] Check that every attachment opens. File names include the app name. (All 5 open; 1/1/5/7/5 pages.)
-- [ ] Sent ✅ (record the timestamp and message id here)
+- [x] Sent ✅ George reported sending it on Fri Nov 6, 2026, before 8:03 pm MT (message id not recorded)
 
-## If we're a finalist (notified Nov 9)
-- [ ] Book the practice-session slot (Nov 10–13). **Both** of us attend.
+## We're a finalist (notified Tue Nov 10)
+- [ ] Reply to Kim (itevents@unm.edu) with 3 time options for the 30-minute practice session at the IT Building (Bldg. 153): Tue 11/10 3:00–5:00, Wed 11/11 9:00–12:00, Fri 11/13 10:00–4:00. **Both** of us attend and present the app to the Program Staff.
 - [ ] **Print** an unofficial transcript for George and for Mary and bring them to practice. Do not email them.
-- [x] Deck: 8:00 max talk, 4:00 Q&A. Embed MP4 demo videos and keep a PDF backup. We can't use our own laptop or phone. (Built: `presentation/SafetySense-Finalist-Deck.pptx` with the 39 s app clip embedded on slide 6, plus `.pdf` backup. Slide 2 still has amber placeholders for year/major.)
+- [x] Deck: 8:00 max talk, 4:00 Q&A. Embed MP4 demo videos and keep a PDF backup. We can't use our own laptop or phone. (Built: `presentation/SafetySense-Finalist-Deck.pptx` with a 58 s demo clip playing full screen on slide 6, plus `.pdf` backup. Rebuilt 2026-11-10.)
 - [ ] Email the deck by **Mon Nov 16 at 12:00 pm**. Subject: `App Contest Presentation Submission – <Team or App Name>`.
 - [ ] Present Fri Nov 20, 1–5 pm at UNM Rainforest Innovations, and stay for the awards (about 4 pm).
 
 
-Status last checked 2026-11-04. See `docs/STATUS.md` for what exists and George's to-do list.
+Status last checked 2026-11-10. See `docs/STATUS.md` for what exists and George's to-do list.

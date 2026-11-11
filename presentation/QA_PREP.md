@@ -1,10 +1,14 @@
 # SafetySense: judge Q&A prep
 
-Presentation Day gives 4 minutes of judge questions after the 8-minute talk. Judges have **not** seen our technical submission, so assume they know nothing beyond the talk.
+We're a finalist (notified Nov 10). Presentation Day is Fri Nov 20: 8 minutes of talk, then 4 minutes of judge questions. Judges have **not** seen our technical submission, so assume they know nothing beyond the talk.
+
+The practice session (30 minutes, IT Building, Bldg. 153) comes first. We present the app and its functions to the Program Staff and get feedback, so expect these same questions there. Bring a printed transcript each.
+
+Last updated Nov 10, 2026.
 
 **How to answer:** lead with the one-sentence answer and stop. Offer more detail only if they ask. If you don't know, say so: "We haven't measured that yet. Here's how we would." Never overclaim. SafetySense supplements 911 and never replaces it.
 
-Who answers: **George** takes technical, security and App Store questions. **Mary** takes user, design, campus and partnership questions. (Adjust once Mary's role is settled.)
+Who answers: **George** takes technical, security and App Store questions. **Mary** takes user, design, wording, campus and partnership questions. She led research, UX and the app's wording.
 
 Appendix slides A1 to A3 in the deck carry the short versions of the first 12 answers below.
 
@@ -15,7 +19,7 @@ Judges to have in mind: Mark Orgeron (UNM Information Security and Privacy Offic
 ## 1. Trust and tech
 
 ### What about false alarms?
-**Short:** The first step is always a quiet "You okay?" that one tap clears, and the monitoring center's call is forwarded to you to confirm before police are ever sent.
+**Short:** The first step is always a quiet "You okay?" that one tap clears, and the monitoring center's call is forwarded to you to confirm before police are ever sent. You press 1 to take it.
 **More:**
 - The risk engine is rule-based. Each signal adds weighted points that fade over time, so one shout at a party doesn't escalate on its own. A scream followed by long stillness does.
 - The ladder has three exits before police: the check-in (45 s), the Safety PIN during Alert (90 s), and the dispatcher's verification call.
@@ -37,7 +41,7 @@ Judges to have in mind: Mark Orgeron (UNM Information Security and Privacy Offic
 - Background audio runs only during a session the user starts, with a visible Live Activity and the system microphone indicator (Guideline 2.5.4).
 - We never auto-dial 911 or auto-text. iOS doesn't allow it, so dispatch goes through Noonlight, a professional monitoring service many apps already use.
 - Each permission is asked when it's needed, with a reason. There are no ad or analytics SDKs (Guideline 5.1).
-- The app isn't published yet (contest rule). It runs on a simulator and through Xcode on George's iPhone.
+- The app isn't on the App Store (contest rule). It's on internal TestFlight, build 0.1.0 (2), for our own testing only. Apple hasn't reviewed it for the App Store, so don't say Apple approved it.
 
 ### How does the Action Button trigger work without opening the app?
 An App Intent ("SafetySense Alert") that you pick under Settings > Action Button > Shortcut. It writes to a shared queue the app drains, and it starts the alert at the level you set: by default a manual SOS goes straight to dispatch.
@@ -66,7 +70,7 @@ During a session the phone sends a heartbeat every 60 seconds. If heartbeats sto
 **More:** Universities already spend on safety apps and Clery and Title IX compliance. A campus licence would cover students for free, and a paid plan would cover non-students. **These are proposals. We have no agreements.** Partners we'd like to work with: LoboRESPECT Advocacy Center, the UNM Women's Resource Center, UNMPD, CNM Security and the Rape Crisis Center of Central NM.
 
 ### Have you talked to any of these partners?
-Answer truthfully. As of Nov 4 we haven't. Say: "Not yet. Advocate review of our copy is the first step after the contest."
+Answer truthfully. As of Nov 10 we haven't. Say: "Not yet. Advocate review of our copy is the first step after the contest."
 
 ---
 
@@ -79,10 +83,20 @@ If no contact responds within 90 seconds, dispatch takes over automatically. If 
 Location is shared only during a Guard session or an alert, and only the phone's owner can start one. Contacts can't pull location on demand. Live links are designed to expire after the alert. The Vault needs Face ID, and the discreet icon helps if someone controls the phone.
 
 ### What if someone forces her to cancel?
-That's what the duress PIN is for. It looks exactly like a normal cancel on screen, and the server silently escalates to dispatch. If they ask whether the dispatcher calls the phone: not directly. Dispatch is given a relay number, not her phone, and during duress the relay never connects to the phone and tells the caller to send police. We've tested that with simulated calls and the Noonlight sandbox, not a real dispatcher. The prototype has one relay number, so production needs a pool, and Noonlight still has to confirm a relay is allowed. If they ask what's left: a link opened on her phone, the Vault after a relaunch, or a listed contact who is the attacker can still give it away. Those are disclosed in the Security document.
+That's what the duress PIN is for. It looks exactly like a normal cancel on screen, and the server silently escalates to dispatch. If they ask whether the dispatcher calls the phone: not directly. Dispatch is given a relay number, not her phone, and during duress the relay never connects to the phone and tells the caller to send police. We've tested that with simulated calls and the Noonlight sandbox, not a real dispatcher. The prototype has one relay number, so production needs a pool, and Noonlight still has to confirm a relay is allowed.
+
+Fixed since the submission: clips recorded after a duress PIN stay out of the Vault, even after a relaunch, until the real safety PIN is used. The live link on her own phone reads like a normal cancel, so a link left open can't show the duress warning.
+
+If they ask what's left:
+- A listed contact who is the attacker still gets the alert call.
+- iOS keeps the microphone and location indicators on for about 30 minutes after a fake cancel.
+- A safe-word or Action Button alert isn't duress, so the dispatcher's call can ring the phone (she'd have to press 1).
+- A call that started forwarding before the duress PIN can leave a missed-call notice.
+
+The Security document we submitted lists the link and the Vault as open. That was true on Nov 6.
 
 ### What about false 911 calls? Isn't that a burden on police?
-SafetySense never calls 911 directly. A professional monitoring center calls first, through a relay line that forwards to the user, and dispatches only if she doesn't answer or says she's unsafe. Drills are marked TEST and never dispatch.
+SafetySense never calls 911 directly. A professional monitoring center calls first, through a relay line that forwards to the user. She presses 1 to take the call, and they dispatch only if she doesn't answer or says she's unsafe. Their texts don't reach her, only calls, and we haven't confirmed what Noonlight does when a text goes unanswered. Drills are marked TEST and never dispatch.
 
 ### What about older iPhones?
 The Action Button needs an iPhone 15 Pro or newer (or the 16e or 17 series). Every phone also gets the Lock Screen control, Siri, the spoken safe word and the hold-to-release SOS. Without Apple Intelligence, the app runs on rules only. It needs iOS 26.
@@ -94,7 +108,7 @@ We started on iOS to use Apple's on-device AI. The backend is platform-neutral, 
 No, and we won't claim it can. No phone can detect a drug. SafetySense detects the effect that matters: you stop responding, stop moving, or end up somewhere you didn't plan to be. Night Out also prompts drink checks.
 
 ### Is the demo real?
-Yes. It's a native SwiftUI app talking to a live Supabase backend. Calls are real Twilio calls to a verified number. Dispatch in the demo is the Noonlight sandbox or a labelled simulation, never live 911. The relay line is tested with simulated calls, not a real dispatcher call. The Twilio trial blocks US SMS, so texts are sent but don't arrive yet. Calls work.
+Yes. It's a native SwiftUI app on internal TestFlight, talking to a live Supabase backend. The clip in the deck was recorded in the iPhone simulator in demo mode. Calls are real Twilio calls to a verified number. Dispatch in the demo is the Noonlight sandbox or a labelled simulation, never live 911. The relay line is tested with simulated calls, not a real dispatcher call. The Twilio trial blocks US SMS, so texts are sent but don't arrive yet. Calls work.
 
 ### How is the contacts' data protected?
 Contacts' names and numbers are stored server-side under row-level security and used only to reach them during an alert. The spec has contacts get a text explaining SafetySense when they're added. That text is blocked on the Twilio trial for now.
@@ -104,7 +118,7 @@ Be honest. Good answers: false-alarm rates in real noisy bars, which we haven't 
 
 ---
 
-## Facts to have ready (verified Nov 4, 2026)
+## Facts to have ready (verified Nov 4, 2026; app and backend state as of Nov 10)
 
 | Claim | Source | Status |
 |---|---|---|
@@ -113,6 +127,8 @@ Be honest. Good answers: false-alarm rates in real noisy bars, which we haven't 
 | NM is one-party consent for calls (NMSA 30-12-1(C): "a sender or intended recipient") | Statute text; 2013 SB 127 (all-party bill, not enacted) | **Wording verified**; in-person audio unclear; not legal advice. Use "generally read as" |
 | Competitor table (slide 7) | unmsafe.unm.edu, noonlight.com, getbsafe.com/help, Apple iPhone User Guide | **Re-checked Nov 5, 2026.** Noonlight's Alexa link was discontinued; see docs/COMPETITOR_RESEARCH.md. Noonlight has Safety Network location sharing and paid crash detection; Apple's fall detection is on the Watch; Check In can warn late if the phone dies |
 | Twilio and Noonlight pricing | Not checked | Say "about a cent or two", no exact figures |
+| App build | App Store Connect | Internal TestFlight 0.1.0 (2), valid Nov 6. Internal testers only, no public link, no App Store review. **Not yet run through the real-device checklist on the iPhone 16e** |
+| Backend | Supabase | **Confirmed Nov 10.** Function version 12 is pinned to commit 5672739, and that file is byte-identical to the repo. The relay-lookup migration is applied. The relay routes answer on the live API. Checked by reading the deployed code, not by running a live alert |
 | Local phone numbers in the Support screen | unm.edu, cnm.edu, nmcsap.org | **Verified Nov 4, 2026**: LoboRESPECT 505-277-2911, RCCCNM 505-266-7711, ABQ SANE 505-884-7263, UNMPD 505-277-2241, CEEO/Title IX 505-277-5251, CNM Security 505-224-3001/3002 |
 
 ## Things not to say
@@ -122,6 +138,9 @@ Be honest. Good answers: false-alarm rates in real noisy bars, which we haven't 
 - That Citizen sends your audio to the cloud. We don't know that.
 - "It detects drugging." It doesn't.
 - "It calls 911." It goes through professional monitoring, and the demo uses a sandbox.
+- "It's on the App Store" or "Apple approved it." It's internal TestFlight only.
+- "Nothing is saved." Say "no audio is saved". Location and sealed details do go to the server during a session.
+- That we tested on a real phone, until the iPhone 16e run is done.
 - That the duress callback problem is solved, that Noonlight approved the relay, or that dispatchers will follow the message. None of that is known yet.
 - "Replaces 911", "guarantees safety", or anything that blames a user for not using it.
 - Partnerships or user numbers we don't have.

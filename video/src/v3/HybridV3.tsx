@@ -4,7 +4,7 @@ import React from "react";
 import { AbsoluteFill, Audio, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { C } from "../theme";
 import { TIMELINE, TOTAL_FRAMES, bEnd, bStart, sec, voEnvelope, w } from "./timing";
-import { Captions16, LadderStrip, Letterbox, Shot, Tag, ez } from "./ui";
+import { Captions16, DeckModeCtx, LadderStrip, Letterbox, Shot, Tag, ez } from "./ui";
 import {
   CallMap3D, CarPin3D, PoliceArrive3D, ColdOpen3D, DateGlance3D, DispatchMap3D, HomeSafe3D, MomPhone3D, PartyGuard3D, PartyListen3D, PhoneSmash3D,
   FreezeInsert3D, DrugsInsert3D, TakenInsert3D, PrivacyMic3D, CheckInPhone3D,
@@ -56,12 +56,24 @@ const duck = (abs: number) => {
   return (1 - (0.32 + 0.16 * dense) * env) * (1 - 0.4 * key);
 };
 
-const Sfx: React.FC<{ at: number; file: string; vol: number; dur?: number; loop?: boolean; fadeOut?: number }> = ({ at, file, vol, dur = 150, loop, fadeOut = 0 }) => (
+/** Deck clip (DeckClip.tsx): only the VO lines and effects that start inside [from, to) play. null = the full film. */
+// `deck: true` (deckIndexV2.tsx) also turns on the legibility pass for a projected room: no ladder strip, no small
+// eyebrows, captions only for the lines that play, bigger time-skip chips and "simulated" labels. Absent = unchanged.
+// `captions: false` (deck stills only) drops the caption band, so slide stills carry no half-lit caption.
+// `mute: true` (deck clips only) drops the whole soundtrack, for a frozen picture-only layer.
+export const ClipCtx = React.createContext<{ from: number; to: number; deck?: boolean; captions?: boolean; mute?: boolean } | null>(null);
+const inClip = (clip: { from: number; to: number } | null, at: number) => !clip || (at >= clip.from - 12 && at < clip.to);
+
+const Sfx: React.FC<{ at: number; file: string; vol: number; dur?: number; loop?: boolean; fadeOut?: number }> = ({ at, file, vol, dur = 150, loop, fadeOut = 0 }) => {
+  const clip = React.useContext(ClipCtx);
+  if (!inClip(clip, at)) return null;
+  return (
   <Sequence from={at} durationInFrames={dur} name={`sfx ${file}`}>
     <Audio src={staticFile(`sfx/${file}`)} loop={loop}
       volume={(f) => vol * (fadeOut ? interpolate(f, [0, 4, Math.max(5, dur - fadeOut), Math.max(6, dur)], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1)} />
   </Sequence>
-);
+  );
+};
 
 const Music: React.FC<{ file: string; from: number; to: number; env: [number, number][] }> = ({ file, from, to, env }) => (
   // v3 fix r4: the beds are pre-looped into 170 s files (public/music/v3long, ffmpeg -stream_loop). A `loop`ed <Audio>
@@ -79,6 +91,7 @@ const Music: React.FC<{ file: string; from: number; to: number; env: [number, nu
 );
 
 const SoundTrack: React.FC = () => {
+  const clip = React.useContext(ClipCtx);
   const T = TOTAL_FRAMES;
   const archTaps = [w("v3_16", "sound"), w("v3_16", "rules-based"), w("v3_16", "Supabase"), w("v3_16", "Twilio"), w("v3_16", "Noonlight")];
   const chips = [w("v3_07", "screams"), w("v3_07", "distress"), w("v3_07", "safe"), w("v3_07", "fall")];
@@ -86,7 +99,7 @@ const SoundTrack: React.FC = () => {
   return (
     <>
       {/* VO: one clip per beat at its approved start time */}
-      {TIMELINE.beats.map((b) => (
+      {TIMELINE.beats.filter((b) => inClip(clip, sec(b.startSec))).map((b) => (
         <Sequence key={b.id} from={sec(b.startSec)} durationInFrames={Math.ceil(b.durationSec * 30) + 12} name={`vo ${b.id}`}>
           <Audio src={staticFile(`vo/v3/${b.id}.mp3`)} volume={1} />
         </Sequence>
@@ -211,15 +224,16 @@ const ColdOpenHud: React.FC = () => {
   const det = ez(frame, CO_FREEZE + 2, CO_FREEZE + 9);
   const still = ez(frame, CO_FREEZE + 34, CO_FREEZE + 40);
   const pulse = 0.5 + 0.5 * Math.sin(frame / 2.5);
+  const deck = React.useContext(DeckModeCtx);
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div style={{ position: "absolute", left: 80, top: 100, opacity: ez(frame, 6, 18) }}>
-        <Tag color={C.calm} size={30} bg="rgba(13,12,22,.78)">Guard on · Walk Home · mic on</Tag>
+        <Tag color={C.calm} size={deck ? 38 : 30} bg="rgba(13,12,22,.78)">Guard on · Walk Home · mic on</Tag>
       </div>
       {det > 0 && (
-        <div style={{ position: "absolute", left: 80, top: 176, display: "flex", gap: 14, opacity: det, transform: `translateX(${(1 - det) * -30}px)` }}>
-          <Tag color={C.accent} size={30} bg="rgba(40,14,26,.88)" style={{ boxShadow: `0 0 ${20 + 20 * pulse}px ${C.accent}88` }}>Sudden stop</Tag>
-          {still > 0 && <div style={{ opacity: still }}><Tag color={C.warn} size={30} bg="rgba(40,30,14,.88)">then no movement</Tag></div>}
+        <div style={{ position: "absolute", left: 80, top: deck ? 200 : 176, display: "flex", flexDirection: deck ? "column" : "row", alignItems: "flex-start", gap: 14, opacity: det, transform: `translateX(${(1 - det) * -30}px)` }}>
+          <Tag color={C.accent} size={deck ? 44 : 30} bg="rgba(40,14,26,.88)" style={{ boxShadow: `0 0 ${20 + 20 * pulse}px ${C.accent}88` }}>Sudden stop</Tag>
+          {still > 0 && <div style={{ opacity: still }}><Tag color={C.warn} size={deck ? 44 : 30} bg="rgba(40,30,14,.88)">then no movement</Tag></div>}
         </div>
       )}
     </AbsoluteFill>
@@ -240,10 +254,11 @@ const PoliceInsert: React.FC<{ dur: number }> = ({ dur }) => {
   const frame = useCurrentFrame();
   // v3 r6: hard cuts in and out (the crossfade double-exposed the dispatch headline over the street)
   void frame;
+  const deck = React.useContext(DeckModeCtx);
   return (
     <AbsoluteFill>
       <PoliceArrive3D dur={dur} />
-      <div style={{ position: "absolute", left: 80, top: 70 }}><Tag color={C.warn} size={27} bg="rgba(40,30,14,.92)">Simulated · Noonlight sandbox · no real police</Tag></div>
+      <div style={{ position: "absolute", left: 80, top: 70 }}><Tag color={C.warn} size={deck ? 46 : 27} bg="rgba(40,30,14,.92)">Simulated · Noonlight sandbox · no real police</Tag></div>
     </AbsoluteFill>
   );
 };
@@ -264,9 +279,10 @@ const InsertTag: React.FC<{ text: string; color: string; low?: boolean }> = ({ t
 const ContactTag: React.FC = () => {
   const frame = useCurrentFrame();
   const p = ez(frame, 4, 12);
+  const deck = React.useContext(DeckModeCtx);
   return (
     // v3 fix r4: stacked right under the notification (one compact left column, clear of her head)
-    <div style={{ position: "absolute", left: 96, top: 336, opacity: p, transform: `translateX(${(1 - p) * -20}px)` }}>
+    <div style={{ position: "absolute", left: 96, top: deck ? 424 : 336, opacity: p, transform: `translateX(${(1 - p) * -20}px)` }}>
       <Tag color={C.calm} size={26} bg="rgba(13,12,22,.85)">Maya Chen · trusted contact</Tag>
     </div>
   );
@@ -299,17 +315,21 @@ const DRIFT = new Set<K>(["mapLive", "problem", "modes", "triggers", "listenReal
 const ZOUT: Partial<Record<K, number>> = { party: 3, mom: 3, listen3d: 3, date: 3, smash: 3, mapLive: 3 };
 const ZIN: Partial<Record<K, number>> = { hero: 4, triggers: 4, contacts: 4, listenReal: 4, fake: 4, heart: 4, live: 4 };
 export const HybridV3: React.FC = () => {
+  const clip = React.useContext(ClipCtx);
+  const deck = clip?.deck === true;
   const S = (k: K, kind: "cut" | "fade" | "push", node: React.ReactNode, inT = 8, outT = 8) => (
     <Shot key={k} name={k} from={CUTS[k][0]} to={CUTS[k][1]} kind={kind} inT={inT} outT={outT} drift={DRIFT.has(k) ? 0.055 : 0} zin={ZIN[k] ?? 0} zout={ZOUT[k] ?? 0}>{node}</Shot>
   );
   return (
+    <DeckModeCtx.Provider value={deck}>
     <AbsoluteFill style={{ background: "#000" }}>
       {/* COLD OPEN */}
       {S("cold", "cut", <><ColdOpen3D /><ColdOpenHud /></>)}
       {S("flash", "cut", <FlashCut />)}
       {S("hero", "cut", <HeroAlert from={f0("hero")} />)}
       {S("map", "cut", <CallMap3D dur={len("map")} />)}
-      <Sequence from={f0("map")} durationInFrames={len("map")}><Toast at={f0("map") + 4} from={f0("map")} y={150} title="SafetySense" body="SafetySense: Ava may need help (sudden stop, then no movement). Live location and what to do: safetysense-live.vercel.app/a/…" /></Sequence>
+      {/* deck clips: no SMS toast over the map (unreadable in a room; the ringing phones carry the beat) */}
+      {!deck && <Sequence from={f0("map")} durationInFrames={len("map")}><Toast at={f0("map") + 4} from={f0("map")} y={150} title="SafetySense" body="SafetySense: Ava may need help (sudden stop, then no movement). Live location and what to do: safetysense-live.vercel.app/a/…" /></Sequence>}
       {/* v3 fix r3: the bars retract on the smash cut, so the UI cards are never clipped by them */}
       <Sequence from={0} durationInFrames={f0("sting")}><Letterbox inAt={-20} outAt={f0("flash") - 8} /></Sequence>
       {S("sting", "cut", <BrandSting from={f0("sting")} />)}
@@ -325,7 +345,7 @@ export const HybridV3: React.FC = () => {
       {/* MEET + ARM */}
       {S("meet", "cut", <Meet from={f0("meet")} />)}
       {S("modes", "cut", <GuardModes from={f0("modes")} />)}
-      {S("party", "cut", <><PartyGuard3D dur={len("party")} /><GuardOnBadge /></>)}
+      {S("party", "cut", <><PartyGuard3D dur={len("party")} />{!deck && <GuardOnBadge />}</>)}
       {S("triggers", "cut", <Triggers from={f0("triggers")} />)}
 
       {/* WATCH */}
@@ -339,7 +359,7 @@ export const HybridV3: React.FC = () => {
           Ava not answering, never as Mom not picking up */}
       {/* v3 fix r3: a 1.5 s 3D cutaway breaks the 8 s check-in hold (the buzz in her hand at the party) */}
       <Sequence from={CHECK_IN_CUT[0]} durationInFrames={CHECK_IN_CUT[1] - CHECK_IN_CUT[0]} name="check-in cutaway"><CheckInPhone3D dur={CHECK_IN_CUT[1] - CHECK_IN_CUT[0]} /><InsertTag text="The quiet check-in" color={C.warn} low /></Sequence>
-      {S("mom", "cut", <><MomPhone3D dur={len("mom")} /><ContactTag /><Toast at={f0("mom") + 8} from={f0("mom")} y={110} title="SafetySense" body="SafetySense: Ava may need help (missed check-in). Live location and what to do: safetysense-live.vercel.app/a/…" />
+      {S("mom", "cut", <><MomPhone3D dur={len("mom")} /><ContactTag /><Toast at={f0("mom") + 8} from={f0("mom")} y={deck ? 70 : 110} k={deck ? 1.3 : 1} title="SafetySense" body="SafetySense: Ava may need help (missed check-in). Live location and what to do: safetysense-live.vercel.app/a/…" />
         <SkipChip at={f0("mom") + 1} from={f0("mom")} label="▸▸ +35 s · no answer" style={{ left: 96, top: 800, fontSize: 48 }} /></>)}
       {S("contacts", "cut", <ContactsReal from={f0("contacts")} />)}
       {/* v3 fix r3: the light-leak whip is gone; the kitchen pushes through into the contacts UI (ZOUT/ZIN) */}
@@ -380,12 +400,12 @@ export const HybridV3: React.FC = () => {
       <Sequence from={TOTAL_FRAMES - 18} durationInFrames={18}><FadeOut /></Sequence>
 
       {/* HUD + captions */}
-      <LadderStrip
+      {!deck && <LadderStrip
         keys={[[f0("hero"), "contacts"], [f0("checkin"), "checkin"], [f0("mom"), "contacts"], [w("v3_11", "Professional"), "dispatch"], [w("v3_13", "raises"), "contacts"]]}
         // v3 fix r4: off during the 3D close-ups (check-in cutaway, Maya's kitchen) so only one HUD element sits near a face
         show={[[f0("map"), f0("sting")], [f0("checkin") + 6, CHECK_IN_CUT[0]], [CHECK_IN_CUT[1] + 4, f0("mom")], [f0("contacts"), CUTS.dispatch[1]], [w("v3_13", "raises") - 4, CUTS.heart[1]]]}
-      />
-      <Captions16 hide={["v3_18", "v3_19"]} cutoffs={ORDER.map((k) => B[k])}
+      />}
+      {!(deck && clip?.captions === false) && <Captions16 hide={deck ? ["v3_18", "v3_19", ...TIMELINE.beats.filter((b) => !inClip(clip, sec(b.startSec))).map((b) => b.id)] : ["v3_18", "v3_19"]} cutoffs={ORDER.map((k) => B[k])}
         // one reading channel: no caption while a big on-screen headline says the same words
         // v3 r6: every mute ends >= 20 frames after its line (and Captions16 never re-shows a chunk that started muted)
         // v3 fix r3: ONE rule for the whole film: a sentence is muted only as a whole, and only when the on-screen
@@ -402,9 +422,10 @@ export const HybridV3: React.FC = () => {
           // audio still gets the narration; the privacy headlines now quote the VO word for word
         ].map(([a, b]) => [a, clampMute(a, b)] as [number, number])}
         // v3 fix r4: one fixed caption baseline everywhere (the glass insert is reframed above the lower third instead)
-      />
-      <SoundTrack />
+      />}
+      {clip?.mute !== true && <SoundTrack />}
     </AbsoluteFill>
+    </DeckModeCtx.Provider>
   );
 };
 

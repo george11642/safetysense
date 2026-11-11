@@ -6,6 +6,10 @@ import { TIMELINE } from "./timing";
 // v3 fix r4: measured speech onsets for phrase-initial words (scripts/v3_caption_onsets.py); captions only
 import ONSETS from "../../scripts/v3_caption_onsets.json";
 
+/** Deck clips (deckIndexV2.tsx) opt in with ClipCtx `deck: true`; HybridV3 provides it here. false = the film, unchanged. */
+export const DeckModeCtx = React.createContext(false);
+const deckMin = (deck: boolean, size: number) => (deck ? Math.max(size, 34) : size);
+
 export const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 export const ez = (frame: number, a: number, b: number, from = 0, to = 1) =>
   interpolate(frame, [a, b], [from, to], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.22, 1, 0.36, 1) });
@@ -198,7 +202,7 @@ export const deviceScreenW = (w: number) => w - 2 * (w * 0.022 + w * 0.03);
 
 /* ------------------------------------------------------------------ TYPE */
 export const Kicker: React.FC<{ children: React.ReactNode; color?: string; size?: number; style?: React.CSSProperties }> = ({ children, color = C.accent, size = 22, style }) => (
-  <div style={{ fontFamily: F.mono, fontWeight: 600, fontSize: size, letterSpacing: "0.18em", textTransform: "uppercase", color, ...style }}>{children}</div>
+  <div style={{ fontFamily: F.mono, fontWeight: 600, fontSize: deckMin(React.useContext(DeckModeCtx), size), letterSpacing: "0.18em", textTransform: "uppercase", color, ...style }}>{children}</div>
 );
 
 export const Headline: React.FC<{ children: React.ReactNode; size?: number; color?: string; style?: React.CSSProperties }> = ({ children, size = 84, color = C.ink, style }) => (
@@ -229,7 +233,9 @@ export const RiseWords: React.FC<{ text: string; at: number; step?: number; size
 /** Small chapter tag, top-left. */
 export const Chapter: React.FC<{ n: string; title: string; color?: string; at?: number; from?: number }> = ({ n, title, color = C.accent, at = 0 }) => {
   const frame = useCurrentFrame();
+  const deck = React.useContext(DeckModeCtx);
   const p = ez(frame, at, at + 16);
+  if (deck) return null; // deck clips: no small mono eyebrows (the slides frame each step)
   return (
     <div style={{ position: "absolute", top: 50, left: 72, display: "flex", alignItems: "center", gap: 18, opacity: p, transform: `translateX(${(1 - p) * -16}px)` }}>
       <div style={{ width: 46 * p, height: 3, background: color }} />
@@ -239,12 +245,15 @@ export const Chapter: React.FC<{ n: string; title: string; color?: string; at?: 
 };
 
 /** Pill tag. */
-export const Tag: React.FC<{ children: React.ReactNode; color?: string; bg?: string; size?: number; dot?: boolean; style?: React.CSSProperties }> = ({ children, color = C.calm, bg, size = 18, dot = true, style }) => (
+export const Tag: React.FC<{ children: React.ReactNode; color?: string; bg?: string; size?: number; dot?: boolean; style?: React.CSSProperties }> = ({ children, color = C.calm, bg, size: size0 = 18, dot = true, style }) => {
+  const size = deckMin(React.useContext(DeckModeCtx), size0);
+  return (
   <div style={{ display: "inline-flex", alignItems: "center", gap: size * 0.55, padding: `${size * 0.5}px ${size * 0.95}px`, borderRadius: 999, background: bg ?? `${color}1f`, border: `1px solid ${color}55`, color, fontFamily: F.mono, fontWeight: 600, fontSize: size, letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap", ...style }}>
     {dot && <span style={{ width: size * 0.45, height: size * 0.45, borderRadius: 99, background: color, boxShadow: `0 0 ${size * 0.6}px ${color}` }} />}
     {children}
   </div>
-);
+  );
+};
 
 /** Glass card. */
 export const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; accent?: string }> = ({ children, style, accent }) => (
