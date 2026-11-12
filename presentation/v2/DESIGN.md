@@ -625,7 +625,11 @@ Round 3: story fit, timing and honesty approved; the visual reviewer asked for c
 - **Slide 6:** the picture is the clip's first frame, so slide 7 starts from the same pose.
 - **Guard screenshot (slides 5, 14, A4):** the caption line is redrawn as "No audio is saved unless something seems wrong." (`prepFrames` in `build_deck_v2.js`).
 - **Wording:** slide 3 no longer speaks the tagline (saved for slide 14); slide 5 and slide 12 no longer both list the frameworks; slide 6 item 2 covers who is called if no one answers; slide 9's bSafe column says "Voice phrase" and "Not listed"; slide 12 leaves "sandbox" to the slide text. Slide 7 has a 56 s slot and slide 4 has 47 s. Total 7:23.
-- **Encode:** clip A 9.94 s, clip B 52.42 s (no extra hold; audio fades from 50.4 s). Both about -16.5 LUFS.
+- **Encode:** clip A 9.94 s, clip B 52.42 s. Each render has a tail (36 and 30 frames) for the audio to ring out; the picture is cut at the scene's last frame (261 and 1541) and held with `tpad`, because the tail frames show the film's next scene. A first re-encode on Nov 10 skipped that hold and was fixed on Nov 11. Both about -16.5 LUFS.
 - **Full film:** `HybridV3` stills at frames 195, 1700, 1950, 2500 and 2750 are byte-identical with and without this pass.
 
 Still not done: playing the deck in real PowerPoint (autoplay, sound, last-frame hold), and confirming the cold-open tone at the practice session.
+
+## 13. v3: the same deck without the cold open (Nov 11, 2026)
+
+`presentation/v3/SafetySense-Finalist-Deck-v3.pptx` and `.pdf`, built by `presentation/build/build_deck_v3.js`. Slide 2 (the cold-open film) is removed and George opens by speaking: "Picture someone walking home at night. Someone comes up behind her. She freezes, and she can't reach her phone. That's the moment we built SafetySense for." One video remains, the proof clip on slide 6, read from `presentation/v2/`. 13 slides plus 4 appendix, 7:21 scripted. Slide 5 no longer says "You saw her phone already calling", and slide 7 no longer mentions the opening film.

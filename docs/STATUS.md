@@ -71,9 +71,10 @@ The app now matches the prototype's screens and flows: Marked safe (both PINs, c
 - Night Out and Date Guards start with the End Guard button alone, without "Face ID/PIN" on the label; the auth gate is unchanged.
 - CNM Title IX (505-224-4000 x51240, Dean of Students) was checked on CNM's own Title IX page on 2026-11-05. It isn't in the SPEC fact-check table yet.
 
-## Finalist deck: v1 and v2 (2026-11-10)
+## Finalist deck: v1, v2 and v3 (2026-11-11)
 
 - **v2 (recommended):** `presentation/v2/SafetySense-Finalist-Deck-v2.pptx` and `.pdf`. 14 slides plus 4 appendix, 7:23 scripted. Two clips that autoplay: a 10 s cold open on slide 2 and a 51 s proof clip on slide 7, which is the only place the ladder is told. Slide 8 says what was real and what was simulated. Design and "as built" notes: `presentation/v2/DESIGN.md`. Build: `NODE_PATH=$(npm root -g) node presentation/build/build_deck_v2.js`, then `python3 presentation/build/autoplay.py <pptx>`. Clips: `video/src/v3/deckIndexV2.tsx`.
+- **v3 (one video):** `presentation/v3/SafetySense-Finalist-Deck-v3.pptx` and `.pdf`. v2 without the cold-open film: George opens by speaking, and the proof clip (slide 6) is the only video. 13 slides plus 4 appendix, 7:21. Build: `build_deck_v3.js`, then `autoplay.py`.
 - **v1 (saved):** `presentation/v1/`. 15 slides with one 58 s clip full screen on slide 6. `presentation/SafetySense-Finalist-Deck.pptx` is the same deck.
 - **Not done:** neither deck has been played in real PowerPoint. Check autoplay, sound and the last-frame hold on a Windows machine before Nov 16. The video polish from the last review is done (see `presentation/v2/DESIGN.md` section 12).
 - **Pick one deck** before emailing it on Nov 16.
