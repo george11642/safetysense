@@ -13,7 +13,7 @@ Most of the apps below rely on the person pressing a button or running a timer. 
 - **Freezing is a normal response.** Many survivors describe being unable to move or speak during an assault. This is called tonic immobility. In a study of 298 women seen at a Stockholm emergency clinic within a month of a sexual assault, 70% reported significant tonic immobility and 48% extreme tonic immobility (Möller, Söndergaard & Helström, *Acta Obstet Gynecol Scand* 2017;96(8):932–938, doi:10.1111/aogs.13174). A panic button does nothing for someone who has frozen.
 - **Drugging takes away the ability to act.** Someone who has been drugged may not recognize the danger or be able to unlock their phone.
 - **The phone gets taken or thrown.** Timer-based apps can't tell a dead phone from a quiet night until the timer ends. Apple's Check In, Google's Safety Check, Centinela's server-held countdown and several lone-worker products have server-side versions of this. SafetySense's server treats a lost heartbeat as a warning sign: after three missed 60 s heartbeats (a 180 s grace, checked by a once-a-minute watchdog), it raises the alert by itself, so contacts hear within about 3-4 minutes.
-- **New Mexico still has no text-to-911.** As of Nov 4, 2026, sources still list it as the only US state without it, and we found no announcement of a public launch. The statewide NG911 upgrade (which can support text) began in 2025, starting with Bernalillo County. If you can't speak out loud, the standard silent route to 911 isn't there; third-party relays such as accesSOS cover Albuquerque and Santa Fe. SafetySense's data-only path to dispatch helps cover that local gap. Re-check before Nov 20.
+- **Even texting 911 takes a phone in your hand.** Calling or texting 911 both need the person to act. SafetySense's data-only path to dispatch starts by itself. Corrected Nov 13, 2026: this bullet used to say New Mexico has no text-to-911. George confirmed that it does; the statewide NG911 upgrade, which supports text, went live in Bernalillo County in July 2025 and has been rolling out since. Never claim New Mexico lacks it.
 
 ## 3. What changed from the original idea (pushback)
 
@@ -203,7 +203,7 @@ Copy is calm, plain and never blames the user. Each permission is asked only whe
 - iOS feasibility (Apple docs): background audio interruptions, SoundAnalysis `knownClassifications`, `SpeechAnalyzer`, Foundation Models availability and background rate limits, `ControlWidget`, `CLServiceSession`, `CMFallDetectionManager`, App Review 2.5.4 / 2.5.14 / 5.1.
 - Noonlight Dispatch API: docs.noonlight.com/reference/post_alarms
 - UNM Safe (which replaced LoboGuardian, retired Jul 31, 2026): unmsafe.unm.edu. CNM Security: cnm.edu/depts/security
-- New Mexico text-to-911 gap: KFOX14; Source NM (Apr 11, 2025); GovTech (Aug 11, 2025); Textdrip state guide (Jun 18, 2026). The FCC registry (fcc.gov/files/text-911-master-psap-registry) blocks automated fetches, so George should open it in a browser once.
+- New Mexico text-to-911 (the "gap" claim was withdrawn on Nov 13, 2026; these are the sources it rested on): KFOX14; Source NM (Apr 11, 2025); GovTech (Aug 11, 2025); Textdrip state guide (Jun 18, 2026). The FCC registry (fcc.gov/files/text-911-master-psap-registry) blocks automated fetches, so George should open it in a browser once.
 - Local numbers: checked 2026-11-04 (see **Fact check**).
 
 ## Fact check (2026-11-04)
@@ -211,7 +211,7 @@ Copy is calm, plain and never blames the user. Each permission is asked only whe
 | Claim | Verdict | Source |
 |---|---|---|
 | 70% significant / 48% extreme tonic immobility, 298 women | **Correct** | Möller et al. 2017, doi:10.1111/aogs.13174 (Crossref metadata; ScienceDaily, Jun 7, 2017) |
-| NM is the only US state without text-to-911 | **Correct as far as we can find**, softened to "still listed as" | Textdrip (Jun 2026), KFOX14, Source NM, GovTech. No 2026 launch announcement found |
+| NM is the only US state without text-to-911 | **Wrong. Withdrawn Nov 13, 2026.** George confirmed New Mexico has text-to-911; some third-party guides were out of date | Textdrip (Jun 2026), KFOX14, Source NM, GovTech. No 2026 launch announcement found |
 | "No silent way to reach 911 in NM" | **Too strong**, softened | accesSOS relay covers Albuquerque and Santa Fe; Noonlight's own app lets users text its dispatchers |
 | NMSA 30-12-1(C) one-party consent wording | **Correct for telephone/telegraph**; in-person audio unclear | Statute text (Justia, FindLaw); 2013 SB 127 (not enacted) |
 | NM breach law NMSA 57-12C, 45 days | **Correct** | 57-12C-1 to -12, eff. Jun 16, 2017 |
