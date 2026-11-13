@@ -437,7 +437,8 @@ And we link to UNM Safe.
 MARY: We designed this for the worst night of someone's life, so the words matter as much as the features.
 We wrote every line to be calm and to never blame the person holding the phone. Advocates haven't reviewed it yet; that's our next step. You saw it in the video: the first thing it says is just "You okay?"
 Onboarding ends with a practice drill marked TEST, so your first alert is a practice one.
-And afterward, the Support screen offers an advocate, medical care, reporting, or keeping it private. Nothing is required.`);
+And afterward, the Support screen offers an advocate, medical care, reporting, or keeping it private. Nothing is required.
+(Mary's only full slide. George takes every other slide; Mary also has the intro line and the closing line.)`);
   }
 
   // ===== 11. Privacy (Mary) ===============================================
@@ -471,7 +472,7 @@ And afterward, the Support screen offers an advocate, medical care, reporting, o
     footer(s, 11);
     s.addNotes(
 `${stamp(11)}
-MARY: An app that listens has to earn trust, so here's exactly what happens to audio.
+GEORGE: An app that listens has to earn trust, so here's exactly what happens to audio.
 All the listening happens on the phone. Audio sits in a 30-second buffer in memory that keeps overwriting itself. No audio is saved.
 Only if an alert fires is audio kept. It's encrypted on the phone before upload, so our server only holds ciphertext.
 It goes into a vault that opens with your Face ID, and you decide whether anyone hears it.

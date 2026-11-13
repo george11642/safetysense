@@ -8,7 +8,7 @@ Last updated Nov 10, 2026.
 
 **How to answer:** lead with the one-sentence answer and stop. Offer more detail only if they ask. If you don't know, say so: "We haven't measured that yet. Here's how we would." Never overclaim. SafetySense supplements 911 and never replaces it.
 
-Who answers: **George** takes technical, security and App Store questions. **Mary** takes user, design, wording, campus and partnership questions. She led research, UX and the app's wording.
+Who answers: **George** takes most questions: technical, security, privacy, App Store, cost and business. **Mary** takes questions about the app's wording, design and who it's for, and George can pick up any of those too. In the talk Mary has three parts: her intro line, the design slide and the closing line.
 
 Appendix slides A1 to A3 in the deck carry the short versions of the first 12 answers below.
 
