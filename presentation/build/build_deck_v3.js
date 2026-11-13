@@ -200,7 +200,7 @@ async function prepFrames() {
     s.addText("SafetySense calls for help when you can't.", { x: 0.6, y: 0.78, w: 8.2, h: 1.3, margin: 0, fontFace: SANS, fontSize: 34, bold: true, color: C.ink, valign: "top" });
     const people = [
       ["George Teifel", "University of New Mexico", "Senior · Electrical Engineering", "Built the iOS app and the backend"],
-      ["Mary Teifel", "Central New Mexico Community College", "Freshman · Mechanical Engineering", "Research, design and the app's wording"],
+      ["Mary Teifel", "Central New Mexico Community College", "Dual credit student · Mechanical Engineering", "Research, design and the app's wording"],
     ];
     for (let i = 0; i < 2; i++) {
       const x = 0.6 + i * 4.15, y = 2.5, w = 3.95;
@@ -218,7 +218,7 @@ async function prepFrames() {
     s.addNotes(
 `${stamp(3)}
 GEORGE: Picture a student walking home at night. Someone comes up behind her. She freezes. She can't get to her phone. That's the moment we built SafetySense for. I'm George Teifel. I'm a senior in electrical engineering at UNM, and I built the app and the backend.
-MARY: I'm Mary Teifel, a freshman in mechanical engineering at CNM. I worked on the research, the design and the wording in the app.
+MARY: I'm Mary Teifel, a dual credit student at CNM, studying mechanical engineering. I worked on the research, the design and the wording in the app.
 GEORGE: SafetySense is an iPhone app for students who are out at night.`);
   }
 
@@ -236,7 +236,7 @@ GEORGE: SafetySense is an iPhone app for students who are out at night.`);
     const rows = [
       ["FaSnowflake", C.pink, "Freezing is involuntary", "It is a normal response, not a choice."],
       ["FaMobileScreen", C.red, "Phones get taken, broken or switched off", "A dead phone sends nothing."],
-      ["FaCommentSms", C.teal, "Speaking isn't always possible", "New Mexico is still listed as the only state without text-to-911."],
+      ["FaCommentSms", C.teal, "Speaking isn't always possible", "Even texting 911 takes a phone in your hand."],
     ];
     for (let i = 0; i < rows.length; i++) {
       const y = 1.85 + i * 1.375;
@@ -253,10 +253,10 @@ GEORGE: SafetySense is an iPhone app for students who are out at night.`);
 We built this for UNM and CNM students: parties, first dates, rideshares, the walk back to the car.
 Most safety apps we looked at need you to do something. Press a button, or set a timer.
 But that's exactly what you can't do when it matters. In one clinical study of 298 women seen after a sexual assault, 70 percent said they froze. It's involuntary. It's a normal response, not a choice.
-Phones also get taken, broken or switched off. And New Mexico is still listed as the only state where you can't text 911.
+Phones also get taken, broken or switched off. And even texting 911 takes a phone in your hand.
 So our question was simple: what if you can't press the button?
 (Source if asked: Möller, Söndergaard and Helström, 2017. 298 women at a Stockholm emergency clinic; 70% significant, 48% extreme.)
-(Re-check the text-to-911 status before Nov 20. Never say there is "no way at all" to text.)`);
+(Don't say New Mexico has no text-to-911. The state has been rolling it out since its 2025 911 upgrade.)`);
   }
 
   // ===== 5. Our answer: a Guard ===========================================
