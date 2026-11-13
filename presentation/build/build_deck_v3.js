@@ -46,7 +46,7 @@ const S8_CROPS = {
 // ---- talk timing -----------------------------------------------------
 // Seconds per slide (slide 1 is the holding card, before the timer). Sized so no slide is scripted faster than about
 // 145 spoken words a minute; the clips take their own length plus a beat.
-const SECS = { 3: 38, 4: 47, 5: 32, 6: 20, 7: 56, 8: 44, 9: 43, 10: 35, 11: 40, 12: 33, 13: 36, 14: 17 };
+const SECS = { 3: 38, 4: 47, 5: 32, 6: 20, 7: 56, 8: 48, 9: 47, 10: 40, 11: 44, 12: 33, 13: 36, 14: 17 };
 const TALK_TOTAL = Object.values(SECS).reduce((a, b) => a + b, 0);
 const mmss = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 function stamp(n) {
@@ -200,7 +200,7 @@ async function prepFrames() {
     s.addText("SafetySense calls for help when you can't.", { x: 0.6, y: 0.78, w: 8.2, h: 1.3, margin: 0, fontFace: SANS, fontSize: 34, bold: true, color: C.ink, valign: "top" });
     const people = [
       ["George Teifel", "University of New Mexico", "Senior · Electrical Engineering", "Built the iOS app and the backend"],
-      ["Mary Teifel", "Central New Mexico Community College", "Freshman · Mechanical Engineering", "Led research, UX and the app's wording"],
+      ["Mary Teifel", "Central New Mexico Community College", "Freshman · Mechanical Engineering", "Research, design and the app's wording"],
     ];
     for (let i = 0; i < 2; i++) {
       const x = 0.6 + i * 4.15, y = 2.5, w = 3.95;
@@ -217,9 +217,9 @@ async function prepFrames() {
     footer(s, 3);
     s.addNotes(
 `${stamp(3)}
-GEORGE: Picture someone walking home at night. Someone comes up behind her. She freezes, and she can't reach her phone. That's the moment we built SafetySense for. I'm George Teifel, a senior in electrical engineering at UNM. I built the app and the backend.
-MARY: And I'm Mary Teifel, a freshman in mechanical engineering at CNM. I led the research, the design and every word the app says.
-GEORGE: SafetySense is an iPhone safety app for students out at night.`);
+GEORGE: Picture a student walking home at night. Someone comes up behind her. She freezes. She can't get to her phone. That's the moment we built SafetySense for. I'm George Teifel. I'm a senior in electrical engineering at UNM, and I built the app and the backend.
+MARY: I'm Mary Teifel, a freshman in mechanical engineering at CNM. I worked on the research, the design and the wording in the app.
+GEORGE: SafetySense is an iPhone app for students who are out at night.`);
   }
 
   // ===== 4. The problem ===================================================
@@ -245,16 +245,16 @@ GEORGE: SafetySense is an iPhone safety app for students out at night.`);
       s.addText(rows[i][2], { x: 6.3, y: y + 0.17, w: 6.25, h: 0.42, margin: 0, fontFace: SANS, fontSize: 19, bold: true, color: C.ink });
       s.addText(rows[i][3], { x: 6.3, y: y + 0.62, w: 6.25, h: 0.42, margin: 0, fontFace: SANS, fontSize: 16, color: C.muted, valign: "top" });
     }
-    s.addText("What should a phone do when she can't?", { x: 0.6, y: 6.1, w: 12.13, h: 0.6, margin: 0, fontFace: SANS, fontSize: 26, bold: true, color: C.pink, valign: "middle" });
+    s.addText("What if you can't press the button?", { x: 0.6, y: 6.1, w: 12.13, h: 0.6, margin: 0, fontFace: SANS, fontSize: 26, bold: true, color: C.pink, valign: "middle" });
     s.addText("“Most safety apps”: based on the documentation of the apps we reviewed. We did not test them.", { x: 0.6, y: 6.72, w: 12.13, h: 0.3, margin: 0, fontFace: SANS, fontSize: 14, color: C.muted, valign: "middle" });
     footer(s, 4);
     s.addNotes(
 `${stamp(4)}
-We built this for UNM and CNM students out at night: parties, first dates, rideshares, the walk back to the car.
-Most safety apps we reviewed wait for you to press a button or set a timer.
-That fails exactly when it matters. In a clinical study of 298 women seen after a sexual assault, 70 percent reported significant tonic immobility: an involuntary freeze. It's a normal response, not a choice.
-Phones also get taken, broken or switched off, and a dead phone sends nothing. And New Mexico is still listed as the only state without text-to-911.
-So we asked one question: what should a phone do when she can't?
+We built this for UNM and CNM students: parties, first dates, rideshares, the walk back to the car.
+Most safety apps we looked at need you to do something. Press a button, or set a timer.
+But that's exactly what you can't do when it matters. In one clinical study of 298 women seen after a sexual assault, 70 percent said they froze. It's involuntary. It's a normal response, not a choice.
+Phones also get taken, broken or switched off. And New Mexico is still listed as the only state where you can't text 911.
+So our question was simple: what if you can't press the button?
 (Source if asked: Möller, Söndergaard and Helström, 2017. 298 women at a Stockholm emergency clinic; 70% significant, 48% extreme.)
 (Re-check the text-to-911 status before Nov 20. Never say there is "no way at all" to text.)`);
   }
@@ -294,8 +294,8 @@ So we asked one question: what should a phone do when she can't?
     footer(s, 5);
     s.addNotes(
 `${stamp(5)}
-Our answer starts before anything goes wrong. Before a walk home, a night out, a date or a ride, you turn on a Guard. One tap.
-Then the phone watches for signs that something's wrong: a scream, breaking glass, your safe word, or a fall followed by stillness. It only listens while a Guard is on, and all of that runs on Apple's on-device frameworks.
+So here's our answer. Before you head out, for a walk home, a night out, a date or a ride, you turn on a Guard. It's one tap.
+From then on, your phone pays attention for you. It listens for a scream, breaking glass or your safe word, and it notices a fall followed by no movement. It only listens while the Guard is on, and all of that happens on the phone.
 (Twilio and Noonlight are on the slide. Don't read them out: slide 11 explains what each one does.)`);
   }
 
@@ -315,7 +315,7 @@ Then the phone watches for signs that something's wrong: a scream, breaking glas
     s.addImage({ data: img.data, x: 12.73 - w, y: 0.95, w, h });
     s.addNotes(
 `${stamp(6)}
-Here's what that looks like on a night out. Watch three things: it asks before it alerts, what her friend sees and who gets called if nobody answers, and what happens if someone makes her cancel or breaks her phone.
+Let me show you. This is a night out. Watch for three things. It asks before it alerts anyone. What her friend sees, and who gets called if nobody answers. And what happens if someone forces her to cancel, or breaks her phone.
 (Advance. The clip starts by itself.)`);
   }
 
@@ -353,10 +353,10 @@ Here's what that looks like on a night out. Watch three things: it asks before i
     footer(s, 8);
     s.addNotes(
 `${stamp(8)}
-Those phone screens are our app, recorded in the iPhone simulator in demo mode, with a scripted night and the waits sped up. A few are redrawn for the big screen.
-Outside the video, the app places real calls to a verified number, and the friend's page is a real web page. The text is written, but doesn't arrive yet on our trial account.
-Dispatch is simulated: we've only used Noonlight's sandbox, and no police were contacted. The duress PIN keeps that same simulated dispatch coming.
-And the smashed phone is an animation of a server check we've deployed.
+So, what was real in that? The phone screens are our actual app, recorded in the iPhone simulator in demo mode. We scripted the night and sped up the waiting. A few screens are redrawn so you can read them.
+Outside the video, the app makes real phone calls to a verified number, and the friend's page is a real web page. The text message is written, but it doesn't get delivered yet on our trial account.
+Dispatch is simulated. We've only used Noonlight's test system, so no police were ever contacted. The duress PIN leads to that same simulated dispatch.
+And the smashed phone is an animation of a server check that we've deployed.
 (If asked "was that call real in the video?": no. The recording used demo mode, which places no calls. Real calls work in our tests, to a verified number.)
 (Only say "deployed" for the heartbeat check. Don't say it has been tested in a live alert unless that test has been run by then.)`);
   }
@@ -399,9 +399,9 @@ And the smashed phone is an animation of a server check we've deployed.
     footer(s, 9);
     s.addNotes(
 `${stamp(9)}
-We compared tools a student could already have: UNM Safe, Noonlight, bSafe and the iPhone itself, from their documentation.
-Other apps have pieces of this, and we'll name them. Centinela listens for a scream and has a duress PIN, but stops at your friends. aegis+ has a duress PIN and dispatch, but its listing describes nothing that notices on its own. We found no product that documents the whole chain.
-Ours notices on its own, tells your people, and reaches dispatch, in a sandbox today, including the two cases you just saw: the forced cancel and the smashed phone.
+We looked at what a student could already have: UNM Safe, Noonlight, bSafe and the iPhone itself, going by their documentation.
+Other apps do parts of this, and I'll name two. Centinela listens for a scream and has a duress PIN, but it stops at your friends. aegis+ has a duress PIN and dispatch, but nothing in its listing notices trouble on its own. We couldn't find one that documents the whole chain.
+Ours notices on its own, tells your people, and reaches dispatch, in a test system for now. That includes the two cases you just saw: the forced cancel and the smashed phone.
 And we link to UNM Safe.
 (Say "we found no product that documents", never "no one else does this". Their columns are shipped products; ours is a prototype.)
 (If asked: some apps also document a server-side dead-phone alert. We read documentation; we did not test them.)
@@ -434,10 +434,10 @@ And we link to UNM Safe.
     footer(s, 10);
     s.addNotes(
 `${stamp(10)}
-MARY: We designed this for the worst night of someone's life, so the words matter as much as the features.
-We wrote every line to be calm and to never blame the person holding the phone. Advocates haven't reviewed it yet; that's our next step. You saw it in the video: the first thing it says is just "You okay?"
-Onboarding ends with a practice drill marked TEST, so your first alert is a practice one.
-And afterward, the Support screen offers an advocate, medical care, reporting, or keeping it private. Nothing is required.
+MARY: We designed this for the worst night of someone's life. So the words matter as much as the features.
+We tried to make every line calm, and to never blame the person holding the phone. You saw it in the video. The first thing it says is just, "You okay?" Advocates haven't reviewed our wording yet. That's our next step.
+Setup ends with a practice drill, marked TEST, so your first alert is never a real one.
+And afterward, the app offers an advocate, medical care, reporting, or keeping it private. Nothing is required.
 (Mary's only full slide. George takes every other slide; Mary also has the intro line and the closing line.)`);
   }
 
@@ -472,11 +472,11 @@ And afterward, the Support screen offers an advocate, medical care, reporting, o
     footer(s, 11);
     s.addNotes(
 `${stamp(11)}
-GEORGE: An app that listens has to earn trust, so here's exactly what happens to audio.
+GEORGE: An app that listens has to earn your trust. So here's exactly what happens to the audio.
 All the listening happens on the phone. Audio sits in a 30-second buffer in memory that keeps overwriting itself. No audio is saved.
-Only if an alert fires is audio kept. It's encrypted on the phone before upload, so our server only holds ciphertext.
-It goes into a vault that opens with your Face ID, and you decide whether anyone hears it.
-There are no ad or analytics SDKs, and the live link is built to expire when the alert ends.
+Audio is only kept if an alert fires. It's encrypted on the phone before it's uploaded, so our server only ever holds the encrypted copy.
+It goes into a vault that opens with your Face ID, and you decide if anyone ever hears it.
+There are no ads and no analytics trackers. And the link your friends get is built to expire when the alert ends.
 (Say "no audio is saved". Never "nothing is saved": location does go to the server during a Guard.)`);
   }
 
@@ -511,9 +511,9 @@ There are no ad or analytics SDKs, and the live link is built to expire when the
     footer(s, 12);
     s.addNotes(
 `${stamp(12)}
-GEORGE: Under the hood, it's a native iOS 26 app on a live backend.
-On the phone, those signals feed a rules-based risk engine, so it can always explain why it escalated. Apple's on-device language model gives a second opinion, but can never be the only reason to escalate.
-The server runs the alert steps and a once-a-minute heartbeat check. Twilio carries the calls, and Noonlight is the dispatch service.`);
+GEORGE: Under the hood, this is a native iOS 26 app on a live backend.
+On the phone, those signals feed a risk engine built on rules, so it can always explain why it escalated. Apple's on-device language model gives a second opinion, but it can never be the only reason to escalate.
+Our server runs the alert steps and checks for a heartbeat once a minute. Twilio makes the calls, and Noonlight is the dispatch service.`);
   }
 
   // ===== 13. Proof, limits and next steps (George) ========================
@@ -551,9 +551,9 @@ The server runs the alert steps and a once-a-minute heartbeat check. Twilio carr
     footer(s, 13);
     s.addNotes(
 `${stamp(13)}
-Here's how we'll know it works. Our targets are on the left: under one false alert in ten hours of guarding, and under a minute from a scream to a ringing phone.
-Those are targets; we haven't field-tested them. The app is on internal TestFlight only, our real-device run is still to come, and we still need Noonlight's sign-off before any live dispatch.
-Next: usability tests with UNM and CNM students, a review of our wording by advocates, then a TestFlight pilot and a campus partnership.
+So how will we know it works? Our targets are on the left: fewer than one false alert in ten hours of guarding, and under a minute from a scream to a ringing phone.
+Those are targets. We haven't field-tested them yet. The app is on internal TestFlight only, we still need to run it on a real phone, and we need Noonlight's sign-off before any live dispatch.
+Next up: usability tests with UNM and CNM students, advocates reviewing our wording, then a TestFlight pilot and a campus partnership.
 (If the iPhone 16e run is done by Nov 20, replace that line with the measured numbers.)`);
   }
 
@@ -575,7 +575,7 @@ Next: usability tests with UNM and CNM students, a review of our wording by advo
     s.addNotes(
 `${stamp(14)}
 GEORGE: SafetySense supplements 911. It never replaces it. But when you can't call for help, SafetySense does.
-MARY: We'd love to pilot it with students at UNM and CNM. Thank you. We're happy to take your questions.
+MARY: We'd love to pilot it with students at UNM and CNM. Thank you. We'd love your questions.
 (Stop. Stay on this slide for Q&A. The appendix slides are only for answering questions.)`);
   }
 
